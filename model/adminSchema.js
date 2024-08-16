@@ -22,6 +22,11 @@ const adminSchema = new mongoose.Schema(
         enabled: { type: Boolean, default: true },
       },
     ],
+    commodities: [
+      {
+        symbol: { type: String, required: true },
+      },
+    ],
     workCompletionDate: { type: Date },
     serviceStartDate: { type: Date, required: true },
     serviceEndDate: { type: Date },
