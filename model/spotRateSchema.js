@@ -16,12 +16,12 @@ const SpotRateSchema = new mongoose.Schema({
   silverHighValueMargin: { types: Number },
   commodities: [
     {
-      metal: { type: String, required: true },
-      purity: { type: Number, required: true },
-      unit: { type: Number, required: true },
-      weight: { type: String, required: true },
-      buyPremium: { type: Number, required: true },
-      sellPremium: { type: Number, required: true },
+      metal: { type: String },
+      purity: { type: Number },
+      unit: { type: Number },
+      weight: { type: String },
+      buyPremium: { type: Number },
+      sellPremium: { type: Number },
     },
   ],
 });
