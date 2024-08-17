@@ -11,6 +11,10 @@ const SpotRateSchema = new mongoose.Schema({
   silverBidSpread: { types: Number },
   goldAskSpread: { types: Number },
   goldBidSpread: { types: Number },
+  goldLowValueMargin: { types: Number },
+  goldHighValueMargin: { types: Number },
+  silverLowValueMargin: { types: Number },
+  silverHighValueMargin: { types: Number },
   commodities: [
     {
       metal: { type: String, required: true },
