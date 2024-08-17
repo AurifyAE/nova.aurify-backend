@@ -22,15 +22,18 @@ export const addNewServer = async ({ serverName, serverURL }) => {
   }
 };
 
-export const updateServerSelection = async (serverURL, serverName) => {
+export const updateServerSelection = async (
+  serverId,
+  serverURL,
+  serverName
+) => {
   try {
     const serverDoc = await serverModel.findOne({
-      "servers.serverURL": serverURL,
+      _id: serverId,
     });
     if (!serverDoc) {
       throw new Error("Server not found");
     }
-
     serverDoc.selectedServerName = serverName;
     serverDoc.selectedServerURL = serverURL;
 
@@ -44,7 +47,6 @@ export const updateServerSelection = async (serverURL, serverName) => {
 
 export const deleteServer = async (serverId) => {
   try {
-
     const serverDoc = await serverModel.findOneAndUpdate(
       { "servers._id": serverId },
       { $pull: { servers: { _id: serverId } } },
@@ -83,5 +85,13 @@ export const editServerDetails = async (serverId, serverName, serverURL) => {
     return { success: true, server: serverDoc };
   } catch (error) {
     throw new Error(`Error editing server details: ${error.message}`);
+  }
+};
+
+export const fetchServerDetails = async () => {
+  try {
+    return await serverModel.find({});
+  } catch (error) {
+    throw new Error("Error fetching server data");
   }
 };
