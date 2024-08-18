@@ -12,6 +12,7 @@ import {
   addBanner,
   deleteBanner,
   editBannerDetails,
+  fetchBanners
 } from "../../controllers/super/bannerController.js";
 const router = Router();
 
@@ -24,7 +25,7 @@ router.patch("/update-selected-server/:serverId", updateSelectedServer);
 router.delete("/delete-server/:serverId", deleteSelectedServer);
 router.patch("/edit-server/:serverId", editServer);
 router.post("/add-banners", uploadSingle("image"), addBanner);
-router.delete("/banners/:bannerId", deleteBanner);
+router.delete("/banners/:bannerId/:adminId", deleteBanner);
 router.put("/banners/:bannerId", uploadSingle("image"),editBannerDetails);
-
+router.get('/get-banners',fetchBanners)
 export default router;
