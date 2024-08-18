@@ -2,6 +2,7 @@ import {
   addNewBanner,
   updateBanner,
   removeBanner,
+  fetchBannersDetails,
 } from "../../helper/superAdmin/bannerHelper.js";
 
 export const addBanner = async (req, res, next) => {
@@ -22,6 +23,7 @@ export const editBannerDetails = async (req, res, next) => {
   try {
     const data = {
       bannerId: req.params.bannerId,
+      adminId: req.body.adminId,
       title: req.body.title,
       imageUrl: req.file.filename,
     };
@@ -34,9 +36,17 @@ export const editBannerDetails = async (req, res, next) => {
 
 export const deleteBanner = async (req, res, next) => {
   try {
-    const { bannerId } = req.params;
-    await removeBanner(bannerId);
+    await removeBanner(req.params.bannerId, req.params.adminId);
     res.json({ message: "Banner deleted successfullyy" }).status(200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const fetchBanners = async (req, res, next) => {
+  try {
+    const banners = await fetchBannersDetails();
+    res.status(200).json({ info: banners });
   } catch (error) {
     next(error);
   }
