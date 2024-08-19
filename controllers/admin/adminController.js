@@ -1,11 +1,16 @@
-import { userVerfication } from "../../helper/Admin/adminHelper.js";
+import {
+  adminVerfication,
+  userVerfication,
+  userCollectionSave,
+  userUpdateSpread
+} from "../../helper/Admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
 import bcrypt from "bcrypt";
 
-export const userLoginController = async (req, res, next) => { // Include next here
+export const adminLoginController = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const authLogin = await userVerfication(email);
+    const authLogin = await adminVerfication(email);
 
     if (authLogin) {
       const encryptPassword = authLogin.password;
@@ -23,6 +28,55 @@ export const userLoginController = async (req, res, next) => { // Include next h
       throw createAppError("User not found.", 404);
     }
   } catch (error) {
-    next(error); // Pass the error to the global error handler
+    next(error);
   }
 };
+
+export const registerUser = async (req, res, next) => {
+  try {
+    const { userName, contact, location, email, password } = req.body;
+    const { adminId } = req.params;
+    const data = {
+      userName,
+      contact,
+      location,
+      email,
+      password,
+    };
+    const response = await userCollectionSave(data, adminId);
+    res
+      .status(200)
+      .json({ message: response.message, success: response.success });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const userLoginController = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    const { adminId } = req.params;
+    const response = await userVerfication(adminId, email, password);
+    res
+      .status(200)
+      .json({ message: response.message, success: response.success });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+export const updateSpread = async (req, res, next) => {
+  try {
+    const { adminId, userId } = req.params;
+    const { spread } = req.body;
+    const response = await userUpdateSpread(adminId, userId , spread);
+    res
+      .status(200)
+      .json({ message: response.message, success: response.success });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
