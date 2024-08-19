@@ -23,20 +23,22 @@ export const registerAdmin = async (req, res, next) => {
       workCompletionDate: req.body.workCompletionDate,
       serviceStartDate: req.body.serviceStartDate,
     };
-    await userCollectionSave(userData);
-    res.json({ message: "User registered successfully" }).status(201);
+    const response = await userCollectionSave(userData);
+    res
+      .status(201)
+      .json({ message: response.message, success: response.success });
   } catch (error) {
     next(error); // Pass the error to the global error handler
   }
 };
-export const getAdmin = async(req,res,next)=>{
+export const getAdmin = async (req, res, next) => {
   try {
-  const infoAdmin =  await fetchAdminData()
-  res.json({ info: infoAdmin }).status(201);
+    const infoAdmin = await fetchAdminData();
+    res.json({ info: infoAdmin }).status(201);
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 export const editAdmin = async (req, res, next) => {
   try {
     // Validate request body

@@ -21,13 +21,21 @@ export const userCollectionSave = async (userData) => {
       contact,
       whatsapp,
       userType,
-      solutions,
-      features,
-      commodities,
+      solutions = [],
+      features = [],
+      commodities = [],
       workCompletionDate,
       serviceStartDate,
     } = userData;
-
+    // Check if the email already exists
+    const existingAdmin = await adminModel.findOne({ email });
+    if (existingAdmin) {
+      return {
+        success: false,
+        message:
+          "The email provided is already in use. Please use a different email.",
+      };
+    }
     // Calculate serviceEndDate by adding 365 days to serviceStartDate
     const serviceStartDateObj = new Date(serviceStartDate);
     const serviceEndDate = new Date(serviceStartDateObj);
@@ -60,25 +68,25 @@ export const userCollectionSave = async (userData) => {
       userType,
       solutions: formattedSolutions,
       features: formattedFeatures,
-      commodities:formattedCommodities,
+      commodities: formattedCommodities,
       workCompletionDate,
       serviceStartDate: serviceStartDateObj,
       serviceEndDate, // Store the calculated serviceEndDate
     });
 
     await authCollection.save();
-    return authCollection;
+    return { success: true, message: "User registered successfully" };
   } catch (error) {
-    throw new Error("Error saving user data");
+    throw new Error("Error saving admin data");
   }
 };
-export const fetchAdminData = async ()=>{
+export const fetchAdminData = async () => {
   try {
-     return await adminModel.find({})
+    return await adminModel.find({});
   } catch (error) {
     throw new Error("Error fetching admin data");
   }
-}
+};
 export const collectionUpdate = async (adminId, userData) => {
   try {
     const {
