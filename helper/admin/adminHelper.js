@@ -1,7 +1,7 @@
 import adminModel from "../../model/adminSchema.js";
 import bcrypt from "bcrypt";
 import { UsersModel } from "../../model/usersSchema.js";
-
+import NotificationsModel from "../../model/notificationSchema.js";
 // Function to hash the password
 const hashPassword = async (password) => {
   try {
@@ -82,5 +82,17 @@ export const userUpdateSpread = async (adminId, userId, spread) => {
     return { success: true, message: "Spread value updated successfully" };
   } catch (error) {
     throw new Error("Error updating spread value" + error.message);
+  }
+};
+
+export const updateNotification = async (adminId, notificationId) => {
+  try {
+    await NotificationsModel.updateOne(
+      { createdBy: adminId },
+      { $pull: { notification: { _id: notificationId } } }
+    );
+    return { success: true, message: "Notification cleared" };
+  } catch (error) {
+    throw new Error("Error updating notification" + error.message);
   }
 };

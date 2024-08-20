@@ -1,25 +1,45 @@
 import mongoose from "mongoose";
 import BannerModel from "../../model/bannerSchema.js";
+import  NotificationModel  from "../../model/notificationSchema.js";
 export const addNewBanner = async (data) => {
   try {
     const { title, imageUrl, adminId } = data;
     const objectId = new mongoose.Types.ObjectId(adminId);
+    
+    // Find or create the banner document
     let bannerDoc = await BannerModel.findOne({ createdBy: objectId });
     if (bannerDoc) {
-      // If a document exists, push the new banner into the banner array
       bannerDoc.banner.push({ title, imageUrl });
     } else {
-      // If no document exists, create a new banner document
       bannerDoc = new BannerModel({
-        banner: [{ title, imageUrl }], // Initialize the banner array with the new banner
-        createdBy: objectId, // Set the createdBy field to the admin's ObjectId
+        banner: [{ title, imageUrl }],
+        createdBy: objectId,
       });
     }
     await bannerDoc.save();
 
+    // Attractive notification message
+    const notificationMessage = `🎉 A new banner titled "${title}" has just been added to your dashboard! Check it out now to see the latest updates.`;
+
+    // Create and save the notification
+    let notificationDoc = await NotificationModel.findOne({ createdBy: objectId });
+    if (notificationDoc) {
+      notificationDoc.notification.push({
+        message: notificationMessage,
+      });
+    } else {
+      notificationDoc = new NotificationModel({
+        notification: [{
+          message: notificationMessage,
+        }],
+        createdBy: objectId,
+      });
+    }
+    await notificationDoc.save();
+
     return bannerDoc;
   } catch (error) {
-    throw new Error("Error adding banner");
+    throw new Error("Error adding banner and sending notification");
   }
 };
 
