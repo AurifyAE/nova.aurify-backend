@@ -1,7 +1,7 @@
 import adminModel from "../../model/adminSchema.js";
 import bcrypt from "bcrypt";
 import { UsersModel } from "../../model/usersSchema.js";
-import NotificationsModel from "../../model/notificationSchema.js";
+import NotificationModel from "../../model/notificationSchema.js";
 // Function to hash the password
 const hashPassword = async (password) => {
   try {
@@ -41,6 +41,23 @@ export const userCollectionSave = async (data, adminId) => {
       usersDoc.users.push(newUser);
     }
     await usersDoc.save();
+    const notificationMessage = `🎉 ${userName} has been added as a new user. Check your admin panel for details!`;
+
+    let notificationDoc = await NotificationModel.findOne({
+      createdBy: adminId,
+    });
+
+    if (!notificationDoc) {
+      notificationDoc = new NotificationModel({
+        createdBy: adminId,
+        notification: [{ message: notificationMessage }],
+      });
+    } else {
+      notificationDoc.notification.push({ message: notificationMessage });
+    }
+
+    await notificationDoc.save();
+
     return { success: true, message: "User added successfully" };
   } catch (error) {
     throw new Error("Error saving user data");
