@@ -2,7 +2,8 @@ import {
   adminVerfication,
   userVerfication,
   userCollectionSave,
-  userUpdateSpread
+  userUpdateSpread,
+  updateNotification,
 } from "../../helper/Admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
 import bcrypt from "bcrypt";
@@ -65,12 +66,11 @@ export const userLoginController = async (req, res, next) => {
   }
 };
 
-
 export const updateSpread = async (req, res, next) => {
   try {
     const { adminId, userId } = req.params;
     const { spread } = req.body;
-    const response = await userUpdateSpread(adminId, userId , spread);
+    const response = await userUpdateSpread(adminId, userId, spread);
     res
       .status(200)
       .json({ message: response.message, success: response.success });
@@ -79,4 +79,14 @@ export const updateSpread = async (req, res, next) => {
   }
 };
 
-
+export const deleteNotification = async (req, res, next) => {
+  try {
+    const { adminId, notificationId } = req.params;
+    const response = await updateNotification(adminId, notificationId);
+    res
+      .status(200)
+      .json({ message: response.message, success: response.success });
+  } catch (error) {
+    next(error);
+  }
+};
