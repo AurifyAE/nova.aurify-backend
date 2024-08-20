@@ -2,12 +2,12 @@
 import mongoose from "mongoose";
 
 const SpreadValueSchema = new mongoose.Schema({
-    adminId: {
+    createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Admin",
         required: true,
     },
-    spreadValues: [Number],
+    spreadValues: [{ spreadValue: { type: Number, required: true } }],
 });
 
 const SpreadValueModel = mongoose.model("SpreadValue", SpreadValueSchema);

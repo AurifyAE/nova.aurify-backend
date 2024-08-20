@@ -3,7 +3,8 @@ import {
   getUsersForAdmin,
   addSpreadValue,
   getSpreadValues,
-} from "../../helper/Admin/adminHelper.js";
+  deleteSpreadValue
+} from "../../helper/admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
 import bcrypt from "bcrypt";
 import adminModel from "../../model/adminSchema.js";
@@ -222,6 +223,29 @@ export const fetchSpreadValues = async (req, res, next) => {
     const { adminId } = req.params;
     const response = await getSpreadValues(adminId);
     res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteSpreadValueController = async (req, res, next) => {
+  try {
+    const { spreadValueId } = req.params;
+    const { email } = req.query; // Assuming you'll send admin email as a query parameter
+
+    const result = await deleteSpreadValue(email, spreadValueId);
+
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        message: result.message
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: result.message
+      });
+    }
   } catch (error) {
     next(error);
   }
