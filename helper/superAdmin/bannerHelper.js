@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import BannerModel from "../../model/bannerSchema.js";
 import NotificationModel from "../../model/notificationSchema.js";
+import FCMTokenModel from "../../model/fcmTokenSchema.js";
+import NotificationService from '../../utils/sendPushNotification.js'
 export const addNewBanner = async (data) => {
   try {
     const { title, imageUrl, adminId } = data;
@@ -40,8 +42,32 @@ export const addNewBanner = async (data) => {
     }
     await notificationDoc.save();
 
+    const fcmTokens = await FCMTokenModel.findOne({ createdBy: objectId })
+      .select("FCMTokens.token")
+      .lean();
+
+    if (fcmTokens && fcmTokens.FCMTokens.length > 0) {
+      // Send push notifications to all tokens
+      for (const tokenObj of fcmTokens.FCMTokens) {
+        try {
+          await NotificationService.sendNotification(
+            tokenObj.token,
+            "New Banner Added",
+            notificationMessage,
+            {
+              bannerTitle: title,
+              imageUrl: imageUrl,
+            }
+          );
+        } catch (error) {
+          console.error(`Failed to send notification to token: ${tokenObj.token}`, error);
+        }
+      }
+    }
+
     return bannerDoc;
   } catch (error) {
+    console.error("Error adding banner and sending notification:", error);
     throw new Error("Error adding banner and sending notification");
   }
 };

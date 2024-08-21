@@ -2,6 +2,7 @@ import adminModel from "../../model/adminSchema.js";
 import bcrypt from "bcrypt";
 import { UsersModel } from "../../model/usersSchema.js";
 import NotificationModel from "../../model/notificationSchema.js";
+import FCMTokenModel from "../../model/fcmTokenSchema.js";
 // Function to hash the password
 const hashPassword = async (password) => {
   try {
@@ -104,12 +105,47 @@ export const userUpdateSpread = async (adminId, userId, spread) => {
 
 export const updateNotification = async (adminId, notificationId) => {
   try {
-    await NotificationsModel.updateOne(
+    await NotificationModel.updateOne(
       { createdBy: adminId },
       { $pull: { notification: { _id: notificationId } } }
     );
     return { success: true, message: "Notification cleared" };
   } catch (error) {
     throw new Error("Error updating notification" + error.message);
+  }
+};
+
+export const addFCMToken = async (email, fcmToken) => {
+  try {
+    const admin = await adminModel.findOne({ email });
+
+    if (!admin) {
+      return { success: false, message: "Invalid email. Admin not found." };
+    }
+
+    let fcmEntry = await FCMTokenModel.findOne({ createdBy: admin._id });
+
+    if (fcmEntry) {
+      const tokenExists = fcmEntry.FCMTokens.some(
+        (tokenObj) => tokenObj.token === fcmToken
+      );
+
+      if (tokenExists) {
+        return { success: false, message: "FCM token already exists." };
+      } else {
+        fcmEntry.FCMTokens.push({ token: fcmToken });
+      }
+    } else {
+      fcmEntry = new FCMTokenModel({
+        FCMTokens: [{ token: fcmToken }],
+        createdBy: admin._id,
+      });
+    }
+
+    await fcmEntry.save();
+
+    return { success: true, message: "FCM token successfully added." };
+  } catch (error) {
+    throw new Error("Error FCMToken " + error.message);
   }
 };
