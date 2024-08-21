@@ -1,10 +1,12 @@
-import { shopModel } from "../../model/shopSchema.js";
+import shopModel from "../../model/shopSchema.js";
 import adminModel from '../../model/adminSchema.js';
 import { createAppError } from '../../utils/errorHandler.js';
 
 // Add a new shop item
 export const addShopItem = async (email, name, type, weight, rate, image) => {
     try {
+        console.log("emailll", email, name, type);
+
         const admin = await adminModel.findOne({ email });
 
         if (!admin) {
@@ -52,6 +54,7 @@ export const updateShopItem = async (email, shopItemId, updatedData) => {
         if (!admin) {
             throw createAppError("Admin not found.", 404);
         }
+
 
         const result = await shopModel.findOneAndUpdate(
             { createdBy: admin._id, "shops._id": shopItemId },
