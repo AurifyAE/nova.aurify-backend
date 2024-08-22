@@ -18,8 +18,13 @@ const adminSchema = new mongoose.Schema(
     ],
     features: [
       {
-        name: { type: String, required: true },
+        name: { type: String },
         enabled: { type: Boolean, default: true },
+      },
+    ],
+    commodities: [
+      {
+        symbol: { type: String, required: true },
       },
     ],
     workCompletionDate: { type: Date },
