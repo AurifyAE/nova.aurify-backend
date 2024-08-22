@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import adminRouter from './router/admin/adminRouter.js'
 import superRouter from './router/super/superRouter.js'
 import { mongodb } from "./config/connaction.js";
-import { errorHandler} from "./utils/errorHandler.js";
+import { errorHandler } from "./utils/errorHandler.js";
 
 dotenv.config();
 
@@ -25,11 +25,13 @@ app.use(
   })
 );
 
+
 //database connecting
 mongodb();
 
 app.use("/api", adminRouter);
 app.use("/admin", superRouter);
+
 
 // Global error handling middleware
 app.use(errorHandler);

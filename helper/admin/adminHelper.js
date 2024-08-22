@@ -1,4 +1,5 @@
 import adminModel from "../../model/adminSchema.js";
+import { SpreadValueModel } from "../../model/spreadValueSchema.js";
 import bcrypt from "bcrypt";
 import { UsersModel } from "../../model/usersSchema.js";
 import NotificationModel from "../../model/notificationSchema.js";
@@ -14,106 +15,90 @@ const hashPassword = async (password) => {
 export const adminVerfication = async (email) => {
   try {
     return await adminModel.findOne({ email });
+
   } catch (error) {
-    throw new Error("Verification failed");
+    console.error("Error in userVerfication:", error.message); 
+    throw new Error("Verification failed: " + error.message);
   }
 };
 
-export const userCollectionSave = async (data, adminId) => {
+export const getUserData = async (userEmail) => {
   try {
-    const { userName, contact, location, email, password } = data;
-    const encrypt = await hashPassword(password);
-    const newUser = {
-      userName,
-      contact,
-      location,
-      email,
-      password: encrypt, // Store the hashed password
-    };
-    let usersDoc = await UsersModel.findOne({ createdBy: adminId });
-    const emailExists = usersDoc?.users.some((user) => user.email === email);
+    return await adminModel.findOne({email: userEmail}).select('-password');
 
-    if (emailExists) {
-      return { success: false, message: "Email already exists for this Admin" };
-    }
-    if (!usersDoc) {
-      usersDoc = new UsersModel({ createdBy: adminId, users: [newUser] });
-    } else {
-      usersDoc.users.push(newUser);
-    }
-    await usersDoc.save();
-    const notificationMessage = `🎉 ${userName} has been added as a new user. Check your admin panel for details!`;
-
-    let notificationDoc = await NotificationModel.findOne({
-      createdBy: adminId,
-    });
-
-    if (!notificationDoc) {
-      notificationDoc = new NotificationModel({
-        createdBy: adminId,
-        notification: [{ message: notificationMessage }],
-      });
-    } else {
-      notificationDoc.notification.push({ message: notificationMessage });
-    }
-
-    await notificationDoc.save();
-
-    return { success: true, message: "User added successfully" };
   } catch (error) {
-    throw new Error("Error saving user data");
+    console.error("Error in finding the user:", error.message); 
+    throw new Error("searching failed: " + error.message);
   }
 };
 
-export const userVerfication = async (adminId, email, password) => {
+
+export const updateUserData = async (id, email, fullName, mobile, location) => {
   try {
-    const usersDoc = await UsersModel.findOne({ createdBy: adminId });
-    if (!usersDoc) {
-      return { success: false, message: "Admin not found" };
-    }
-    const user = usersDoc.users.find((user) => user.email === email);
+    return await adminModel.findByIdAndUpdate(
+      id,
+      { 
+        email: email,
+        userName: fullName,
+        contact: mobile,
+        address: location
+      },
+      { new: true, runValidators: true }
+    ).select('-password');
 
-    if (!user) {
-      return { success: false, message: "Invalid email" };
-    }
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordMatch) {
-      return { success: false, message: "Invalid password." };
-    }
-    return { success: true, message: "Login successful" };
   } catch (error) {
-    throw new Error("Error during login: " + error.message);
+    console.error("Error in updateing the user:", error.message); 
+    throw new Error("Updation failed: " + error.message);
   }
 };
 
-export const userUpdateSpread = async (adminId, userId, spread) => {
+export const updateUserLogo = async (email, logoName) => {
   try {
-    const usersDoc = await UsersModel.findOneAndUpdate(
-      { createdBy: adminId, "users._id": userId },
-      { $set: { "users.$.spread": spread } },
+    return await adminModel.findOneAndUpdate(
+      { email: email },
+      { logo: logoName },
       { new: true }
     );
-    if (!usersDoc) {
-      return { success: false, message: "User not found" };
-    }
-    return { success: true, message: "Spread value updated successfully" };
+
   } catch (error) {
-    throw new Error("Error updating spread value" + error.message);
+    console.error("Error in updating the logo:", error.message); 
+    throw new Error("Logo Updation failed: " + error.message);
   }
 };
 
-export const updateNotification = async (adminId, notificationId) => {
+export const getCommodity = async (email) => {
   try {
-    await NotificationModel.updateOne(
-      { createdBy: adminId },
-      { $pull: { notification: { _id: notificationId } } }
-    );
-    return { success: true, message: "Notification cleared" };
+    return await adminModel.findOne({ email });
+
   } catch (error) {
-    throw new Error("Error updating notification" + error.message);
+    console.error("Error in fetching Commodity:", error.message); 
+    throw new Error("fetching failed: " + error.message);
   }
 };
+export const getMetals = async (userEmail) => {
+  try {
+    console.log('working');
+    return await adminModel.findOne({email: userEmail}).select('-password');
+
+  } catch (error) {
+    console.error("Error in finding the metals:", error.message); 
+    throw new Error("searching failed: " + error.message);
+  }
+};
+
+export const fetchNotification = async (userId) => {
+  try {
+    const createdBy = new mongoose.Types.ObjectId(userId);
+    const notifications = await NotificationModel.find({ createdBy }); 
+    if (!notifications) {
+      return { success: false, message: "Notification not found" };
+    }
+    
+    return { success: true, message: "Notification found", data: notifications };
+  } catch (error) {
+    throw new Error("Error fetching notification: " + error.message);
+  }
+}
 
 export const addFCMToken = async (email, fcmToken) => {
   try {
@@ -147,5 +132,90 @@ export const addFCMToken = async (email, fcmToken) => {
     return { success: true, message: "FCM token successfully added." };
   } catch (error) {
     throw new Error("Error FCMToken " + error.message);
+  }
+};
+
+
+export const getUsersForAdmin = async (adminEmail) => {
+  try {
+    const user = await adminModel.findOne({ email: adminEmail });
+    if (!user) {
+      return null;
+    }
+    const usersDoc = await UsersModel.findOne({ createdBy: user._id });
+
+    if (!usersDoc) {
+      return { success: false, message: "No users found for this admin" };
+    }
+    return { success: true, users: usersDoc.users };
+  } catch (error) {
+    throw new Error("Error fetching users: " + error.message);
+  }
+};
+
+export const addSpreadValue = async (adminEmail, spreadValue, title) => {
+  try {
+    const user = await adminModel.findOne({ email: adminEmail });
+    if (!user) {
+      return { success: false, message: "Admin not found" };
+    }
+
+    // Find the spread value document for this admin, or create a new one if it doesn't exist
+    let spreadDoc = await SpreadValueModel.findOneAndUpdate(
+      { createdBy: user._id },
+      {
+        $push: { spreadValues: { spreadValue, title } },
+        $setOnInsert: { createdBy: user._id }
+      },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true
+      }
+    );
+
+    return { success: true, message: "Spread value added successfully", spreadDoc };
+  } catch (error) {
+    console.error("Error adding spread value:", error);
+    return { success: false, message: error.message };
+  }
+};
+
+export const getSpreadValues = async (adminEmail) => {
+  try {
+    const user = await adminModel.findOne({ email: adminEmail });
+    if (!user) {
+      return null;
+    }
+    const spreadDoc = await SpreadValueModel.findOne({ createdBy: user._id });
+    if (!spreadDoc) {
+      return { success: false, message: "No spread values found for this admin" };
+    }
+    return { success: true, spreadValues: spreadDoc.spreadValues };
+  } catch (error) {
+    throw new Error("Error fetching spread values: " + error.message);
+  }
+};
+
+export const deleteSpreadValue = async (adminEmail, spreadValueId) => {
+  try {
+    const user = await adminModel.findOne({ email: adminEmail });
+    if (!user) {
+      return { success: false, message: "Admin not found" };
+    }
+
+    const result = await SpreadValueModel.updateOne(
+      { createdBy: user._id },
+      { $pull: { spreadValues: { _id: spreadValueId } } }
+    );
+
+    if (result.modifiedCount > 0) {
+      return { success: true, message: "Spread value deleted successfully" };
+    } else {
+      return { success: false, message: "Spread value not found or already deleted" };
+    }
+  } catch (error) {
+    console.error("Error deleting spread value:", error);
+    throw new Error("Error deleting spread value: " + error.message);
   }
 };

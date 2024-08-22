@@ -32,32 +32,34 @@ const adminSchema = new mongoose.Schema({
   serviceStartDate: { type: Date, required: true },
   serviceEndDate: { type: Date },
 
-  // Additional fields for admin features
-  userDetails: {
-    deviceIP: { type: String },
-    location: { type: String },
-    spreadValue: { type: String },
-  },
-  socialMediaLinks: {
-    facebook: { type: String },
-    twitter: { type: String },
-    linkedin: { type: String },
-    instagram: { type: String },
-  },
-  bankDetails: [
-    {
-      holderName: { type: String },
-      bankName: { type: String },
-      accountNumber: { type: String },
-      ibanNumber: { type: String },
-      ifscCode: { type: String },
-      swiftCode: { type: String },
-      branch: { type: String },
-      city: { type: String },
-      country: { type: String },
+    // Additional fields for admin features
+    userDetails: {
+      deviceIP: { type: String },
+      location: { type: String },
+      spreadValue: { type: String },
     },
-  ],
-});
+    socialMediaLinks: {
+      facebook: { type: String },
+      twitter: { type: String },
+      linkedin: { type: String },
+      instagram: { type: String },
+    },
+    bankDetails: [
+      {
+        holderName: { type: String },
+        bankName: { type: String },
+        accountNumber: { type: String },
+        iban: { type: String },
+        ifsc: { type: String },
+        swift: { type: String },
+        branch: { type: String },
+        city: { type: String },
+        country: { type: String },
+        logo: { type: String },
+      },
+    ],
+  },
+);
 
 const adminModel = mongoose.model("Admin", adminSchema);
 export default adminModel;
