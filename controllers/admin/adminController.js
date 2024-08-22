@@ -210,8 +210,8 @@ export const fetchUsersForAdmin = async (req, res, next) => {
 export const addCustomSpread = async (req, res, next) => {
   try {
     const { adminId } = req.params;
-    const { spreadValue } = req.body;
-    const response = await addSpreadValue(adminId, spreadValue);
+    const { spreadValue, title } = req.body;
+    const response = await addSpreadValue(adminId, spreadValue, title);
     res.status(200).json(response);
   } catch (error) {
     next(error);

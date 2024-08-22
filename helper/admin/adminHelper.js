@@ -33,7 +33,7 @@ export const getUsersForAdmin = async (adminEmail) => {
   }
 };
 
-export const addSpreadValue = async (adminEmail, spreadValue) => {
+export const addSpreadValue = async (adminEmail, spreadValue, title) => {
   try {
     const user = await adminModel.findOne({ email: adminEmail });
     if (!user) {
@@ -44,7 +44,7 @@ export const addSpreadValue = async (adminEmail, spreadValue) => {
     let spreadDoc = await SpreadValueModel.findOneAndUpdate(
       { createdBy: user._id },
       {
-        $push: { spreadValues: { spreadValue } },
+        $push: { spreadValues: { spreadValue, title } },
         $setOnInsert: { createdBy: user._id }
       },
       {

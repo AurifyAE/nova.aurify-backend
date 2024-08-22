@@ -1,4 +1,3 @@
-// model/spreadValueSchema.js
 import mongoose from "mongoose";
 
 const SpreadValueSchema = new mongoose.Schema({
@@ -7,7 +6,10 @@ const SpreadValueSchema = new mongoose.Schema({
         ref: "Admin",
         required: true,
     },
-    spreadValues: [{ spreadValue: { type: Number, required: true } }],
+    spreadValues: [{
+        spreadValue: { type: Number, required: true },
+        title: { type: String, required: true, default: "Rate" }
+    }],
 });
 
 const SpreadValueModel = mongoose.model("SpreadValue", SpreadValueSchema);
