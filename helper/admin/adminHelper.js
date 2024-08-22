@@ -1,4 +1,8 @@
 import adminModel from "../../model/adminSchema.js";
+import { SpreadValueModel } from "../../model/spreadValueSchema.js";
+import { UsersModel } from "../../model/userSchema.js";
+
+export const userVerfication = async (email) => {
 import bcrypt from "bcrypt";
 import { UsersModel } from "../../model/usersSchema.js";
 import NotificationModel from "../../model/notificationSchema.js";

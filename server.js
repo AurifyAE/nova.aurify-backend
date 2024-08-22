@@ -6,7 +6,6 @@ import superRouter from './router/super/superRouter.js'
 import { mongodb } from "./config/connaction.js";
 import { errorHandler } from "./utils/errorHandler.js";
 
-
 dotenv.config();
 
 const app = express();
