@@ -4,16 +4,20 @@ import {
   userCollectionSave,
   userUpdateSpread,
   updateNotification,
-} from "../../helper/Admin/adminHelper.js";
+} from "../../helper/admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
 import bcrypt from "bcrypt";
-import { getUserData } from "../../helper/Admin/adminHelper.js";
-import { updateUserData } from "../../helper/Admin/adminHelper.js";
-import { updateUserLogo } from  "../../helper/Admin/adminHelper.js";
+import { getUserData } from "../../helper/admin/adminHelper.js";
+import { updateUserData } from "../../helper/admin/adminHelper.js";
+import { updateUserLogo } from  "../../helper/admin/adminHelper.js";
 import { spotRateModel } from "../../model/spotRateSchema.js";
-import { getCommodity } from "../../helper/Admin/adminHelper.js";
-import { getMetals } from "../../helper/Admin/adminHelper.js"
+import { getCommodity } from "../../helper/admin/adminHelper.js";
+import { getMetals } from "../../helper/admin/adminHelper.js"
+import { fetchNotification } from "../../helper/admin/adminHelper.js";
 import mongoose from "mongoose";
+import jwt from 'jsonwebtoken';
+
+const SECRET_KEY = 'aurify@JWT';
 
 export const adminLoginController = async (req, res, next) => {
   try {
@@ -27,10 +31,12 @@ export const adminLoginController = async (req, res, next) => {
       if (!matchPassword) {
         throw createAppError("Incorrect password.", 401);
       }
+      const token = jwt.sign({ userId: authLogin._id }, SECRET_KEY, { expiresIn: '1h' });
 
       res.status(200).json({
         success: true,
         message: "Authentication successful.",
+        token
       });
     } else {
       throw createAppError("User not found.", 404);
@@ -73,18 +79,18 @@ export const userLoginController = async (req, res, next) => {
   }
 };
 
-export const updateSpread = async (req, res, next) => {
-  try {
-    const { adminId, userId } = req.params;
-    const { spread } = req.body;
-    const response = await userUpdateSpread(adminId, userId, spread);
-    res
-      .status(200)
-      .json({ message: response.message, success: response.success });
-  } catch (error) {
-    next(error);
-  }
-};
+// export const updateSpread = async (req, res, next) => {
+//   try {
+//     const { adminId, userId } = req.params;
+//     const { spread } = req.body;
+//     const response = await userUpdateSpread(adminId, userId, spread);
+//     res
+//       .status(200)
+//       .json({ message: response.message, success: response.success });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 
 export const deleteNotification = async (req, res, next) => {
   try {
@@ -256,7 +262,7 @@ export const getSpotRate = async (req, res, next) => {
 };
 
 
-export const updateCommodity = async (req, res, next) => {
+export const createCommodity = async (req, res, next) => {
   try {
     const { userId, commodity } = req.body;
     const spotrate = await spotRateModel.findOne({ createdBy: userId });
@@ -264,11 +270,11 @@ export const updateCommodity = async (req, res, next) => {
       return res.status(404).json({ message: 'Spotrate not found for this user' });
     }
     spotrate.commodities.push(commodity);
-    await spotrate.save();
-    res.status(200).json({ message: 'Spotrate commodity updated successfully' });
+    const updatedSpotrate = await spotrate.save();
+    res.status(200).json({ message: 'Commodity created successfully', data: updatedSpotrate });
   } catch (error) {
-    console.error('Error updating spotrate commodity:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error creating commodity:', error);
+    res.status(500).json({ message: 'Error creating commodity', error: error.message });
   }
 };
 
@@ -317,5 +323,28 @@ export const getMetalCommodity = async (req, res, next) => {
   } catch (error) {
     console.log('Error:', error.message);
     next(error); // Pass the error to the global error handler
+  }
+};
+
+export const getNotification = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    console.log('Received userId:', userId); // Debug log
+
+    if (!userId) {
+      throw createAppError("User ID is required.", 400);
+    }
+
+    const response = await fetchNotification(userId);
+    console.log('Notification fetch response:', response); // Debug log
+
+    res.status(200).json({ 
+      message: response.message, 
+      success: response.success,
+      data: response.data // If there's data returned, include it
+    });
+  } catch (error) {
+    console.error('Error fetching notifications:', error.message);
+    next(error);
   }
 };

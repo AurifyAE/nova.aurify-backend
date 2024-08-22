@@ -74,3 +74,4 @@ export const getMetals = async (userEmail) => {
     throw new Error("searching failed: " + error.message);
   }
 };
+
