@@ -74,14 +74,11 @@ export const getCommodity = async (email) => {
     throw new Error("fetching failed: " + error.message);
   }
 };
-
 export const getMetals = async (userEmail) => {
   try {
-    await NotificationsModel.updateOne(
-      { createdBy: adminId },
-      { $pull: { notification: { _id: notificationId } } }
-    );
-    return { success: true, message: "Notification cleared" };
+    console.log('working');
+    return await adminModel.findOne({email: userEmail}).select('-password');
+
   } catch (error) {
     console.error("Error in finding the metals:", error.message); 
     throw new Error("searching failed: " + error.message);
