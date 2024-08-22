@@ -355,7 +355,6 @@ export const getNotification = async (req, res, next) => {
 export const saveBankDetailsController = async (req, res, next) => {
   try {
     const { email, bankDetails } = req.body;
-    console.log('haaaai', bankDetails);
     if (!email || !bankDetails) {
       return res.status(400).json({ success: false, message: "Email and bank details are required." });
     }
