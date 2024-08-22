@@ -21,7 +21,7 @@ const SECRET_KEY = 'aurify@JWT';
 
 export const adminLoginController = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password,fcmToken } = req.body;
     const authLogin = await adminVerfication(email);
 
     if (authLogin) {
@@ -31,6 +31,7 @@ export const adminLoginController = async (req, res, next) => {
       if (!matchPassword) {
         throw createAppError("Incorrect password.", 401);
       }
+      await addFCMToken(email,fcmToken);    
       const token = jwt.sign({ userId: authLogin._id }, SECRET_KEY, { expiresIn: '1h' });
 
       res.status(200).json({

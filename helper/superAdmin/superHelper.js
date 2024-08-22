@@ -26,16 +26,26 @@ export const userCollectionSave = async (userData) => {
       commodities = [],
       workCompletionDate,
       serviceStartDate,
+      fcmToken, // Expecting the FCM token to be passed from the frontend
     } = userData;
+
+    // Check if the FCM token is provided
+    if (!fcmToken) {
+      return {
+        success: false,
+        message: "FCM token is required. Please provide a valid FCM token.",
+      };
+    }
+
     // Check if the email already exists
     const existingAdmin = await adminModel.findOne({ email });
     if (existingAdmin) {
       return {
         success: false,
-        message:
-          "The email provided is already in use. Please use a different email.",
+        message: "The email provided is already in use. Please use a different email.",
       };
     }
+
     // Calculate serviceEndDate by adding 365 days to serviceStartDate
     const serviceStartDateObj = new Date(serviceStartDate);
     const serviceEndDate = new Date(serviceStartDateObj);
@@ -44,12 +54,12 @@ export const userCollectionSave = async (userData) => {
     // Transform solutions and features into the correct format
     const formattedSolutions = solutions.map((solution) => ({
       type: solution,
-      enabled: true, // or false, depending on your logic
+      enabled: true,
     }));
 
     const formattedFeatures = features.map((feature) => ({
       name: feature,
-      enabled: true, // or true, depending on your logic
+      enabled: true,
     }));
 
     const formattedCommodities = commodities.map((commodity) => ({
@@ -72,6 +82,7 @@ export const userCollectionSave = async (userData) => {
       workCompletionDate,
       serviceStartDate: serviceStartDateObj,
       serviceEndDate, // Store the calculated serviceEndDate
+      fcmToken, // Store the FCM token
     });
 
     await authCollection.save();
@@ -80,6 +91,7 @@ export const userCollectionSave = async (userData) => {
     throw new Error("Error saving admin data");
   }
 };
+
 export const fetchAdminData = async () => {
   try {
     return await adminModel.find({});
@@ -89,64 +101,26 @@ export const fetchAdminData = async () => {
 };
 export const collectionUpdate = async (adminId, userData) => {
   try {
-    const {
-      userName,
-      logo,
-      address,
-      email,
-      password,
-      contact,
-      whatsapp,
-      userType,
-      solutions,
-      features,
-      workCompletionDate,
-      serviceStartDate,
-    } = userData;
-
     const updateData = {};
 
-    // Populate updateData only with provided fields
-    if (userName) updateData.userName = userName;
-    if (logo) updateData.logo = logo;
-    if (address) updateData.address = address;
-    if (email) updateData.email = email;
-
-    // Hash password only if it's provided
-    if (password) updateData.password = await hashPassword(password);
-
-    if (contact) updateData.contact = contact;
-    if (whatsapp) updateData.whatsapp = whatsapp;
-    if (userType) updateData.userType = userType;
-
-    // Only map if solutions are provided
-    if (solutions) {
-      updateData.solutions = solutions.map((solution) => ({
-        type: solution,
-        enabled: true, // or false, depending on your logic
-      }));
+    // Iterate over the userData object and conditionally add fields to updateData
+    // Process each field dynamically
+    for (const key in userData) {
+      if (userData[key] !== undefined) { // Check if the value is not undefined
+        if (key === "password") {
+          updateData.password = await hashPassword(userData[key]);
+        } else if (key === "solutions" || key === "features" || key === "commodities") {
+          // Handle array fields like solutions, features, and commodities
+          updateData[key] = userData[key].map((item) => ({
+            ...item, // Use spread to copy all properties from item
+            enabled: item.enabled !== undefined ? item.enabled : true,
+          }));
+        } else {
+          updateData[key] = userData[key];
+        }
+      }
     }
-
-    // Only map if features are provided
-    if (features) {
-      updateData.features = features.map((feature) => ({
-        name: feature,
-        enabled: true, // or false, depending on your logic
-      }));
-    }
-
-    if (workCompletionDate) updateData.workCompletionDate = workCompletionDate;
-
-    // Calculate serviceEndDate only if serviceStartDate is provided
-    if (serviceStartDate) {
-      const serviceStartDateObj = new Date(serviceStartDate);
-      const serviceEndDate = new Date(serviceStartDateObj);
-      serviceEndDate.setDate(serviceEndDate.getDate() + 365);
-      updateData.serviceStartDate = serviceStartDateObj;
-      updateData.serviceEndDate = serviceEndDate;
-    }
-
-    // Use the $set operator for efficient field updates
+    // Use $set to update only the provided fields
     const updatedAdmin = await adminModel.findByIdAndUpdate(
       adminId,
       { $set: updateData },
@@ -159,6 +133,6 @@ export const collectionUpdate = async (adminId, userData) => {
 
     return updatedAdmin;
   } catch (error) {
-    throw new Error("Error updating admin data");
+    throw new Error(`Error updating admin data: ${error.message}`);
   }
 };

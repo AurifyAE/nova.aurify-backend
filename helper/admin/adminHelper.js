@@ -1,6 +1,17 @@
 import adminModel from "../../model/adminSchema.js";
-
-export const userVerfication = async (email) => {
+import bcrypt from "bcrypt";
+import { UsersModel } from "../../model/usersSchema.js";
+import NotificationModel from "../../model/notificationSchema.js";
+import FCMTokenModel from "../../model/fcmTokenSchema.js";
+// Function to hash the password
+const hashPassword = async (password) => {
+  try {
+    return await bcrypt.hash(password, 10);
+  } catch (error) {
+    throw new Error("Error hashing password");
+  }
+};
+export const adminVerfication = async (email) => {
   try {
     return await adminModel.findOne({ email });
 
@@ -66,12 +77,48 @@ export const getCommodity = async (email) => {
 
 export const getMetals = async (userEmail) => {
   try {
-    console.log('working');
-    return await adminModel.findOne({email: userEmail}).select('-password');
-
+    await NotificationsModel.updateOne(
+      { createdBy: adminId },
+      { $pull: { notification: { _id: notificationId } } }
+    );
+    return { success: true, message: "Notification cleared" };
   } catch (error) {
     console.error("Error in finding the metals:", error.message); 
     throw new Error("searching failed: " + error.message);
   }
 };
 
+export const addFCMToken = async (email, fcmToken) => {
+  try {
+    const admin = await adminModel.findOne({ email });
+
+    if (!admin) {
+      return { success: false, message: "Invalid email. Admin not found." };
+    }
+
+    let fcmEntry = await FCMTokenModel.findOne({ createdBy: admin._id });
+
+    if (fcmEntry) {
+      const tokenExists = fcmEntry.FCMTokens.some(
+        (tokenObj) => tokenObj.token === fcmToken
+      );
+
+      if (tokenExists) {
+        return { success: false, message: "FCM token already exists." };
+      } else {
+        fcmEntry.FCMTokens.push({ token: fcmToken });
+      }
+    } else {
+      fcmEntry = new FCMTokenModel({
+        FCMTokens: [{ token: fcmToken }],
+        createdBy: admin._id,
+      });
+    }
+
+    await fcmEntry.save();
+
+    return { success: true, message: "FCM token successfully added." };
+  } catch (error) {
+    throw new Error("Error FCMToken " + error.message);
+  }
+};
