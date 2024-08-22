@@ -85,6 +85,20 @@ export const getMetals = async (userEmail) => {
   }
 };
 
+export const fetchNotification = async (userId) => {
+  try {
+    const createdBy = new mongoose.Types.ObjectId(userId);
+    const notifications = await NotificationModel.find({ createdBy }); 
+    if (!notifications) {
+      return { success: false, message: "Notification not found" };
+    }
+    
+    return { success: true, message: "Notification found", data: notifications };
+  } catch (error) {
+    throw new Error("Error fetching notification: " + error.message);
+  }
+}
+
 export const addFCMToken = async (email, fcmToken) => {
   try {
     const admin = await adminModel.findOne({ email });

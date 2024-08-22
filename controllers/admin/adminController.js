@@ -1,9 +1,9 @@
 import {
   adminVerfication,
-  userVerfication,
-  userCollectionSave,
-  userUpdateSpread,
-  updateNotification,
+  // userVerfication,
+  // userCollectionSave,
+  // userUpdateSpread,
+  // updateNotification,
 } from "../../helper/admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
 import bcrypt from "bcrypt";
@@ -13,7 +13,7 @@ import { updateUserLogo } from  "../../helper/admin/adminHelper.js";
 import { spotRateModel } from "../../model/spotRateSchema.js";
 import { getCommodity } from "../../helper/admin/adminHelper.js";
 import { getMetals } from "../../helper/admin/adminHelper.js"
-import { fetchNotification } from "../../helper/admin/adminHelper.js";
+import { fetchNotification, addFCMToken } from "../../helper/admin/adminHelper.js";
 import mongoose from "mongoose";
 import jwt from 'jsonwebtoken';
 
@@ -47,31 +47,31 @@ export const adminLoginController = async (req, res, next) => {
   }
 };
 
-export const registerUser = async (req, res, next) => {
-  try {
-    const { userName, contact, location, email, password } = req.body;
-    const { adminId } = req.params;
-    const data = {
-      userName,
-      contact,
-      location,
-      email,
-      password,
-    };
-    const response = await userCollectionSave(data, adminId);
-    res
-      .status(200)
-      .json({ message: response.message, success: response.success });
-  } catch (error) {
-    next(error);
-  }
-};
+// export const registerUser = async (req, res, next) => {
+//   try {
+//     const { userName, contact, location, email, password } = req.body;
+//     const { adminId } = req.params;
+//     const data = {
+//       userName,
+//       contact,
+//       location,
+//       email,
+//       password,
+//     };
+//     const response = await userCollectionSave(data, adminId);
+//     res
+//       .status(200)
+//       .json({ message: response.message, success: response.success });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 
 export const userLoginController = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const { adminId } = req.params;
-    const response = await userVerfication(adminId, email, password);
+    const response = await adminVerfication(adminId, email, password);
     res
       .status(200)
       .json({ message: response.message, success: response.success });
@@ -93,17 +93,17 @@ export const userLoginController = async (req, res, next) => {
 //   }
 // };
 
-export const deleteNotification = async (req, res, next) => {
-  try {
-    const { adminId, notificationId } = req.params;
-    const response = await updateNotification(adminId, notificationId);
-    res
-      .status(200)
-      .json({ message: response.message, success: response.success });
-  } catch (error) {
-    next(error);
-  }
-};
+// export const deleteNotification = async (req, res, next) => {
+//   try {
+//     const { adminId, notificationId } = req.params;
+//     const response = await updateNotification(adminId, notificationId);
+//     res
+//       .status(200)
+//       .json({ message: response.message, success: response.success });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 
 
 export const getAdminDataController = async (req, res, next) => {
