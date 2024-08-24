@@ -18,6 +18,7 @@ import { adminVerfication } from "../../helper/admin/adminHelper.js";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { generateToken } from "../../utils/jwt.js";
+import { userCollectionSave } from "../../helper/superAdmin/superHelper.js";
 // const SECRET_KEY = 'aurify@JWT';
 
 export const adminLoginController = async (req, res, next) => {
@@ -96,25 +97,26 @@ export const adminTokenVerificationApi = async (req, res, next) => {
 };
 
 
-// export const registerUser = async (req, res, next) => {
-//   try {
-//     const { userName, contact, location, email, password } = req.body;
-//     const { adminId } = req.params;
-//     const data = {
-//       userName,
-//       contact,
-//       location,
-//       email,
-//       password,
-//     };
-//     const response = await userCollectionSave(data, adminId);
-//     res
-//       .status(200)
-//       .json({ message: response.message, success: response.success });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
+export const registerUser = async (req, res, next) => {
+  try {
+    const { userName, contact, location, email, password } = req.body;
+    const { adminId } = req.params;
+    const data = {
+      userName,
+      contact,
+      location,
+      email,
+      password,
+    };
+    console.log(data)
+    // const response = await userCollectionSave(data, adminId);
+    // res
+    //   .status(200)
+    //   .json({ message: response.message, success: response.success });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const userLoginController = async (req, res, next) => {
   try {
