@@ -4,7 +4,9 @@ import {
     updateBankDetailsController,
     deleteBankDetailsController,
     getAdminDataController,
-    getAdminFeaturesController
+    getAdminFeaturesController,
+    getNotification,
+    deleteNotification
 } from "../../controllers/admin/adminController.js";
 
 import {
@@ -34,6 +36,8 @@ import { deleteSpotRateCommodity, updateCommodity } from "../../controllers/admi
 import { getMetalCommodity } from "../../controllers/admin/adminController.js";
 import { adminLoginController } from "../../controllers/admin/adminController.js";
 
+import { getBanner } from "../../controllers/admin/bannerController.js";
+
 import { createShopItem, fetchShopItems, editShopItem, removeShopItem } from "../../controllers/admin/shopController.js";
 
 const router = Router()
@@ -55,12 +59,18 @@ router.patch('/spotrate-commodity/:userId/:commodityId', updateCommodity);
 router.delete('/commodities/:userId/:commodityId', deleteSpotRateCommodity);
 router.get('metalCommodities/:email', getMetalCommodity);
 
+router.get('/notifications/:userId',getNotification);
+router.delete('/notifications/:userId/:notificationId',deleteNotification);
+
 
 router.post('/save-bank-details', saveBankDetailsController);
 router.delete('/delete-bank-details', deleteBankDetailsController);
 router.put('/update-bank-details', updateBankDetailsController);
 
 router.get('/features', getAdminFeaturesController);
+
+router.get('/banners/:userId',getBanner);
+
 
 //news-routers
 router.post('/add-manual-news', addManualNewsController);

@@ -32,13 +32,10 @@ export const addManualNews = async (email, title, description) => {
 
 export const getManualNews = async (email) => {
     try {
-        console.log('Searching for admin with email:', email);
         const admin = await adminModel.findOne({ email });
         if (!admin) {
-            console.log('Admin not found for email:', email);
             throw createAppError("Admin not found.", 404);
         }
-        console.log('Admin found:', admin);
         const news = await newsModel.findOne({ createdBy: admin._id }).populate('createdBy', 'userName');
         return news;
     } catch (error) {
@@ -53,7 +50,6 @@ export const updateManualNews = async (email, newsId, newsItemId, updatedData) =
         if (!admin) {
             throw createAppError("Admin not found.", 404);
         }
-        console.log(newsId, email, newsItemId);
         const result = await newsModel.findOneAndUpdate(
             { createdBy: admin._id, "news._id": newsItemId },
             {
@@ -64,7 +60,6 @@ export const updateManualNews = async (email, newsId, newsItemId, updatedData) =
             },
             { new: true }
         );
-        console.log("result", result);
         if (!result) {
             throw createAppError("News item not found or update failed.", 404);
         }
@@ -77,14 +72,10 @@ export const updateManualNews = async (email, newsId, newsItemId, updatedData) =
 
 export const deleteManualNews = async (email, newsId, newsItemId) => {
     try {
-        console.log('Deleting news for email:', email, 'newsId:', newsId, 'newsItemId:', newsItemId);
         const admin = await adminModel.findOne({ email });
         if (!admin) {
-            console.log('Admin not found for email:', email);
-            throw createAppError("Admin not found.", 404);
+           throw createAppError("Admin not found.", 404);
         }
-        console.log('Admin found:', admin);
-
         const result = await newsModel.findOneAndUpdate(
             { createdBy: admin._id },
             {

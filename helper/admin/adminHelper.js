@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import { UsersModel } from "../../model/usersSchema.js";
 import NotificationModel from "../../model/notificationSchema.js";
 import FCMTokenModel from "../../model/fcmTokenSchema.js";
+import mongoose from "mongoose";
 // Function to hash the password
 const hashPassword = async (password) => {
   try {
@@ -77,7 +78,6 @@ export const getCommodity = async (email) => {
 };
 export const getMetals = async (userEmail) => {
   try {
-    console.log('working');
     return await adminModel.findOne({email: userEmail}).select('-password');
 
   } catch (error) {
@@ -89,7 +89,7 @@ export const getMetals = async (userEmail) => {
 export const fetchNotification = async (userId) => {
   try {
     const createdBy = new mongoose.Types.ObjectId(userId);
-    const notifications = await NotificationModel.find({ createdBy }); 
+    const notifications = await NotificationModel.findOne({ createdBy });
     if (!notifications) {
       return { success: false, message: "Notification not found" };
     }
@@ -217,5 +217,17 @@ export const deleteSpreadValue = async (adminEmail, spreadValueId) => {
   } catch (error) {
     console.error("Error deleting spread value:", error);
     throw new Error("Error deleting spread value: " + error.message);
+  }
+};
+
+export const updateNotification = async (adminId, notificationId) => {
+  try {
+    await NotificationModel.updateOne(
+      { createdBy: adminId },
+      { $pull: { notification: { _id: notificationId } } }
+    );
+    return { success: true, message: "Notification cleared" };
+  } catch (error) {
+    throw new Error("Error updating notification" + error.message);
   }
 };

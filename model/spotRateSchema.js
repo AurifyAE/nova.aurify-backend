@@ -6,26 +6,34 @@ const SpotRateSchema = new mongoose.Schema({
     ref: "Admin",
     required: true,
   },
-  silverAskSpread: { types: Number },
-  silverBidSpread: { types: Number },
-  goldAskSpread: { types: Number },
-  goldBidSpread: { types: Number },
-  goldLowValueMargin: { types: Number },
-  goldHighValueMargin: { types: Number },
-  silverLowValueMargin: { types: Number },
-  silverHighValueMargin: { types: Number },
+  silverAskSpread: { type: Number, default: 0 },
+  silverBidSpread: { type: Number, default: 0 },
+  goldAskSpread: { type: Number, default: 0 },
+  goldBidSpread: { type: Number, default: 0 },
+  copperAskSpread: { type: Number, default: 0 },
+  copperBidSpread: { type: Number, default: 0 },
+  platinumAskSpread: { type: Number, default: 0 },
+  platinumBidSpread: { type: Number, default: 0 },
+  goldLowMargin: { type: Number, default: 0 },
+  goldHighMargin: { type: Number, default: 0 },
+  silverLowMargin: { type: Number, default: 0 },
+  silverHighMargin: { type: Number, default: 0 },
+  copperLowMargin: { type: Number, default: 0 },
+  copperHighMargin: { type: Number, default: 0 },
+  platinumLowMargin: { type: Number, default: 0 },
+  platinumHighMargin: { type: Number, default: 0 },
   commodities: [
     {
       metal: { type: String },
-      purity: { type: Number },
-      unit: { type: Number },
+      purity: { type: Number, default: 0 },
+      unit: { type: Number, default: 0 },
       weight: { type: String },
-      buyPremium: { type: Number },
-      sellPremium: { type: Number },
+      buyPremium: { type: Number, default: 0 },
+      sellPremium: { type: Number, default: 0 },
     },
   ],
 });
 
-const spotRateModel = new mongoose.model("SpotRate", SpotRateSchema);
+const spotRateModel = mongoose.model("SpotRate", SpotRateSchema);
 
 export { spotRateModel };
