@@ -29,14 +29,7 @@ export const userCollectionSave = async (userData) => {
       fcmToken, // Expecting the FCM token to be passed from the frontend
     } = userData;
 
-    // Check if the FCM token is provided
-    if (!fcmToken) {
-      return {
-        success: false,
-        message: "FCM token is required. Please provide a valid FCM token.",
-      };
-    }
-
+    
     // Check if the email already exists
     const existingAdmin = await adminModel.findOne({ email });
     if (existingAdmin) {
@@ -82,7 +75,6 @@ export const userCollectionSave = async (userData) => {
       workCompletionDate,
       serviceStartDate: serviceStartDateObj,
       serviceEndDate, // Store the calculated serviceEndDate
-      fcmToken, // Store the FCM token
     });
 
     await authCollection.save();

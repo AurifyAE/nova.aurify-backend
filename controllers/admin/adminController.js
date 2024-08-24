@@ -2,28 +2,30 @@ import {
   getUsersForAdmin,
   addSpreadValue,
   getSpreadValues,
-  deleteSpreadValue
+  deleteSpreadValue,
 } from "../../helper/admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
 import bcrypt from "bcrypt";
 import { getUserData } from "../../helper/admin/adminHelper.js";
 import { updateUserData } from "../../helper/admin/adminHelper.js";
-import { updateUserLogo } from  "../../helper/admin/adminHelper.js";
+import { updateUserLogo } from "../../helper/admin/adminHelper.js";
 import { spotRateModel } from "../../model/spotRateSchema.js";
 import { getCommodity } from "../../helper/admin/adminHelper.js";
-import { getMetals } from "../../helper/admin/adminHelper.js"
-import { fetchNotification, addFCMToken } from "../../helper/admin/adminHelper.js";
+import { getMetals } from "../../helper/admin/adminHelper.js";
+import {
+  fetchNotification,
+  addFCMToken,
+} from "../../helper/admin/adminHelper.js";
 import adminModel from "../../model/adminSchema.js";
 import { adminVerfication } from "../../helper/admin/adminHelper.js";
 import mongoose from "mongoose";
-import jwt from 'jsonwebtoken';
-
-const SECRET_KEY = 'aurify@JWT';
+import jwt from "jsonwebtoken";
+import { generateToken } from "../../utils/jwt.js";
+// const SECRET_KEY = 'aurify@JWT';
 
 export const adminLoginController = async (req, res, next) => {
   try {
-    const { email, password,fcmToken } = req.body;
-    console.log(fcmToken);
+    const { email, password, fcmToken, rememberMe } = req.body;
     const authLogin = await adminVerfication(email);
 
     if (authLogin) {
@@ -33,14 +35,15 @@ export const adminLoginController = async (req, res, next) => {
       if (!matchPassword) {
         throw createAppError("Incorrect password.", 401);
       }
-      await addFCMToken(email,fcmToken);    
-      const token = jwt.sign({ userId: authLogin._id }, SECRET_KEY, { expiresIn: '1h' });
+      await addFCMToken(email, fcmToken);
+      const expiresIn = rememberMe ? "30d" : "3d";
+      const token = generateToken({ adminId: authLogin._id }, expiresIn);
 
       res.status(200).json({
         success: true,
         message: "Authentication successful.",
-        token
-      });
+        token,
+      }); 
     } else {
       throw createAppError("User not found.", 404);
     }
@@ -48,6 +51,53 @@ export const adminLoginController = async (req, res, next) => {
     next(error);
   }
 };
+
+
+export const adminTokenVerificationApi = async (req, res, next) => {
+  try {
+    const token = req.body.token;
+    if (!token) {
+      return res.status(401).json({ message: 'Authentication token is missing' });
+    }
+
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+
+    // Fetch admin data using the decoded adminId
+    const admin = await adminModel.findById(decoded.adminId);
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    const currentDate = new Date();
+    const serviceEndDate = new Date(admin.serviceEndDate);
+
+    if (serviceEndDate < currentDate) {
+      // If service has expired
+      return res.status(403).json({
+        message: 'Your service has ended. Please renew to continue using the system.',
+        serviceExpired: true
+      });
+    }
+
+    // If the token is valid and service is active
+    res.status(200).json({
+      admin: {
+        adminId: admin._id,
+        serviceEndDate: admin.serviceEndDate,
+      },
+      serviceExpired: false
+    });
+
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token has expired', tokenExpired: true });
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Invalid token', tokenInvalid: true });
+    }
+    next(error);
+  }
+};
+
 
 // export const registerUser = async (req, res, next) => {
 //   try {
@@ -107,7 +157,6 @@ export const userLoginController = async (req, res, next) => {
 //   }
 // };
 
-
 export const getAdminDataController = async (req, res, next) => {
   try {
     const userEmail = req.params.email;
@@ -126,26 +175,30 @@ export const getAdminDataController = async (req, res, next) => {
       data: adminData,
     });
   } catch (error) {
-    console.log('Error:', error.message);
+    console.log("Error:", error.message);
     next(error); // Pass the error to the global error handler
   }
 };
-
-
 
 export const updateAdminProfileController = async (req, res, next) => {
   try {
     const { id } = req.params; // Get ID from URL parameters
     const { email, fullName, mobile, location } = req.body; // Get updated data from request body
 
-    console.log('Request body:', req.body); // Log the request body
-    console.log('URL parameters:', req.params); // Log the URL parameters
+    console.log("Request body:", req.body); // Log the request body
+    console.log("URL parameters:", req.params); // Log the URL parameters
 
     if (!id) {
       throw createAppError("ID parameter is required.", 400);
     }
 
-    const updateAdminData = await updateUserData(id, email, fullName, mobile, location);
+    const updateAdminData = await updateUserData(
+      id,
+      email,
+      fullName,
+      mobile,
+      location
+    );
     // Find the admin by ID and update the fields
 
     if (!updateAdminData) {
@@ -155,11 +208,10 @@ export const updateAdminProfileController = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Profile updated successfully.",
-      data: updateAdminData
+      data: updateAdminData,
     });
-
   } catch (error) {
-    console.log('Error updating profile:', error.message);
+    console.log("Error updating profile:", error.message);
     next(error); // Pass the error to the global error handler
   }
 };
@@ -172,17 +224,19 @@ export const updateLogo = async (req, res) => {
     // Update the user's logo in the database
     const updatedUser = await updateUserLogo(email, logoName);
     if (!updatedUser) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     res.json({
       success: true,
-      message: 'Logo updated successfully',
-      data: { logo: logoName }
+      message: "Logo updated successfully",
+      data: { logo: logoName },
     });
   } catch (error) {
-    console.error('Error updating logo:', error);
-    res.status(500).json({ success: false, message: 'Error updating logo' });
+    console.error("Error updating logo:", error);
+    res.status(500).json({ success: false, message: "Error updating logo" });
   }
 };
 
@@ -202,7 +256,9 @@ export const updateSpread = async (req, res) => {
     }
 
     // Update the appropriate field based on metal and type
-    const fieldName = `${metal.toLowerCase()}${type.charAt(0).toUpperCase() + type.slice(1)}Spread`;
+    const fieldName = `${metal.toLowerCase()}${
+      type.charAt(0).toUpperCase() + type.slice(1)
+    }Spread`;
     const updateObj = { [fieldName]: spread };
     const updatedSpotRate = await spotRateModel.findOneAndUpdate(
       { createdBy },
@@ -210,18 +266,19 @@ export const updateSpread = async (req, res) => {
       { new: true, upsert: true, runValidators: false }
     );
     if (!updatedSpotRate) {
-      return res.status(404).json({ message: 'SpotRate not found and could not be created' });
+      return res
+        .status(404)
+        .json({ message: "SpotRate not found and could not be created" });
     }
 
-    res.status(200).json({ message: 'Spread updated successfully', data: updatedSpotRate });
-
+    res
+      .status(200)
+      .json({ message: "Spread updated successfully", data: updatedSpotRate });
   } catch (error) {
-    console.error('Error updating spread:', error);
-    res.status(500).json({ message: 'Error updating spread' });
+    console.error("Error updating spread:", error);
+    res.status(500).json({ message: "Error updating spread" });
   }
 };
-
-
 
 export const getCommodityController = async (req, res, next) => {
   try {
@@ -241,7 +298,7 @@ export const getCommodityController = async (req, res, next) => {
       data: commodityData,
     });
   } catch (error) {
-    console.log('Error:', error.message);
+    console.log("Error:", error.message);
     next(error); // Pass the error to the global error handler
   }
 };
@@ -249,35 +306,44 @@ export const getCommodityController = async (req, res, next) => {
 export const getSpotRate = async (req, res, next) => {
   try {
     const { userId } = req.params;
-    
+
     const spotRates = await spotRateModel.findOne({ createdBy: userId });
-    
+
     if (!spotRates) {
-      return res.status(404).json({ message: 'Spot rates not found for this user' });
+      return res
+        .status(404)
+        .json({ message: "Spot rates not found for this user" });
     }
-    
+
     res.json(spotRates);
   } catch (error) {
-    console.error('Error fetching spot rates:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error fetching spot rates:", error);
+    res.status(500).json({ message: "Server error" });
   }
-
 };
-
 
 export const createCommodity = async (req, res, next) => {
   try {
     const { userId, commodity } = req.body;
     const spotrate = await spotRateModel.findOne({ createdBy: userId });
     if (!spotrate) {
-      return res.status(404).json({ message: 'Spotrate not found for this user' });
+      return res
+        .status(404)
+        .json({ message: "Spotrate not found for this user" });
     }
     spotrate.commodities.push(commodity);
     const updatedSpotrate = await spotrate.save();
-    res.status(200).json({ message: 'Commodity created successfully', data: updatedSpotrate });
+    res
+      .status(200)
+      .json({
+        message: "Commodity created successfully",
+        data: updatedSpotrate,
+      });
   } catch (error) {
-    console.error('Error creating commodity:', error);
-    res.status(500).json({ message: 'Error creating commodity', error: error.message });
+    console.error("Error creating commodity:", error);
+    res
+      .status(500)
+      .json({ message: "Error creating commodity", error: error.message });
   }
 };
 
@@ -288,7 +354,9 @@ export const getSpotRateCommodity = async (req, res, next) => {
       throw createAppError("email parameter is required.", 400);
     }
 
-    const spotRateCommodity = await spotRateModel.findOne({ createdBy: userId });
+    const spotRateCommodity = await spotRateModel.findOne({
+      createdBy: userId,
+    });
 
     if (!spotRateCommodity) {
       throw createAppError("data not found.", 404);
@@ -299,7 +367,7 @@ export const getSpotRateCommodity = async (req, res, next) => {
       data: adminData,
     });
   } catch (error) {
-    console.log('Error:', error.message);
+    console.log("Error:", error.message);
     next(error); // Pass the error to the global error handler
   }
 };
@@ -307,7 +375,7 @@ export const getSpotRateCommodity = async (req, res, next) => {
 export const getMetalCommodity = async (req, res, next) => {
   try {
     const userEmail = req.params.email;
-    console.log('user : ', userEmail);
+    console.log("user : ", userEmail);
     if (!userEmail) {
       throw createAppError("Id is required.", 400);
     }
@@ -324,7 +392,7 @@ export const getMetalCommodity = async (req, res, next) => {
       data: metalData,
     });
   } catch (error) {
-    console.log('Error:', error.message);
+    console.log("Error:", error.message);
     next(error); // Pass the error to the global error handler
   }
 };
@@ -332,22 +400,22 @@ export const getMetalCommodity = async (req, res, next) => {
 export const getNotification = async (req, res, next) => {
   try {
     const { userId } = req.params;
-    console.log('Received userId:', userId); // Debug log
+    console.log("Received userId:", userId); // Debug log
 
     if (!userId) {
       throw createAppError("User ID is required.", 400);
     }
 
     const response = await fetchNotification(userId);
-    console.log('Notification fetch response:', response); // Debug log
+    console.log("Notification fetch response:", response); // Debug log
 
-    res.status(200).json({ 
-      message: response.message, 
+    res.status(200).json({
+      message: response.message,
       success: response.success,
-      data: response.data // If there's data returned, include it
+      data: response.data, // If there's data returned, include it
     });
   } catch (error) {
-    console.error('Error fetching notifications:', error.message);
+    console.error("Error fetching notifications:", error.message);
     next(error);
   }
 };
@@ -355,15 +423,22 @@ export const getNotification = async (req, res, next) => {
 export const saveBankDetailsController = async (req, res, next) => {
   try {
     const { email, bankDetails } = req.body;
-    console.log('haaaai', bankDetails);
+    console.log("haaaai", bankDetails);
     if (!email || !bankDetails) {
-      return res.status(400).json({ success: false, message: "Email and bank details are required." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Email and bank details are required.",
+        });
     }
 
     const admin = await adminModel.findOne({ email });
 
     if (!admin) {
-      return res.status(404).json({ success: false, message: "Admin not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found." });
     }
 
     // Push the new bank details to the bankDetails array
@@ -375,10 +450,10 @@ export const saveBankDetailsController = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Bank details saved successfully",
-      data: admin.bankDetails
+      data: admin.bankDetails,
     });
   } catch (error) {
-    console.log('Error saving bank details:', error.message);
+    console.log("Error saving bank details:", error.message);
     next(error);
   }
 };
@@ -389,24 +464,38 @@ export const updateBankDetailsController = async (req, res, next) => {
     const { email, bankDetails } = req.body;
 
     if (!email || !bankDetails) {
-      return res.status(400).json({ success: false, message: "Email and bank details are required." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Email and bank details are required.",
+        });
     }
 
     const admin = await adminModel.findOne({ email });
 
     if (!admin) {
-      return res.status(404).json({ success: false, message: "Admin not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found." });
     }
 
     // Find the index of the bank details to update
-    const bankIndex = admin.bankDetails.findIndex(b => b.accountNumber === bankDetails.accountNumber);
+    const bankIndex = admin.bankDetails.findIndex(
+      (b) => b.accountNumber === bankDetails.accountNumber
+    );
 
     if (bankIndex === -1) {
-      return res.status(404).json({ success: false, message: "Bank details not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Bank details not found." });
     }
 
     // Update the bank details
-    admin.bankDetails[bankIndex] = { ...admin.bankDetails[bankIndex], ...bankDetails };
+    admin.bankDetails[bankIndex] = {
+      ...admin.bankDetails[bankIndex],
+      ...bankDetails,
+    };
 
     // Save the updated admin document
     await admin.save();
@@ -414,14 +503,13 @@ export const updateBankDetailsController = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Bank details updated successfully",
-      data: admin.bankDetails
+      data: admin.bankDetails,
     });
   } catch (error) {
-    console.error('Error updating bank details:', error.message);
+    console.error("Error updating bank details:", error.message);
     next(error);
   }
 };
-
 
 // Delete bank details
 export const deleteBankDetailsController = async (req, res, next) => {
@@ -429,17 +517,26 @@ export const deleteBankDetailsController = async (req, res, next) => {
     const { email, accountNumber } = req.body;
 
     if (!email || !accountNumber) {
-      return res.status(400).json({ success: false, message: "Email and account number are required." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Email and account number are required.",
+        });
     }
 
     const admin = await adminModel.findOne({ email });
 
     if (!admin) {
-      return res.status(404).json({ success: false, message: "Admin not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found." });
     }
 
     // Remove the bank details
-    admin.bankDetails = admin.bankDetails.filter(b => b.accountNumber !== accountNumber);
+    admin.bankDetails = admin.bankDetails.filter(
+      (b) => b.accountNumber !== accountNumber
+    );
 
     // Save the updated admin document
     await admin.save();
@@ -447,32 +544,35 @@ export const deleteBankDetailsController = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Bank details deleted successfully",
-      data: admin.bankDetails
+      data: admin.bankDetails,
     });
   } catch (error) {
-    console.error('Error deleting bank details:', error.message);
+    console.error("Error deleting bank details:", error.message);
     next(error);
   }
 };
 
-
-//Sidebar Features 
+//Sidebar Features
 export const getAdminFeaturesController = async (req, res, next) => {
   try {
     const { email } = req.query; // Using query parameter for consistency with your frontend
 
-    console.log('Received email:', email);
+    console.log("Received email:", email);
 
     if (!email) {
-      return res.status(400).json({ success: false, message: "Email parameter is required." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email parameter is required." });
     }
 
-    const admin = await adminModel.findOne({ email }).select('features');
+    const admin = await adminModel.findOne({ email }).select("features");
 
-    console.log('Found admin:', admin);
+    console.log("Found admin:", admin);
 
     if (!admin) {
-      return res.status(404).json({ success: false, message: "Admin not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found." });
     }
 
     // Assuming 'features' is an array in your admin document
@@ -481,14 +581,13 @@ export const getAdminFeaturesController = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Features fetched successfully",
-      data: features
+      data: features,
     });
   } catch (error) {
-    console.error('Error fetching admin features:', error.message);
+    console.error("Error fetching admin features:", error.message);
     next(error);
   }
 };
-
 
 export const fetchUsersForAdmin = async (req, res, next) => {
   try {
@@ -531,12 +630,12 @@ export const deleteSpreadValueController = async (req, res, next) => {
     if (result.success) {
       res.status(200).json({
         success: true,
-        message: result.message
+        message: result.message,
       });
     } else {
       res.status(404).json({
         success: false,
-        message: result.message
+        message: result.message,
       });
     }
   } catch (error) {

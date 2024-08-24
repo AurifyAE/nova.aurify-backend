@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const FCMTokenSchema = new mongoose.Schema({
     FCMTokens: [
     {
-      token: { type: String, required: true },
+      token: { type: String},
     },
   ],
 
