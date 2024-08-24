@@ -12,7 +12,7 @@ import { updateUserLogo } from  "../../helper/admin/adminHelper.js";
 import { spotRateModel } from "../../model/spotRateSchema.js";
 import { getCommodity } from "../../helper/admin/adminHelper.js";
 import { getMetals } from "../../helper/admin/adminHelper.js"
-import { fetchNotification, addFCMToken } from "../../helper/admin/adminHelper.js";
+import { fetchNotification, addFCMToken, updateNotification } from "../../helper/admin/adminHelper.js";
 import adminModel from "../../model/adminSchema.js";
 import { adminVerfication } from "../../helper/admin/adminHelper.js";
 import mongoose from "mongoose";
@@ -23,7 +23,6 @@ const SECRET_KEY = 'aurify@JWT';
 export const adminLoginController = async (req, res, next) => {
   try {
     const { email, password,fcmToken } = req.body;
-    console.log(fcmToken);
     const authLogin = await adminVerfication(email);
 
     if (authLogin) {
@@ -95,17 +94,17 @@ export const userLoginController = async (req, res, next) => {
 //   }
 // };
 
-// export const deleteNotification = async (req, res, next) => {
-//   try {
-//     const { adminId, notificationId } = req.params;
-//     const response = await updateNotification(adminId, notificationId);
-//     res
-//       .status(200)
-//       .json({ message: response.message, success: response.success });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
+export const deleteNotification = async (req, res, next) => {
+  try {
+    const { userId, notificationId } = req.params;
+    const response = await updateNotification(userId, notificationId);
+    res
+      .status(200)
+      .json({ message: response.message, success: response.success });
+  } catch (error) {
+    next(error);
+  }
+};
 
 
 export const getAdminDataController = async (req, res, next) => {
@@ -137,9 +136,6 @@ export const updateAdminProfileController = async (req, res, next) => {
   try {
     const { id } = req.params; // Get ID from URL parameters
     const { email, fullName, mobile, location } = req.body; // Get updated data from request body
-
-    console.log('Request body:', req.body); // Log the request body
-    console.log('URL parameters:', req.params); // Log the URL parameters
 
     if (!id) {
       throw createAppError("ID parameter is required.", 400);
@@ -187,11 +183,10 @@ export const updateLogo = async (req, res) => {
 };
 
 export const updateSpread = async (req, res) => {
-  const { userId, metal, type, spread } = req.body;
+  const { userId, metal, type, value   } = req.body;
 
   try {
     const createdBy = new mongoose.Types.ObjectId(userId);
-    console.log(createdBy);
     let spotRate = await spotRateModel.findOne({ createdBy });
 
     if (!spotRate) {
@@ -202,8 +197,15 @@ export const updateSpread = async (req, res) => {
     }
 
     // Update the appropriate field based on metal and type
-    const fieldName = `${metal.toLowerCase()}${type.charAt(0).toUpperCase() + type.slice(1)}Spread`;
-    const updateObj = { [fieldName]: spread };
+    let fieldName;
+    if (type === 'bid' || type === 'ask') {
+      fieldName = `${metal.toLowerCase()}${type.charAt(0).toUpperCase() + type.slice(1)}Spread`;
+    } else if (type === 'low' || type === 'high') {
+      fieldName = `${metal.toLowerCase()}${type.charAt(0).toUpperCase() + type.slice(1)}Margin`;
+    } else {
+      return res.status(400).json({ message: 'Invalid type specified' });
+    }
+    const updateObj = { [fieldName]: value };
     const updatedSpotRate = await spotRateModel.findOneAndUpdate(
       { createdBy },
       { $set: updateObj },
@@ -268,7 +270,9 @@ export const getSpotRate = async (req, res, next) => {
 export const createCommodity = async (req, res, next) => {
   try {
     const { userId, commodity } = req.body;
-    const spotrate = await spotRateModel.findOne({ createdBy: userId });
+    const createdBy = new mongoose.Types.ObjectId(userId);
+    const spotrate = await spotRateModel.findOne({ createdBy });
+
     if (!spotrate) {
       return res.status(404).json({ message: 'Spotrate not found for this user' });
     }
@@ -307,13 +311,11 @@ export const getSpotRateCommodity = async (req, res, next) => {
 export const getMetalCommodity = async (req, res, next) => {
   try {
     const userEmail = req.params.email;
-    console.log('user : ', userEmail);
     if (!userEmail) {
       throw createAppError("Id is required.", 400);
     }
 
     const metalData = await getMetals(userEmail);
-    console.log(metalData);
 
     if (!metalData) {
       throw createAppError("Metal data not found.", 404);
@@ -332,14 +334,12 @@ export const getMetalCommodity = async (req, res, next) => {
 export const getNotification = async (req, res, next) => {
   try {
     const { userId } = req.params;
-    console.log('Received userId:', userId); // Debug log
 
     if (!userId) {
       throw createAppError("User ID is required.", 400);
     }
 
     const response = await fetchNotification(userId);
-    console.log('Notification fetch response:', response); // Debug log
 
     res.status(200).json({ 
       message: response.message, 
@@ -365,11 +365,15 @@ export const saveBankDetailsController = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "Admin not found." });
     }
 
-    // Push the new bank details to the bankDetails array
-    admin.bankDetails.push(bankDetails);
+    // // Push the new bank details to the bankDetails array
+    // admin.bankDetails.push(bankDetails);
 
-    // Save the updated admin document
-    await admin.save();
+    // // Save the updated admin document
+    // await admin.save();
+    await adminModel.updateOne(
+      { email },
+      { $push: { bankDetails } }
+    );
 
     res.status(200).json({
       success: true,
@@ -391,35 +395,28 @@ export const updateBankDetailsController = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Email and bank details are required." });
     }
 
-    const admin = await adminModel.findOne({ email });
+    // Directly update the bank details using the account number
+    const updatedAdmin = await adminModel.findOneAndUpdate(
+      { email, "bankDetails.accountNumber": bankDetails.accountNumber },
+      { $set: { "bankDetails.$": bankDetails } },
+      { new: true } // Return the updated document
+    );
 
-    if (!admin) {
-      return res.status(404).json({ success: false, message: "Admin not found." });
+    if (!updatedAdmin) {
+      return res.status(404).json({ success: false, message: "Admin or bank details not found." });
     }
-
-    // Find the index of the bank details to update
-    const bankIndex = admin.bankDetails.findIndex(b => b.accountNumber === bankDetails.accountNumber);
-
-    if (bankIndex === -1) {
-      return res.status(404).json({ success: false, message: "Bank details not found." });
-    }
-
-    // Update the bank details
-    admin.bankDetails[bankIndex] = { ...admin.bankDetails[bankIndex], ...bankDetails };
-
-    // Save the updated admin document
-    await admin.save();
 
     res.status(200).json({
       success: true,
       message: "Bank details updated successfully",
-      data: admin.bankDetails
+      data: updatedAdmin.bankDetails.find(b => b.accountNumber === bankDetails.accountNumber)
     });
   } catch (error) {
     console.error('Error updating bank details:', error.message);
     next(error);
   }
 };
+
 
 
 // Delete bank details
@@ -431,28 +428,26 @@ export const deleteBankDetailsController = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Email and account number are required." });
     }
 
-    const admin = await adminModel.findOne({ email });
+    // Attempt to remove the bank detail
+    const result = await adminModel.updateOne(
+      { email },
+      { $pull: { bankDetails: { accountNumber } } }
+    );
 
-    if (!admin) {
-      return res.status(404).json({ success: false, message: "Admin not found." });
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ success: false, message: "Admin or bank detail not found." });
     }
-
-    // Remove the bank details
-    admin.bankDetails = admin.bankDetails.filter(b => b.accountNumber !== accountNumber);
-
-    // Save the updated admin document
-    await admin.save();
 
     res.status(200).json({
       success: true,
-      message: "Bank details deleted successfully",
-      data: admin.bankDetails
+      message: "Bank detail deleted successfully."
     });
   } catch (error) {
-    console.error('Error deleting bank details:', error.message);
+    console.error('Error deleting bank detail:', error.message);
     next(error);
   }
 };
+
 
 
 //Sidebar Features 
@@ -460,15 +455,11 @@ export const getAdminFeaturesController = async (req, res, next) => {
   try {
     const { email } = req.query; // Using query parameter for consistency with your frontend
 
-    console.log('Received email:', email);
-
     if (!email) {
       return res.status(400).json({ success: false, message: "Email parameter is required." });
     }
 
     const admin = await adminModel.findOne({ email }).select('features');
-
-    console.log('Found admin:', admin);
 
     if (!admin) {
       return res.status(404).json({ success: false, message: "Admin not found." });

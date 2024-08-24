@@ -10,7 +10,6 @@ import fs from "fs";
 export const createShopItem = async (req, res) => {
     try {
         const { name, type, weight, rate } = req.body;
-        console.log("emaill", req.query.email);
         const { email } = req.query;
 
         // Multer stores the image file information in req.file

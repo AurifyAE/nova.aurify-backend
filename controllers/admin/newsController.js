@@ -9,10 +9,8 @@ import { createAppError } from "../../utils/errorHandler.js";
 
 
 export const addManualNewsController = async (req, res, next) => {
-    console.log(req.body);
     try {
         const { email, title, description } = req.body;
-        console.log(req.body);
 
         if (!email || !title || !description) {
             throw createAppError("Email, title, and description are required.", 400);

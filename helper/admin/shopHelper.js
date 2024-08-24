@@ -5,7 +5,6 @@ import { createAppError } from '../../utils/errorHandler.js';
 // Add a new shop item
 export const addShopItem = async (email, name, type, weight, rate, image) => {
     try {
-        console.log("emailll", email, name, type);
 
         const admin = await adminModel.findOne({ email });
 
