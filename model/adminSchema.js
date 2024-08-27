@@ -9,6 +9,7 @@ const adminSchema = new mongoose.Schema({
   contact: { type: String, required: true },
   whatsapp: { type: String, required: true },
   userType: { type: String, required: true },
+  screenLimit:{type:Number,required:true},
   solutions: [
     {
       type: { type: String, required: true },

@@ -18,6 +18,7 @@ export const registerAdmin = async (req, res, next) => {
       whatsapp: req.body.whatsapp,
       userType: req.body.userType,
       solutions: req.body.solutions,
+      screenCount:req.body.screenCount ? +req.body.screenCount : 0 ,
       features: req.body.additionalFeatures,
       commodities: req.body.commodities,
       workCompletionDate: req.body.workCompletionDate,

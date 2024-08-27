@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import adminRouter from './router/admin/adminRouter.js'
 import superRouter from './router/super/superRouter.js'
+import deviceRouter from './router/device/deviceRouter.js'
 import { mongodb } from "./config/connaction.js";
 import { errorHandler } from "./utils/errorHandler.js";
 
@@ -31,7 +32,7 @@ mongodb();
 
 app.use("/api", adminRouter);
 app.use("/admin", superRouter);
-
+app.use("/device", deviceRouter);
 
 
 // Global error handling middleware
