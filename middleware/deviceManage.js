@@ -9,7 +9,18 @@ export const deviceManagementMiddleware = async (req, res, next) => {
     const ip = requestIp.getClientIp(req);
 
     // Get the device's MAC address
-    const mac = await macaddress.one();
+    let mac;
+    try {
+      mac = await macaddress.one();
+    } catch (error) {
+      console.error("Error getting MAC address:", error);
+      return res.status(400).json({ message: "Unable to retrieve device MAC address" });
+    }
+
+    // Ensure MAC address is not null or undefined
+    if (!mac) {
+      return res.status(400).json({ message: "Invalid MAC address" });
+    }
 
     // Extract the admin ID from the request (assumed to be passed in headers or query)
     const adminId = req.headers["admin-id"]; // Or use req.query.adminId

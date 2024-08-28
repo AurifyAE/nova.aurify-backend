@@ -5,6 +5,11 @@ export const activateDeviceController = async (req, res) => {
   try {
     const { ip, mac, adminId, isNewAdmin, isNewDevice, deviceDoc } = req.deviceInfo;
 
+    // Double-check that MAC address is not null or undefined
+    if (!mac) {
+      return res.status(400).json({ message: "Invalid MAC address" });
+    }
+
     if (isNewAdmin) {
       // Create a new document for this admin
       const newDeviceDoc = new DeviceModel({
@@ -33,6 +38,9 @@ export const activateDeviceController = async (req, res) => {
     res.status(200).json({ message: "Device activated successfully" });
   } catch (error) {
     console.error(error);
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Duplicate MAC address" });
+    }
     return res.status(500).json({ message: "Internal server error" });
   }
 };
