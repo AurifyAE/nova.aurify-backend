@@ -37,7 +37,7 @@ export const deviceManagementMiddleware = async (req, res, next) => {
 
     // Find the device document for this admin
     let deviceDoc = await DeviceModel.findOne({ adminId });
-
+    
     if (!deviceDoc) {
       // If no document exists for this admin, we'll create one in the controller
       req.deviceInfo = { ip, mac, adminId, isNewAdmin: true };
