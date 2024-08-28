@@ -1,40 +1,46 @@
 import DeviceModel from "../../model/deviceSchema.js";
 
-// Controller to handle device activation
 export const activateDeviceController = async (req, res) => {
   try {
-    const { ip, mac, adminId, isNewAdmin, isNewDevice, deviceDoc } = req.deviceInfo;
+    const { mac, adminId, isNewAdmin, isNewDevice, deviceDoc } = req.deviceInfo;
+
+    if (!mac) {
+      return res.status(400).json({ message: "MAC address is required" });
+    }
 
     if (isNewAdmin) {
-      console.log("---------------------")
+      // Check if the MAC address already exists
+      const existingDevice = await DeviceModel.findOne({ "devices.macAddress": mac });
+      if (existingDevice) {
+        return res.status(409).json({ message: "Device with this MAC address already exists" });
+      }
+
       // Create a new document for this admin
       const newDeviceDoc = new DeviceModel({
         adminId,
-        devices: [{ macAddress: mac, ipAddress: ip }] // isActive defaults to true
+        devices: [{ macAddress: mac }] // isActive defaults to true
       });
       await newDeviceDoc.save();
       return res.status(200).json({ message: "New admin and device added successfully" });
     }
 
     if (isNewDevice) {
-      console.log("first")
+      // Check if the MAC address already exists within this admin's devices
+      const existingDevice = deviceDoc.devices.find(device => device.macAddress === mac);
+      if (existingDevice) {
+        return res.status(409).json({ message: "Device with this MAC address already exists" });
+      }
+
       // Add the new device to the existing document
-      deviceDoc.devices.push({ macAddress: mac, ipAddress: ip }); // isActive defaults to true
+      deviceDoc.devices.push({ macAddress: mac }); // isActive defaults to true
       await deviceDoc.save();
       return res.status(200).json({ message: "New device added successfully" });
     }
 
-    // If we reach here, the device already exists, so we just need to ensure it's active and update IP
-    const deviceIndex = deviceDoc.devices.findIndex(d => d.macAddress === mac);
-    if (deviceIndex !== -1) {
-      deviceDoc.devices[deviceIndex].isActive = true; // Ensure it's active
-      deviceDoc.devices[deviceIndex].ipAddress = ip; // Update IP address in case it changed
-      await deviceDoc.save();
-    }
-
-    res.status(200).json({ message: "Device activated successfully" });
+    // If neither new admin nor new device, handle the case as needed
+    // return res.status(400).json({ message: "Invalid request" });
   } catch (error) {
-    console.error(error);
+    console.error("Device activation controller error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
