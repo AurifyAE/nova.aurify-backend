@@ -6,7 +6,7 @@ export const deviceManagementMiddleware = async (req, res, next) => {
   try {
     // Get the device's MAC address
     const mac = await macaddress.one();
-
+  
     // Extract the admin ID from the request (assumed to be passed in headers or query)
     const adminId = req.headers["admin-id"]; // Or use req.query.adminId
 

@@ -6,7 +6,7 @@ const deviceSchema = new mongoose.Schema(
       {
         macAddress: {
           type: String,
-          required: true,
+          default: null,
         },
         isActive: {
           type: Boolean,
@@ -26,8 +26,8 @@ const deviceSchema = new mongoose.Schema(
   },
 );
 
-// Compound index to ensure uniqueness of macAddress within each document
-deviceSchema.index({ adminId: 1, "devices.macAddress": 1 }, { unique: true });
+// Add a sparse unique index on macAddress
+deviceSchema.index({ "devices.macAddress": 1 }, { unique: true, sparse: true });
 
 const DeviceModel = mongoose.model("Device", deviceSchema);
 
