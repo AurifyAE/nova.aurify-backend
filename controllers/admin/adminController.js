@@ -271,10 +271,13 @@ export const createCommodity = async (req, res, next) => {
   try {
     const { userId, commodity } = req.body;
     const createdBy = new mongoose.Types.ObjectId(userId);
-    const spotrate = await spotRateModel.findOne({ createdBy });
+    let spotrate = await spotRateModel.findOne({ createdBy });
 
     if (!spotrate) {
-      return res.status(404).json({ message: 'Spotrate not found for this user' });
+      // If no document exists for this user, create a new one
+      spotrate = new spotRateModel({
+        createdBy,
+      });
     }
     spotrate.commodities.push(commodity);
     const updatedSpotrate = await spotrate.save();

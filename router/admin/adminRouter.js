@@ -81,9 +81,9 @@ router.post('/admin/:adminId/spread-values', addCustomSpread);
 router.get('/admin/:adminId/spread-values', fetchSpreadValues);
 router.delete('/admin/spread-values/:spreadValueId', deleteSpreadValueController);
 
-router.post('/shop-items', uploadSingle('image'), createShopItem);
+router.post('/shop-items', uploadSingle("image"), createShopItem);
 router.get('/shop-items', fetchShopItems);
-router.patch('/shop-items/:id', uploadSingle('image'), editShopItem); // Add file upload support to edit as well
+router.patch('/shop-items/:id', uploadSingle("image"), editShopItem);
 router.delete('/shop-items/:id', removeShopItem);
 
 export default router

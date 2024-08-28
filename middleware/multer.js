@@ -1,5 +1,6 @@
 import multer from 'multer';
 import path from 'path';
+// import sharpMulter from 'sharp-multer';
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
