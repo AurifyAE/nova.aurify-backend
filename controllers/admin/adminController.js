@@ -22,7 +22,6 @@ import { adminVerfication, userCollectionSave } from "../../helper/admin/adminHe
 import { verifyToken, generateToken } from "../../utils/jwt.js";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
-import { generateToken } from "../../utils/jwt.js";
 import { decryptPassword } from "../../utils/crypto.js";
 
 export const adminLoginController = async (req, res, next) => {
@@ -206,7 +205,7 @@ export const updateLogo = async (req, res) => {
 };
 
 export const updateSpread = async (req, res) => {
-  const { userId, metal, type, value } = req.body;
+  const { adminId, metal, type, value } = req.body;
 
   try {
     const createdBy = new mongoose.Types.ObjectId(adminId);
@@ -302,48 +301,47 @@ export const createCommodity = async (req, res, next) => {
     let spotrate = await spotRateModel.findOne({ createdBy });
 
     if (!spotrate) {
-      return res
-        .status(404)
-        .json({ message: "Spotrate not found for this user" });
+      // If no document exists for this user, create a new one
+      spotrate = new spotRateModel({
+        createdBy,
+      });
     }
     spotrate.commodities.push(commodity);
     const updatedSpotrate = await spotrate.save();
-    res.status(200).json({
-      message: "Commodity created successfully",
-      data: updatedSpotrate,
-    });
+    res.status(200).json({ message: 'Commodity created successfully', data: updatedSpotrate });
   } catch (error) {
-    console.error("Error creating commodity:", error);
-    res
-      .status(500)
-      .json({ message: "Error creating commodity", error: error.message });
+    console.error('Error creating commodity:', error);
+    res.status(500).json({ message: 'Error creating commodity', error: error.message });
   }
 };
 
 export const getSpotRateCommodity = async (req, res, next) => {
   try {
-    const adminId = req.params;
+    const adminId = req.params.adminId; // Correctly extract adminId
+    console.log(adminId);
+
     if (!adminId) {
-      throw createAppError("email parameter is required.", 400);
+      throw createAppError("adminId parameter is required.", 400); // Correct the error message
     }
 
-    const spotRateCommodity = await spotRateModel.findOne({
-      createdBy: userId,
-    });
+    const createdBy = new mongoose.Types.ObjectId(adminId);
+    const spotRateCommodity = await spotRateModel.findOne({ createdBy });
+    console.log(spotRateCommodity);
 
     if (!spotRateCommodity) {
-      throw createAppError("data not found.", 404);
+      throw createAppError("Data not found.", 404);
     }
 
     res.status(200).json({
       success: true,
-      data: adminData,
+      data: spotRateCommodity,
     });
   } catch (error) {
-    console.log("Error:", error.message);
+    console.log('Error:', error.message);
     next(error); // Pass the error to the global error handler
   }
 };
+
 
 export const getMetalCommodity = async (req, res, next) => {
   try {
