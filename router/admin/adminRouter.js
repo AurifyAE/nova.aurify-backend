@@ -7,7 +7,8 @@ import {
     getAdminFeaturesController,
     getNotification,
     deleteNotification,
-    adminTokenVerificationApi
+    adminTokenVerificationApi,
+    registerUser
 } from "../../controllers/admin/adminController.js";
 
 import {
@@ -42,10 +43,12 @@ import { createShopItem, fetchShopItems, editShopItem, removeShopItem } from "..
 import { validateContact } from "../../middleware/validators.js";
 import { sendContactEmail } from "../../controllers/admin/contactController.js";
 import { getUserData } from "../../helper/admin/adminHelper.js"; 
+import { validateUser } from "../../middleware/validators.js";
 
 const router = Router()
 
 router.post('/login',adminLoginController);
+router.post("/register/:adminId", validateUser, registerUser);
 router.post('/verify-token', adminTokenVerificationApi);
 router.get('/data/:email', getAdminDataController);
 router.put('/update-profile/:id', updateAdminProfileController);

@@ -14,7 +14,7 @@ import { getCommodity } from "../../helper/admin/adminHelper.js";
 import { getMetals } from "../../helper/admin/adminHelper.js"
 import { fetchNotification, addFCMToken, updateNotification } from "../../helper/admin/adminHelper.js";
 import adminModel from "../../model/adminSchema.js";
-import { adminVerfication } from "../../helper/admin/adminHelper.js";
+import { adminVerfication, userCollectionSave } from "../../helper/admin/adminHelper.js";
 import { verifyToken, generateToken } from "../../utils/jwt.js";
 import mongoose from "mongoose";
 
@@ -98,25 +98,25 @@ export const adminTokenVerificationApi = async (req, res, next) => {
 };
 
 
-// export const registerUser = async (req, res, next) => {
-//   try {
-//     const { userName, contact, location, email, password } = req.body;
-//     const { adminId } = req.params;
-//     const data = {
-//       userName,
-//       contact,
-//       location,
-//       email,
-//       password,
-//     };
-//     const response = await userCollectionSave(data, adminId);
-//     res
-//       .status(200)
-//       .json({ message: response.message, success: response.success });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
+export const registerUser = async (req, res, next) => {
+  try {
+    const { userName, contact, location, email, password } = req.body;
+    const { adminId } = req.params;
+    const data = {
+      userName,
+      contact,
+      location,
+      email,
+      password,
+    };
+    const response = await userCollectionSave(data, adminId);
+    res
+      .status(200)
+      .json({ message: response.message, success: response.success });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const userLoginController = async (req, res, next) => {
   try {
