@@ -16,39 +16,37 @@ const hashPassword = async (password) => {
 export const adminVerfication = async (email) => {
   try {
     return await adminModel.findOne({ email });
-
   } catch (error) {
-    console.error("Error in userVerfication:", error.message); 
+    console.error("Error in userVerfication:", error.message);
     throw new Error("Verification failed: " + error.message);
   }
 };
 
 export const getUserData = async (userEmail) => {
   try {
-    return await adminModel.findOne({email: userEmail}).select('-password');
-
+    return await adminModel.findOne({ email: userEmail }).select("-password");
   } catch (error) {
-    console.error("Error in finding the user:", error.message); 
+    console.error("Error in finding the user:", error.message);
     throw new Error("searching failed: " + error.message);
   }
 };
 
-
 export const updateUserData = async (id, email, fullName, mobile, location) => {
   try {
-    return await adminModel.findByIdAndUpdate(
-      id,
-      { 
-        email: email,
-        userName: fullName,
-        contact: mobile,
-        address: location
-      },
-      { new: true, runValidators: true }
-    ).select('-password');
-
+    return await adminModel
+      .findByIdAndUpdate(
+        id,
+        {
+          email: email,
+          userName: fullName,
+          contact: mobile,
+          address: location,
+        },
+        { new: true, runValidators: true }
+      )
+      .select("-password");
   } catch (error) {
-    console.error("Error in updateing the user:", error.message); 
+    console.error("Error in updateing the user:", error.message);
     throw new Error("Updation failed: " + error.message);
   }
 };
@@ -60,9 +58,8 @@ export const updateUserLogo = async (email, logoName) => {
       { logo: logoName },
       { new: true }
     );
-
   } catch (error) {
-    console.error("Error in updating the logo:", error.message); 
+    console.error("Error in updating the logo:", error.message);
     throw new Error("Logo Updation failed: " + error.message);
   }
 };
@@ -70,18 +67,16 @@ export const updateUserLogo = async (email, logoName) => {
 export const getCommodity = async (email) => {
   try {
     return await adminModel.findOne({ email });
-
   } catch (error) {
-    console.error("Error in fetching Commodity:", error.message); 
+    console.error("Error in fetching Commodity:", error.message);
     throw new Error("fetching failed: " + error.message);
   }
 };
 export const getMetals = async (userEmail) => {
   try {
-    return await adminModel.findOne({email: userEmail}).select('-password');
-
+    return await adminModel.findOne({ email: userEmail }).select("-password");
   } catch (error) {
-    console.error("Error in finding the metals:", error.message); 
+    console.error("Error in finding the metals:", error.message);
     throw new Error("searching failed: " + error.message);
   }
 };
@@ -93,12 +88,16 @@ export const fetchNotification = async (userId) => {
     if (!notifications) {
       return { success: false, message: "Notification not found" };
     }
-    
-    return { success: true, message: "Notification found", data: notifications };
+
+    return {
+      success: true,
+      message: "Notification found",
+      data: notifications,
+    };
   } catch (error) {
     throw new Error("Error fetching notification: " + error.message);
   }
-}
+};
 
 export const addFCMToken = async (email, fcmToken) => {
   try {
@@ -135,7 +134,6 @@ export const addFCMToken = async (email, fcmToken) => {
   }
 };
 
-
 export const getUsersForAdmin = async (adminEmail) => {
   try {
     const user = await adminModel.findOne({ email: adminEmail });
@@ -165,16 +163,20 @@ export const addSpreadValue = async (adminEmail, spreadValue, title) => {
       { createdBy: user._id },
       {
         $push: { spreadValues: { spreadValue, title } },
-        $setOnInsert: { createdBy: user._id }
+        $setOnInsert: { createdBy: user._id },
       },
       {
         new: true,
         upsert: true,
-        setDefaultsOnInsert: true
+        setDefaultsOnInsert: true,
       }
     );
 
-    return { success: true, message: "Spread value added successfully", spreadDoc };
+    return {
+      success: true,
+      message: "Spread value added successfully",
+      spreadDoc,
+    };
   } catch (error) {
     console.error("Error adding spread value:", error);
     return { success: false, message: error.message };
@@ -189,7 +191,10 @@ export const getSpreadValues = async (adminEmail) => {
     }
     const spreadDoc = await SpreadValueModel.findOne({ createdBy: user._id });
     if (!spreadDoc) {
-      return { success: false, message: "No spread values found for this admin" };
+      return {
+        success: false,
+        message: "No spread values found for this admin",
+      };
     }
     return { success: true, spreadValues: spreadDoc.spreadValues };
   } catch (error) {
@@ -212,7 +217,10 @@ export const deleteSpreadValue = async (adminEmail, spreadValueId) => {
     if (result.modifiedCount > 0) {
       return { success: true, message: "Spread value deleted successfully" };
     } else {
-      return { success: false, message: "Spread value not found or already deleted" };
+      return {
+        success: false,
+        message: "Spread value not found or already deleted",
+      };
     }
   } catch (error) {
     console.error("Error deleting spread value:", error);

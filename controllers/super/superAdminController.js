@@ -3,8 +3,6 @@ import {
   fetchAdminData,
   collectionUpdate,
 } from "../../helper/superAdmin/superHelper.js";
-// import Joi from "joi";
-// import { body, validationResult } from "express-validator";
 
 export const registerAdmin = async (req, res, next) => {
   try {
@@ -24,7 +22,6 @@ export const registerAdmin = async (req, res, next) => {
       workCompletionDate: req.body.workCompletionDate,
       serviceStartDate: req.body.serviceStartDate,
     };
-    console.log(userData)
     const response = await userCollectionSave(userData);
     res
       .status(201)
