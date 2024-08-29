@@ -7,7 +7,6 @@ import {
     getAdminFeaturesController,
     getNotification,
     deleteNotification,
-    registerUser
 } from "../../controllers/admin/adminController.js";
 
 import {
@@ -52,7 +51,7 @@ router.post('/verify-token',adminTokenVerificationApi)
 // router.post('/update-spotRate',getSpotRateData);
 router.post('/update-spread', updateSpread);
 router.get('/spotrates/:userId', getSpotRate);
-router.post('/user/:adminId',registerUser)
+
 router.get('/commodities/:email', getCommodityController);
 router.post('/spotrate-commodity', createCommodity);
 router.get('/spotrates/:userId', getSpotRateCommodity);

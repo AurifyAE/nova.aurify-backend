@@ -22,8 +22,9 @@ const UsersSchema = new mongoose.Schema({
       },
       spread: {
         type: Number,
-        default : 0,
+        default: 0,
       },
+      spreadTitle: { type: String, required: true, default: "Rate" },
       email: {
         type: String,
         required: true,
