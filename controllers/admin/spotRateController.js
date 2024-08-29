@@ -20,7 +20,9 @@ export const updateCommodity = async (req, res, next) => {
             weight: commodity.weight,
             _id: commodityId,
             buyPremium: commodity.buyPremium,
-            sellPremium: commodity.sellPremium
+            sellPremium: commodity.sellPremium,
+            buyCharge: commodity.buyCharge,
+            sellCharge: commodity.sellCharge
           } 
         }
       },
