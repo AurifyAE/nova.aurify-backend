@@ -6,7 +6,8 @@ import {
     getAdminDataController,
     getAdminFeaturesController,
     getNotification,
-    deleteNotification
+    deleteNotification,
+    adminTokenVerificationApi
 } from "../../controllers/admin/adminController.js";
 
 import {
@@ -38,27 +39,31 @@ import { adminLoginController } from "../../controllers/admin/adminController.js
 import { getBanner } from "../../controllers/admin/bannerController.js";
 
 import { createShopItem, fetchShopItems, editShopItem, removeShopItem } from "../../controllers/admin/shopController.js";
+import { validateContact } from "../../middleware/validators.js";
+import { sendContactEmail } from "../../controllers/admin/contactController.js";
+import { getUserData } from "../../helper/admin/adminHelper.js"; 
 
 const router = Router()
 
 router.post('/login',adminLoginController);
+router.post('/verify-token', adminTokenVerificationApi);
 router.get('/data/:email', getAdminDataController);
 router.put('/update-profile/:id', updateAdminProfileController);
 router.post('/update-logo', uploadSingle('logo'), updateLogo);
 router.get('/server-url',getServerController);
 // router.post('/update-spotRate',getSpotRateData);
 router.post('/update-spread', updateSpread);
-router.get('/spotrates/:userId', getSpotRate);
+router.get('/spotrates/:adminId', getSpotRate);
 
 router.get('/commodities/:email', getCommodityController);
 router.post('/spotrate-commodity', createCommodity);
-router.get('/spotrates/:userId', getSpotRateCommodity);
-router.patch('/spotrate-commodity/:userId/:commodityId', updateCommodity);
-router.delete('/commodities/:userId/:commodityId', deleteSpotRateCommodity);
+router.get('/spotrates/:adminId', getSpotRateCommodity);
+router.patch('/spotrate-commodity/:adminId/:commodityId', updateCommodity);
+router.delete('/commodities/:adminId/:commodityId', deleteSpotRateCommodity);
 router.get('metalCommodities/:email', getMetalCommodity);
 
-router.get('/notifications/:userId',getNotification);
-router.delete('/notifications/:userId/:notificationId',deleteNotification);
+router.get('/notifications/:adminId',getNotification);
+router.delete('/notifications/:adminId/:notificationId',deleteNotification);
 
 
 router.post('/save-bank-details', saveBankDetailsController);
@@ -67,7 +72,7 @@ router.put('/update-bank-details', updateBankDetailsController);
 
 router.get('/features', getAdminFeaturesController);
 
-router.get('/banners/:userId',getBanner);
+router.get('/banners/:adminId',getBanner);
 
 
 //news-routers
@@ -81,9 +86,14 @@ router.post('/admin/:adminId/spread-values', addCustomSpread);
 router.get('/admin/:adminId/spread-values', fetchSpreadValues);
 router.delete('/admin/spread-values/:spreadValueId', deleteSpreadValueController);
 
-router.post('/shop-items', uploadSingle("image"), createShopItem);
+router.post('/shop-items/:email', uploadSingle('image'), createShopItem);
 router.get('/shop-items', fetchShopItems);
-router.patch('/shop-items/:id', uploadSingle("image"), editShopItem);
+router.patch('/shop-items/:id', uploadSingle('image'), editShopItem);
 router.delete('/shop-items/:id', removeShopItem);
+
+
+router.post('/contact', validateContact, sendContactEmail);
+router.get('/user-data', getUserData);
+
 
 export default router

@@ -2,12 +2,9 @@ import BannerModel from '../../model/bannerSchema.js'
 
 export const getBanner = async (req, res) => {
     try {
-        console.log(req.params)
-      const { userId } = req.params;
-  
-      // Find banners created by the given 
-      console.log(userId);
-      const banner = await BannerModel.findOne({ createdBy: userId });
+      const { adminId } = req.params;
+
+      const banner = await BannerModel.findOne({ createdBy: adminId });
       if (!banner || banner.banner.length === 0) {
         return res.status(404).json({ success: false, message: 'No banners found for this user' });
       }

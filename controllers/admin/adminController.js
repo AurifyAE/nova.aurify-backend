@@ -15,14 +15,16 @@ import { getMetals } from "../../helper/admin/adminHelper.js"
 import { fetchNotification, addFCMToken, updateNotification } from "../../helper/admin/adminHelper.js";
 import adminModel from "../../model/adminSchema.js";
 import { adminVerfication } from "../../helper/admin/adminHelper.js";
+import { verifyToken, generateToken } from "../../utils/jwt.js";
 import mongoose from "mongoose";
-import jwt from 'jsonwebtoken';
 
-const SECRET_KEY = 'aurify@JWT';
+
+
+
 
 export const adminLoginController = async (req, res, next) => {
   try {
-    const { email, password,fcmToken } = req.body;
+    const { email, password, fcmToken, rememberMe } = req.body;
     const authLogin = await adminVerfication(email);
 
     if (authLogin) {
@@ -32,13 +34,14 @@ export const adminLoginController = async (req, res, next) => {
       if (!matchPassword) {
         throw createAppError("Incorrect password.", 401);
       }
-      await addFCMToken(email,fcmToken);    
-      const token = jwt.sign({ userId: authLogin._id }, SECRET_KEY, { expiresIn: '1h' });
+      await addFCMToken(email, fcmToken);
+      const expiresIn = rememberMe ? "30d" : "3d";
+      const token = generateToken({ adminId: authLogin._id }, expiresIn);
 
       res.status(200).json({
         success: true,
         message: "Authentication successful.",
-        token
+        token,
       });
     } else {
       throw createAppError("User not found.", 404);
@@ -47,6 +50,53 @@ export const adminLoginController = async (req, res, next) => {
     next(error);
   }
 };
+
+
+export const adminTokenVerificationApi = async (req, res, next) => {
+  try {
+    const token = req.body.token;
+    if (!token) {
+      return res.status(401).json({ message: 'Authentication token is missing' });
+    }
+
+    const decoded = verifyToken(token);
+
+    // Fetch admin data using the decoded adminId
+    const admin = await adminModel.findById(decoded.adminId);
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    const currentDate = new Date();
+    const serviceEndDate = new Date(admin.serviceEndDate);
+
+    if (serviceEndDate < currentDate) {
+      // If service has expired
+      return res.status(403).json({
+        message: 'Your service has ended. Please renew to continue using the system.',
+        serviceExpired: true
+      });
+    }
+
+    // If the token is valid and service is active
+    res.status(200).json({
+      admin: {
+        adminId: admin._id,
+        serviceEndDate: admin.serviceEndDate,
+      },
+      serviceExpired: false
+    });
+
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token has expired', tokenExpired: true });
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Invalid token', tokenInvalid: true });
+    }
+    next(error);
+  }
+};
+
 
 // export const registerUser = async (req, res, next) => {
 //   try {
@@ -83,9 +133,9 @@ export const userLoginController = async (req, res, next) => {
 
 // export const updateSpread = async (req, res, next) => {
 //   try {
-//     const { adminId, userId } = req.params;
+//     const { adminId, adminId } = req.params;
 //     const { spread } = req.body;
-//     const response = await userUpdateSpread(adminId, userId, spread);
+//     const response = await userUpdateSpread(adminId, adminId, spread);
 //     res
 //       .status(200)
 //       .json({ message: response.message, success: response.success });
@@ -96,8 +146,8 @@ export const userLoginController = async (req, res, next) => {
 
 export const deleteNotification = async (req, res, next) => {
   try {
-    const { userId, notificationId } = req.params;
-    const response = await updateNotification(userId, notificationId);
+    const { adminId, notificationId } = req.params;
+    const response = await updateNotification(adminId, notificationId);
     res
       .status(200)
       .json({ message: response.message, success: response.success });
@@ -183,10 +233,10 @@ export const updateLogo = async (req, res) => {
 };
 
 export const updateSpread = async (req, res) => {
-  const { userId, metal, type, value   } = req.body;
+  const { adminId, metal, type, value   } = req.body;
 
   try {
-    const createdBy = new mongoose.Types.ObjectId(userId);
+    const createdBy = new mongoose.Types.ObjectId(adminId);
     let spotRate = await spotRateModel.findOne({ createdBy });
 
     if (!spotRate) {
@@ -250,9 +300,9 @@ export const getCommodityController = async (req, res, next) => {
 
 export const getSpotRate = async (req, res, next) => {
   try {
-    const { userId } = req.params;
+    const { adminId } = req.params;
     
-    const spotRates = await spotRateModel.findOne({ createdBy: userId });
+    const spotRates = await spotRateModel.findOne({ createdBy: adminId });
     
     if (!spotRates) {
       return res.status(404).json({ message: 'Spot rates not found for this user' });
@@ -269,8 +319,8 @@ export const getSpotRate = async (req, res, next) => {
 
 export const createCommodity = async (req, res, next) => {
   try {
-    const { userId, commodity } = req.body;
-    const createdBy = new mongoose.Types.ObjectId(userId);
+    const { adminId, commodity } = req.body;
+    const createdBy = new mongoose.Types.ObjectId(adminId);
     let spotrate = await spotRateModel.findOne({ createdBy });
 
     if (!spotrate) {
@@ -290,12 +340,12 @@ export const createCommodity = async (req, res, next) => {
 
 export const getSpotRateCommodity = async (req, res, next) => {
   try {
-    const userId = req.params;
-    if (!userId) {
+    const adminId = req.params;
+    if (!adminId) {
       throw createAppError("email parameter is required.", 400);
     }
 
-    const spotRateCommodity = await spotRateModel.findOne({ createdBy: userId });
+    const spotRateCommodity = await spotRateModel.findOne({ createdBy: adminId });
 
     if (!spotRateCommodity) {
       throw createAppError("data not found.", 404);
@@ -336,13 +386,13 @@ export const getMetalCommodity = async (req, res, next) => {
 
 export const getNotification = async (req, res, next) => {
   try {
-    const { userId } = req.params;
+    const { adminId } = req.params;
 
-    if (!userId) {
+    if (!adminId) {
       throw createAppError("User ID is required.", 400);
     }
 
-    const response = await fetchNotification(userId);
+    const response = await fetchNotification(adminId);
 
     res.status(200).json({ 
       message: response.message, 

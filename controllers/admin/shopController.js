@@ -1,8 +1,9 @@
+
 import {
     addShopItem,
+    deleteShopItem,
     getAllShopItems,
-    updateShopItem,
-    deleteShopItem
+    updateShopItem
 } from "../../helper/admin/shopHelper.js";
 
 
@@ -10,10 +11,7 @@ import {
 export const createShopItem = async (req, res) => {
     // try {
     const { name, type, weight, rate } = req.body;
-    console.log("emaill", req.query.email);
-    const { email } = req.query;
-
-    console.log("file", req.file);
+    const { email } = req.params;
     // Multer stores the image file information in req.file
 
     const image = req.file ? `/uploads/${req.file.filename}` : null;
@@ -44,39 +42,7 @@ export const fetchShopItems = async (req, res) => {
     }
 };
 
-// Update a shop item
-// export const editShopItem = async (req, res) => {
-//     try {
-//         console.log("Query:", req.query);
-//         console.log("Params:", req.params);
-//         console.log("Body:", req.body);
-//         console.log("File:", req.file);
-//         const { email } = req.query;
-//         const { id: shopItemId } = req.params;
-//         let updatedData = req.body;
 
-//         // Convert weight and rate to numbers
-//         if (updatedData.weight) {
-//             updatedData.weight = parseFloat(updatedData.weight);
-//         }
-//         if (updatedData.rate) {
-//             updatedData.rate = parseFloat(updatedData.rate);
-//         }
-//         // Check if a new image was uploaded
-//         if (req.file) {
-//             const imageBase64 = fs.readFileSync(req.file.path, { encoding: 'base64' });
-//             const img = `data:${req.file.mimetype};base64,${imageBase64}`;
-//             updatedData = { ...updatedData, image: img };
-//         }
-//         console.log("Updated data before sending to helper:", updatedData);
-
-//         const updatedShopItem = await updateShopItem(email, shopItemId, updatedData);
-//         res.status(200).json(updatedShopItem);
-//     } catch (error) {
-//         console.error("Detailed error:", error);
-//         res.status(error.statusCode || 500).json({ message: error.message });
-//     }
-// };
 
 export const editShopItem = async (req, res) => {
     try {
@@ -94,8 +60,6 @@ export const editShopItem = async (req, res) => {
         if (req.file) {
             updatedData.image = `/uploads/${req.file.filename}`;
         }
-
-        console.log("Updated data before sending to helper:", updatedData);
 
         const updatedShopItem = await updateShopItem(email, shopItemId, updatedData);
         res.status(200).json(updatedShopItem);

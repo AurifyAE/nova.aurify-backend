@@ -86,9 +86,9 @@ export const getMetals = async (userEmail) => {
   }
 };
 
-export const fetchNotification = async (userId) => {
+export const fetchNotification = async (adminId) => {
   try {
-    const createdBy = new mongoose.Types.ObjectId(userId);
+    const createdBy = new mongoose.Types.ObjectId(adminId);
     const notifications = await NotificationModel.findOne({ createdBy });
     if (!notifications) {
       return { success: false, message: "Notification not found" };
