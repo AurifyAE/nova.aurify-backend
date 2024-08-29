@@ -6,7 +6,7 @@ import {
     getAdminDataController,
     getAdminFeaturesController,
     getNotification,
-    deleteNotification,
+    deleteNotification,,
     adminTokenVerificationApi,
     registerUser
 } from "../../controllers/admin/adminController.js";
@@ -22,7 +22,8 @@ import {
     fetchUsersForAdmin,
     fetchSpreadValues,
     addCustomSpread,
-    deleteSpreadValueController
+    deleteSpreadValueController,
+    adminTokenVerificationApi
 } from '../../controllers/admin/adminController.js';
 import { updateAdminProfileController } from "../../controllers/admin/adminController.js"
 import { updateLogo } from "../../controllers/admin/adminController.js";
@@ -54,6 +55,7 @@ router.get('/data/:email', getAdminDataController);
 router.put('/update-profile/:id', updateAdminProfileController);
 router.post('/update-logo', uploadSingle('logo'), updateLogo);
 router.get('/server-url',getServerController);
+router.post('/verify-token',adminTokenVerificationApi)
 // router.post('/update-spotRate',getSpotRateData);
 router.post('/update-spread', updateSpread);
 router.get('/spotrates/:adminId', getSpotRate);
