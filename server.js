@@ -18,6 +18,8 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 4444;
 
+
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -76,16 +78,28 @@ io.on('connection', (socket) => {
 });
 
 
+app.use(express.static('public'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-const server = http.createServer(app);
+// Custom middleware to check for secret key
+const checkSecretKey = (req, res, next) => {
+  const secretKey = req.headers['x-secret-key'];
+  if (secretKey !== process.env.API_KEY) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+  next();
+};
 
-const io = new Server(server, {
-  cors: {
-    origin: ["http://localhost:5173","http://localhost:3000"],
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    credentials: true,
-  })
-);
+// CORS configuration
+app.use(cors({
+  origin: (origin, callback) => {
+    callback(null, true); // Allow any origin
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  credentials: true,
+}));
+
 
 // Apply secret key check to all routes
 app.use(checkSecretKey);
