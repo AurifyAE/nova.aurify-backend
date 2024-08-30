@@ -3,6 +3,7 @@ import {
   updateBanner,
   removeBanner,
   fetchBannersDetails,
+  fetchAdminBanners
 } from "../../helper/superAdmin/bannerHelper.js";
 
 export const addBanner = async (req, res, next) => {
@@ -51,3 +52,15 @@ export const fetchBanners = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getBannerAdmin = async (req, res, next) => {
+  try {
+    const banners = await fetchAdminBanners();
+    console.log(banners)
+    res.status(200).json({ info: banners });
+  } catch (error) {
+    next(error);
+  }
+};
+
+

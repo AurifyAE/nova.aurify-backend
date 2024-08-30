@@ -3,6 +3,7 @@ import BannerModel from "../../model/bannerSchema.js";
 import NotificationModel from "../../model/notificationSchema.js";
 import FCMTokenModel from "../../model/fcmTokenSchema.js";
 import NotificationService from '../../utils/sendPushNotification.js'
+import adminModel from "../../model/adminSchema.js";
 export const addNewBanner = async (data) => {
   try {
     const { title, imageUrl, adminId } = data;
@@ -112,3 +113,14 @@ export const fetchBannersDetails = async () => {
     throw new Error("Error fetching Banner data");
   }
 };
+
+export const fetchAdminBanners = async () => {
+  try {
+    return await adminModel.find({
+      features: { $elemMatch: { name: "Digital Marketing", enabled: true } }
+    });
+  } catch (error) {
+    throw new Error("Error fetching Admin Banner data");
+  }
+};
+

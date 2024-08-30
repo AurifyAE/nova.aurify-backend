@@ -84,7 +84,6 @@ export const adminTokenVerificationApi = async (req, res, next) => {
 
     const reminderDate = new Date(serviceEndDate.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days before expiration
     if (currentDate >= reminderDate && currentDate < serviceEndDate) {
-      console.log("first")
       return res.status(200).json({
         admin: {
           adminId: admin._id,
@@ -301,9 +300,11 @@ export const getSpotRate = async (req, res, next) => {
 export const createCommodity = async (req, res, next) => {
   try {
     const { userId, commodity } = req.body;
+    console.log(commodity)
+    console.log(userId)
     const createdBy = new mongoose.Types.ObjectId(userId);
     const spotrate = await spotRateModel.findOne({ createdBy });
-
+    console.log(spotrate)
     if (!spotrate) {
       return res
         .status(404)

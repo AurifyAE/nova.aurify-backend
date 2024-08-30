@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { UsersModel } from "../../model/usersSchema.js";
 import NotificationModel from "../../model/notificationSchema.js";
 import FCMTokenModel from "../../model/fcmTokenSchema.js";
+import NotificationService from "../../utils/sendPushNotification.js";
 // Function to hash the password
 const hashPassword = async (password) => {
   try {
@@ -23,6 +24,7 @@ export const userCollectionSave = async (data, adminId) => {
       email,
       password: encrypt, // Store the hashed password
     };
+
     let usersDoc = await UsersModel.findOne({ createdBy: adminId });
     const emailExists = usersDoc?.users.some((user) => user.email === email);
 
@@ -35,6 +37,7 @@ export const userCollectionSave = async (data, adminId) => {
       usersDoc.users.push(newUser);
     }
     await usersDoc.save();
+
     const notificationMessage = `🎉 ${userName} has been added as a new user. Check your admin panel for details!`;
 
     let notificationDoc = await NotificationModel.findOne({
@@ -51,6 +54,30 @@ export const userCollectionSave = async (data, adminId) => {
     }
 
     await notificationDoc.save();
+
+    // Fetch FCM tokens
+    const fcmTokens = await FCMTokenModel.findOne({ createdBy: adminId })
+      .select("FCMTokens.token")
+      .lean();
+    console.log(fcmTokens)
+    if (fcmTokens && fcmTokens.FCMTokens.length > 0) {
+      // Send push notifications to all tokens
+      for (const tokenObj of fcmTokens.FCMTokens) {
+        try {
+          await NotificationService.sendNotification(
+            tokenObj.token,
+            "New User Added",
+            notificationMessage,
+            {
+              userName: userName,
+              contact: contact,
+            }
+          );
+        } catch (error) {
+          console.error(`Failed to send notification to token: ${tokenObj.token}`, error);
+        }
+      }
+    }
 
     return { success: true, message: "User added successfully" };
   } catch (error) {
@@ -93,6 +120,55 @@ export const userUpdateSpread = async (adminId, userId, spread, title) => {
     return { success: true, message: "Spread value updated successfully" };
   } catch (error) {
     throw new Error("Error updating spread value" + error.message);
+  }
+};
+
+export const requestPassInAdmin = async (adminId, request) => {
+  try {
+
+    const notificationMessage = `📩 New Request: ${request || 'Untitled'}. Please review it in your admin panel.`;
+
+    let notificationDoc = await NotificationModel.findOne({
+      createdBy: adminId,
+    });
+
+    if (!notificationDoc) {
+      notificationDoc = new NotificationModel({
+        createdBy: adminId,
+        notification: [{ message: notificationMessage }],
+      });
+    } else {
+      notificationDoc.notification.push({ message: notificationMessage });
+    }
+
+    await notificationDoc.save();
+    const fcmTokens = await FCMTokenModel.findOne({ createdBy: adminId })
+    .select("FCMTokens.token")
+    .lean();
+
+  if (fcmTokens && fcmTokens.FCMTokens.length > 0) {
+    // Send push notifications to all tokens
+    for (const tokenObj of fcmTokens.FCMTokens) {
+      try {
+        await NotificationService.sendNotification(
+          tokenObj.token,
+          "New Request Added",
+          notificationMessage,
+          {
+            requestTitle: request.title || 'No Title',
+            requestDetails: request.details || 'No Details',
+          }
+        );
+      } catch (error) {
+        throw new Error(`Failed to send notification to token: ${tokenObj.token}` + error.message);
+      }
+    }
+  } else {
+    return { success: false, message: "No FCM tokens found for this admin" };
+  }
+    return { success: true, message: "Requesting add successfully" };
+  } catch (error) {
+    throw new Error("Error For the Requesting" + error.message);
   }
 };
 
