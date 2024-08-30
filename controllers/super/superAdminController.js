@@ -3,8 +3,6 @@ import {
   fetchAdminData,
   collectionUpdate,
 } from "../../helper/superAdmin/superHelper.js";
-// import Joi from "joi";
-// import { body, validationResult } from "express-validator";
 
 export const registerAdmin = async (req, res, next) => {
   try {
@@ -13,22 +11,21 @@ export const registerAdmin = async (req, res, next) => {
       logo: req.file ? req.file.filename : undefined,
       address: req.body.address,
       email: req.body.email,
-      fcmToken:req.body.fcmToken,
       password: req.body.password,
       contact: req.body.contact,
       whatsapp: req.body.whatsapp,
       userType: req.body.userType,
       solutions: req.body.solutions,
+      screenCount:req.body.screenCount ? +req.body.screenCount : 0 ,
       features: req.body.additionalFeatures,
       commodities: req.body.commodities,
       workCompletionDate: req.body.workCompletionDate,
       serviceStartDate: req.body.serviceStartDate,
     };
-    console.log(userData)
-    // const response = await userCollectionSave(userData);
-    // res
-    //   .status(201)
-    //   .json({ message: response.message, success: response.success });
+    const response = await userCollectionSave(userData);
+    res
+      .status(201)
+      .json({ message: response.message, success: response.success });
   } catch (error) {
     next(error); // Pass the error to the global error handler
   }

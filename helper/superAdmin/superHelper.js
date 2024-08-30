@@ -1,5 +1,6 @@
 import adminModel from "../../model/adminSchema.js";
 import bcrypt from "bcrypt";
+import { decryptPassword, encryptPassword } from "../../utils/crypto.js";
 
 // Function to hash the password
 const hashPassword = async (password) => {
@@ -21,28 +22,21 @@ export const userCollectionSave = async (userData) => {
       contact,
       whatsapp,
       userType,
+      screenCount,
       solutions = [],
       features = [],
       commodities = [],
       workCompletionDate,
       serviceStartDate,
-      fcmToken, // Expecting the FCM token to be passed from the frontend
     } = userData;
-
-    // Check if the FCM token is provided
-    if (!fcmToken) {
-      return {
-        success: false,
-        message: "FCM token is required. Please provide a valid FCM token.",
-      };
-    }
 
     // Check if the email already exists
     const existingAdmin = await adminModel.findOne({ email });
     if (existingAdmin) {
       return {
         success: false,
-        message: "The email provided is already in use. Please use a different email.",
+        message:
+          "The email provided is already in use. Please use a different email.",
       };
     }
 
@@ -66,23 +60,26 @@ export const userCollectionSave = async (userData) => {
       symbol: commodity,
     }));
 
-    const encrypt = await hashPassword(password);
+    // const encrypt = await hashPassword(password);
+    const { iv, encryptedData } = encryptPassword(password);
+
     const authCollection = new adminModel({
       userName,
       logo,
       address,
       email,
-      password: encrypt,
+      password: encryptedData,
+      passwordAccessKey: iv,
       contact,
       whatsapp,
       userType,
+      screenLimit: screenCount,
       solutions: formattedSolutions,
       features: formattedFeatures,
       commodities: formattedCommodities,
       workCompletionDate,
       serviceStartDate: serviceStartDateObj,
       serviceEndDate, // Store the calculated serviceEndDate
-      fcmToken, // Store the FCM token
     });
 
     await authCollection.save();
@@ -94,7 +91,14 @@ export const userCollectionSave = async (userData) => {
 
 export const fetchAdminData = async () => {
   try {
-    return await adminModel.find({});
+    const admins = await adminModel.find({});
+    return admins.map(admin => {
+      const decryptedPassword = decryptPassword(admin.password, admin.passwordAccessKey); // Assuming the `iv` field is stored in the admin schema
+      return {
+        ...admin.toObject(), // Convert Mongoose document to plain JavaScript object
+        password: decryptedPassword, // Replace encrypted password with the decrypted one
+      };
+    });
   } catch (error) {
     throw new Error("Error fetching admin data");
   }
@@ -106,10 +110,15 @@ export const collectionUpdate = async (adminId, userData) => {
     // Iterate over the userData object and conditionally add fields to updateData
     // Process each field dynamically
     for (const key in userData) {
-      if (userData[key] !== undefined) { // Check if the value is not undefined
+      if (userData[key] !== undefined) {
+        // Check if the value is not undefined
         if (key === "password") {
           updateData.password = await hashPassword(userData[key]);
-        } else if (key === "solutions" || key === "features" || key === "commodities") {
+        } else if (
+          key === "solutions" ||
+          key === "features" ||
+          key === "commodities"
+        ) {
           // Handle array fields like solutions, features, and commodities
           updateData[key] = userData[key].map((item) => ({
             ...item, // Use spread to copy all properties from item

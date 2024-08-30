@@ -12,13 +12,15 @@ import {
   addBanner,
   deleteBanner,
   editBannerDetails,
-  fetchBanners
+  fetchBanners,
+  getBannerAdmin
 } from "../../controllers/super/bannerController.js";
 const router = Router();
 
 router.post("/register", uploadSingle("logo"), registerAdmin);
 router.patch("/edit-admin/:adminId",uploadSingle("logo"), editAdmin)
 router.get('/get-admin',getAdmin)
+router.get('/get-banner-admins',getBannerAdmin)
 router.post("/add-server", addServer);
 router.get('/fetch-server',fetchServerData)
 router.patch("/update-selected-server/:serverId", updateSelectedServer);
