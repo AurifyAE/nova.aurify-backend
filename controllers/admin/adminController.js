@@ -277,9 +277,9 @@ export const getCommodityController = async (req, res, next) => {
 
 export const getSpotRate = async (req, res, next) => {
   try {
-    const { userId } = req.params;
+    const { adminId } = req.params;
 
-    const spotRates = await spotRateModel.findOne({ createdBy: userId });
+    const spotRates = await spotRateModel.findOne({ createdBy: adminId });
 
     if (!spotRates) {
       return res
@@ -435,12 +435,8 @@ export const updateBankDetailsController = async (req, res, next) => {
       });
     }
 
-    // Directly update the bank details using the account number
-    const updatedAdmin = await adminModel.findOneAndUpdate(
-      { email, "bankDetails.accountNumber": bankDetails.accountNumber },
-      { $set: { "bankDetails.$": bankDetails } },
-      { new: true } // Return the updated document
-    );
+    // Find the admin by email
+    const admin = await adminModel.findOne({ email });
 
     if (!admin) {
       return res
@@ -448,7 +444,7 @@ export const updateBankDetailsController = async (req, res, next) => {
         .json({ success: false, message: "Admin not found." });
     }
 
-    // Find the index of the bank details to update
+    // Find the bank details by account number
     const bankIndex = admin.bankDetails.findIndex(
       (b) => b.accountNumber === bankDetails.accountNumber
     );
@@ -459,27 +455,19 @@ export const updateBankDetailsController = async (req, res, next) => {
         .json({ success: false, message: "Bank details not found." });
     }
 
-    // Update the bank details
+    // Update the specific bank details
     admin.bankDetails[bankIndex] = {
       ...admin.bankDetails[bankIndex],
       ...bankDetails,
     };
 
     // Save the updated admin document
-    await admin.save();
-
-    if (!updatedAdmin) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Admin or bank details not found." });
-    }
+    const updatedAdmin = await admin.save();
 
     res.status(200).json({
       success: true,
       message: "Bank details updated successfully",
-      data: updatedAdmin.bankDetails.find(
-        (b) => b.accountNumber === bankDetails.accountNumber
-      ),
+      data: updatedAdmin.bankDetails[bankIndex],
     });
   } catch (error) {
     console.error("Error updating bank details:", error.message);
@@ -558,6 +546,7 @@ export const fetchUsersForAdmin = async (req, res, next) => {
   try {
     const { adminId } = req.params;
     const response = await getUsersForAdmin(adminId);
+    console.log(response);
     res.status(200).json(response);
   } catch (error) {
     next(error);

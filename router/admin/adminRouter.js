@@ -42,7 +42,7 @@ import { createShopItem, fetchShopItems, editShopItem, removeShopItem } from "..
 import { validateContact } from "../../middleware/validators.js";
 import { sendContactEmail } from "../../controllers/admin/contactController.js";
 import { getUserData } from "../../helper/admin/adminHelper.js"; 
-// import { validateUser } from "../../middleware/validators.js";
+import { getMessages, storeMessage } from "../../controllers/admin/messageController.js";
 
 const router = Router()
 
@@ -60,7 +60,13 @@ router.get('/spotrates/:adminId', getSpotRate);
 
 router.get('/commodities/:email', getCommodityController);
 router.post('/spotrate-commodity', createCommodity);
-router.get('/spotrates/:adminId', getSpotRateCommodity);
+// router.get('/spotrates/:adminId', (req, res, next) => {
+//     console.log('Route /spotrates/:adminId was hit');
+  
+//     // Optionally pass the request to the next middleware or route handler
+//     next();
+//   }, getSpotRateCommodity);
+  
 router.patch('/spotrate-commodity/:adminId/:commodityId', updateCommodity);
 router.delete('/commodities/:adminId/:commodityId', deleteSpotRateCommodity);
 router.get('metalCommodities/:email', getMetalCommodity);
@@ -97,6 +103,9 @@ router.delete('/shop-items/:id', removeShopItem);
 
 router.post('/contact', validateContact, sendContactEmail);
 router.get('/user-data', getUserData);
+
+router.get('/messages/:adminId/:userId',getMessages);
+router.post('/messages',storeMessage);
 
 
 export default router
