@@ -77,24 +77,23 @@ io.on('connection', (socket) => {
 
 
 
-app.use(express.static('public'))
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const server = http.createServer(app);
 
-// app.use(morgan('dev'))
-//cors connecting
-app.use(
-  cors({
+const io = new Server(server, {
+  cors: {
     origin: ["http://localhost:5173","http://localhost:3000"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
 );
 
+// Apply secret key check to all routes
+app.use(checkSecretKey);
 
 //database connecting
 mongodb();
 
+// Routes
 app.use("/api", adminRouter);
 app.use("/admin", superRouter);
 app.use("/device", deviceRouter);

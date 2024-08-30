@@ -62,14 +62,11 @@ export const adminTokenVerificationApi = async (req, res, next) => {
   try {
     const token = req.body.token;
     if (!token) {
-      return res
-        .status(401)
-        .json({ message: "Authentication token is missing" });
+      return res.status(401).json({ message: "Authentication token is missing" });
     }
 
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
 
-    // Fetch admin data using the decoded adminId
     const admin = await adminModel.findById(decoded.adminId);
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
@@ -79,31 +76,38 @@ export const adminTokenVerificationApi = async (req, res, next) => {
     const serviceEndDate = new Date(admin.serviceEndDate);
 
     if (serviceEndDate < currentDate) {
-      // If service has expired
       return res.status(403).json({
-        message:
-          "Your service has ended. Please renew to continue using the system.",
+        message: "Your service has ended. Please renew to continue using the system.",
         serviceExpired: true,
       });
     }
 
-    // If the token is valid and service is active
+    const reminderDate = new Date(serviceEndDate.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days before expiration
+    if (currentDate >= reminderDate && currentDate < serviceEndDate) {
+      console.log("first")
+      return res.status(200).json({
+        admin: {
+          adminId: admin._id,
+          serviceEndDate: admin.serviceEndDate,
+        },
+        serviceExpired: false,
+        reminderMessage: "Your service is about to expire in less than a week. Please renew soon.",
+      });
+    }
+
     res.status(200).json({
       admin: {
         adminId: admin._id,
         serviceEndDate: admin.serviceEndDate,
       },
       serviceExpired: false,
+      reminderMessage: null,
     });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res
-        .status(401)
-        .json({ message: "Token has expired", tokenExpired: true });
+      return res.status(401).json({ message: "Token has expired", tokenExpired: true });
     } else if (error.name === "JsonWebTokenError") {
-      return res
-        .status(401)
-        .json({ message: "Invalid token", tokenInvalid: true });
+      return res.status(401).json({ message: "Invalid token", tokenInvalid: true });
     }
     next(error);
   }
