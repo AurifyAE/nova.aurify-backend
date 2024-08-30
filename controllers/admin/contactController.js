@@ -33,21 +33,55 @@ export const sendContactEmail = async (req, res) => {
       subject: 'New Contact Form Submission',
       html: mjml2html(
         `<mjml>
-          <mj-body>
-            <mj-section>
-              <mj-column>
-                <mj-divider border-color="#F45E43"></mj-divider>
-                <mj-text font-size="20px" color="#F45E43" font-family="helvetica">
-                  Name: ${finalFirstName} ${lastName}
-                  Company: ${companyName}
-                  Email: ${email}
-                  Phone: ${finalPhoneNumber}
-                  Message: ${message}
-                </mj-text>
-              </mj-column>
-            </mj-section>
-          </mj-body>
-        </mjml>`
+            <mj-head>
+              <mj-attributes>
+                <mj-text font-family="Helvetica, Arial, sans-serif" color="#55575d" />
+                <mj-class name="header" font-size="24px" color="#ffffff" font-weight="bold" />
+                <mj-class name="footer" font-size="12px" color="#999999" />
+              </mj-attributes>
+              <mj-style inline="inline">
+                .bg-gradient {
+                  background: linear-gradient(to right, #7e22ce, #ec4899);
+                }
+              </mj-style>
+            </mj-head>
+            <mj-body background-color="#f0f0f0">
+              <!-- Header Section -->
+              <mj-section css-class="bg-gradient" padding="20px">
+                <mj-column>
+                  <mj-image src="https://via.placeholder.com/150x50?text=Company+Logo" alt="Company Logo" width="150px" />
+                  <mj-text mj-class="header" align="center" padding-top="10px">Company Name</mj-text>
+                </mj-column>
+              </mj-section>
+
+              <!-- Main Content Section -->
+              <mj-section background-color="#ffffff" padding="20px">
+                <mj-column>
+                  <mj-divider border-width="2px" border-color="linear-gradient(to right, #7e22ce, #ec4899)" />
+                  <mj-text font-size="16px" color="#333333" line-height="1.5em">
+                    <strong>Name:</strong> ${finalFirstName} ${lastName} <br />
+                    <strong>Company:</strong> ${companyName} <br />
+                    <strong>Email:</strong> ${email} <br />
+                    <strong>Phone:</strong> ${finalPhoneNumber} <br />
+                    <strong>Message:</strong> ${message}
+                  </mj-text>
+                </mj-column>
+              </mj-section>
+
+              <!-- Footer Section -->
+              <mj-section background-color="#333333" padding="10px">
+                <mj-column>
+                  <mj-text mj-class="footer" align="center">
+                    Company Support Team<br />
+                    Email: support@company.com<br />
+                    Phone: +123 456 7890
+                  </mj-text>
+                </mj-column>
+              </mj-section>
+            </mj-body>
+          </mjml>`
+
+
       ).html
     };
 
