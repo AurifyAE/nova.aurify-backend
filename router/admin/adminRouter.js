@@ -30,9 +30,8 @@ import { getServerController } from "../../controllers/admin/serverController.js
 import { updateSpread } from "../../controllers/admin/adminController.js";
 import { getCommodityController } from "../../controllers/admin/adminController.js";
 import { getSpotRate } from "../../controllers/admin/adminController.js";
-// import { updateCommodity } from "../../controllers/admin/adminController.js";
+
 import {
-  getSpotRateCommodity,
   createCommodity,
 } from "../../controllers/admin/adminController.js";
 import {

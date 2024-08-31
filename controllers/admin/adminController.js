@@ -337,32 +337,6 @@ export const createCommodity = async (req, res, next) => {
   }
 };
 
-export const getSpotRateCommodity = async (req, res, next) => {
-  try {
-    console.log(req.params);
-    const adminId = req.params.adminId; // Correctly extract adminId
-
-    if (!adminId) {
-      throw createAppError("adminId parameter is required.", 400); // Correct the error message
-    }
-
-    const createdBy = new mongoose.Types.ObjectId(adminId);
-    const spotRateCommodity = await spotRateModel.findOne({ createdBy });
-
-    if (!spotRateCommodity) {
-      throw createAppError("Data not found.", 404);
-    }
-
-    res.status(200).json({
-      success: true,
-      data: spotRateCommodity,
-    });
-  } catch (error) {
-    console.log("Error:", error.message);
-    next(error); // Pass the error to the global error handler
-  }
-};
-
 export const getMetalCommodity = async (req, res, next) => {
   try {
     const userEmail = req.params.email;
