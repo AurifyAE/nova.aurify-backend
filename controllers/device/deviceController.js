@@ -1,7 +1,11 @@
 import macaddress from "macaddress";
 import DeviceModel from "../../model/deviceSchema.js";
-import { getNewsByAdminId, getSportrate } from "../../helper/device/deviceHalper.js";
+import {
+  getNewsByAdminId,
+  getSportrate,
+} from "../../helper/device/deviceHalper.js";
 import { serverModel } from "../../model/serverSchema.js";
+import adminModel from "../../model/adminSchema.js";
 
 export const activateDeviceController = async (req, res) => {
   try {
@@ -111,6 +115,29 @@ export const getCurrentNews = async (req, res, next) => {
       success: true,
       news,
       message: "News fetched successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getCommodities = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+    const adminData = await adminModel.findById(adminId, "commodities.symbol");
+    if (!adminData) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+    const commoditySymbols = adminData.commodities.map(
+      (commodity) => commodity.symbol
+    );
+    return res.status(200).json({
+      success: true,
+      commodities: commoditySymbols,
+      message: "Commodities fetched successfully",
     });
   } catch (error) {
     next(error);
