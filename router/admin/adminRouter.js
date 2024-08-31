@@ -50,34 +50,43 @@ import {
   editShopItem,
   removeShopItem,
 } from "../../controllers/admin/shopController.js";
+import { validateContact } from "../../middleware/validators.js";
+import { sendContactEmail } from "../../controllers/admin/contactController.js";
+import { getUserData } from "../../helper/admin/adminHelper.js";
+import {
+  getMessages,
+  storeMessage,
+} from "../../controllers/admin/messageController.js";
 
 const router = Router();
 
 router.post("/login", adminLoginController);
+router.post("/verify-token", adminTokenVerificationApi);
 router.get("/data/:email", getAdminDataController);
 router.put("/update-profile/:id", updateAdminProfileController);
 router.post("/update-logo", uploadSingle("logo"), updateLogo);
 router.get("/server-url", getServerController);
 router.post("/verify-token", adminTokenVerificationApi);
-// router.post('/update-spotRate',getSpotRateData);
 router.post("/update-spread", updateSpread);
-router.get("/spotrates/:userId", getSpotRate);
-
+router.get("/spotrates/:adminId", getSpotRate);
 router.get("/commodities/:email", getCommodityController);
 router.post("/spotrate-commodity", createCommodity);
-router.get("/spotrates/:userId", getSpotRateCommodity);
-router.patch("/spotrate-commodity/:userId/:commodityId", updateCommodity);
-router.delete("/commodities/:userId/:commodityId", deleteSpotRateCommodity);
+router.patch("/spotrate-commodity/:adminId/:commodityId", updateCommodity);
+router.delete("/commodities/:adminId/:commodityId", deleteSpotRateCommodity);
 router.get("metalCommodities/:email", getMetalCommodity);
-
-router.get("/notifications/:userId", getNotification);
-router.delete("/notifications/:userId/:notificationId", deleteNotification);
+router.get("/notifications/:adminId", getNotification);
+router.delete("/notifications/:adminId/:notificationId", deleteNotification);
+router.post("/save-bank-details", saveBankDetailsController);
+router.delete("/delete-bank-details", deleteBankDetailsController);
+router.put("/update-bank-details", updateBankDetailsController);
 
 router.post("/save-bank-details", saveBankDetailsController);
 router.delete("/delete-bank-details", deleteBankDetailsController);
 router.put("/update-bank-details", updateBankDetailsController);
 
 router.get("/features", getAdminFeaturesController);
+
+router.get("/banners/:adminId", getBanner);
 
 router.get("/banners/:userId", getBanner);
 
@@ -101,9 +110,15 @@ router.delete(
   deleteSpreadValueController
 );
 
-router.post("/shop-items", uploadSingle("image"), createShopItem);
+router.post("/shop-items/:email", uploadSingle("image"), createShopItem);
 router.get("/shop-items", fetchShopItems);
-router.patch("/shop-items/:id", uploadSingle("image"), editShopItem); // Add file upload support to edit as well
+router.patch("/shop-items/:id", uploadSingle("image"), editShopItem);
 router.delete("/shop-items/:id", removeShopItem);
+
+router.post("/contact", validateContact, sendContactEmail);
+router.get("/user-data", getUserData);
+
+router.get("/messages/:adminId/:userId", getMessages);
+router.post("/messages/:userId", storeMessage);
 
 export default router;

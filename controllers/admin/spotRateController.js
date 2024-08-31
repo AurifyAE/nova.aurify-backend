@@ -5,12 +5,12 @@ import mongoose from "mongoose";
 
 export const updateCommodity = async (req, res, next) => {
   try {
-    const { userId, commodityId } = req.params;
+    const { adminId, commodityId } = req.params;
     const commodity  = req.body;
     console.log(commodity)
     // Update the specific commodity within the commodities array
     const updatedSpotRate = await spotRateModel.findOneAndUpdate(
-      { createdBy: userId, 'commodities._id': commodityId },
+      { createdBy: adminId, 'commodities._id': commodityId },
       { 
         $set: { 
           'commodities.$': {
@@ -20,7 +20,9 @@ export const updateCommodity = async (req, res, next) => {
             weight: commodity.weight,
             _id: commodityId,
             buyPremium: commodity.buyPremium,
-            sellPremium: commodity.sellPremium
+            sellPremium: commodity.sellPremium,
+            buyCharge: commodity.buyCharge,
+            sellCharge: commodity.sellCharge
           } 
         }
       },
@@ -43,11 +45,11 @@ export const updateCommodity = async (req, res, next) => {
 
   export const deleteSpotRateCommodity = async (req, res, next) => {
     try {
-      const { userId, commodityId } = req.params;
+      const { adminId, commodityId } = req.params;
   
       // Update the spot rate document by removing the specific commodity
       const result = await spotRateModel.updateOne(
-        { createdBy: userId }, 
+        { createdBy: adminId }, 
         { $pull: { commodities: { _id: commodityId } } }
       );
   

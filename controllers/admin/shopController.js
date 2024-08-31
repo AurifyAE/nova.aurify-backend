@@ -1,32 +1,35 @@
+
 import {
     addShopItem,
+    deleteShopItem,
     getAllShopItems,
-    updateShopItem,
-    deleteShopItem
+    updateShopItem
 } from "../../helper/admin/shopHelper.js";
-import fs from "fs";
+import { createAppError } from "../../utils/errorHandler.js";
+
 
 // Add a new shop item
 export const createShopItem = async (req, res) => {
-    try {
-        const { name, type, weight, rate } = req.body;
-        const { email } = req.query;
+    // try {
+    const { name, type, weight, rate } = req.body;
+    const { email } = req.params;
+    // Multer stores the image file information in req.file
 
-        // Multer stores the image file information in req.file
-        const image = req.file ? `/uploads/${req.file.filename}` : null;
+    const image = req.file ? `/uploads/${req.file.filename}` : null;
 
-        if (image == null) {
-            throw createAppError("image is not find", 400);
-        }
-        const imageBase64 = fs.readFileSync(req.file.path, { encoding: 'base64' });
-        const img = `data:${req.file.mimetype};base64,${imageBase64}`;
-
-        // Pass the image path instead of the base64 string to the helper function
-        const newShopItem = await addShopItem(email, name, type, weight, rate, img);
-        res.status(201).json(newShopItem);
-    } catch (error) {
-        res.status(error.statusCode || 500).json({ message: error.message });
+    if (image == null) {
+        throw createAppError("image is not find", 400);
     }
+    // const imageBase64 = fs.readFileSync(req.file.path, { encoding: 'base64' });
+    // const img = `data:${req.file.mimetype};base64,${imageBase64}`;
+    const img = image;
+
+    // Pass the image path instead of the base64 string to the helper function
+    const newShopItem = await addShopItem(email, name, type, weight, rate, img);
+    res.status(201).json(newShopItem);
+    // } catch (error) {
+    //     res.status(error.statusCode || 500).json({ message: error.message });
+    // }
 };
 
 // Get all shop items for a specific admin
@@ -40,24 +43,30 @@ export const fetchShopItems = async (req, res) => {
     }
 };
 
-// Update a shop item
+
+
 export const editShopItem = async (req, res) => {
     try {
         const { email } = req.query;
         const { id: shopItemId } = req.params;
-        let updatedData = req.body;
+        let updatedData = {};
+
+        // Only include fields that are present and valid
+        if (req.body.name) updatedData.name = req.body.name;
+        if (req.body.type) updatedData.type = req.body.type;
+        if (req.body.weight) updatedData.weight = parseFloat(req.body.weight) || 0;
+        if (req.body.rate) updatedData.rate = parseFloat(req.body.rate) || 0;
 
         // Check if a new image was uploaded
         if (req.file) {
-            const imageBase64 = fs.readFileSync(req.file.path, { encoding: 'base64' });
-            const img = `data:${req.file.mimetype};base64,${imageBase64}`;
-            updatedData = { ...updatedData, image: img };
+            updatedData.image = `/uploads/${req.file.filename}`;
         }
 
         const updatedShopItem = await updateShopItem(email, shopItemId, updatedData);
         res.status(200).json(updatedShopItem);
     } catch (error) {
-        res.status(error.statusCode || 500).json({ message: error.message });
+        console.error("Detailed error in controller:", error);
+        res.status(error.statusCode || 500).json({ message: error.message, stack: error.stack });
     }
 };
 

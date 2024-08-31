@@ -64,6 +64,54 @@ export const updateUserLogo = async (email, logoName) => {
   }
 };
 
+
+export const userCollectionSave = async (data, adminId) => {
+  try {
+    const { userName, contact, location, email, password } = data;
+    const encrypt = await hashPassword(password);
+    const newUser = {
+      userName,
+      contact,
+      location,
+      email,
+      password: encrypt, // Store the hashed password
+    };
+    let usersDoc = await UsersModel.findOne({ createdBy: adminId });
+    const emailExists = usersDoc?.users.some((user) => user.email === email);
+
+    if (emailExists) {
+      return { success: false, message: "Email already exists for this Admin" };
+    }
+    if (!usersDoc) {
+      usersDoc = new UsersModel({ createdBy: adminId, users: [newUser] });
+    } else {
+      usersDoc.users.push(newUser);
+    }
+    await usersDoc.save();
+    const notificationMessage = `🎉 ${userName} has been added as a new user. Check your admin panel for details!`;
+
+    let notificationDoc = await NotificationModel.findOne({
+      createdBy: adminId,
+    });
+
+    if (!notificationDoc) {
+      notificationDoc = new NotificationModel({
+        createdBy: adminId,
+        notification: [{ message: notificationMessage }],
+      });
+    } else {
+      notificationDoc.notification.push({ message: notificationMessage });
+    }
+
+    await notificationDoc.save();
+
+    return { success: true, message: "User added successfully" };
+  } catch (error) {
+    throw new Error("Error saving user data");
+  }
+};
+
+
 export const getCommodity = async (email) => {
   try {
     return await adminModel.findOne({ email });
@@ -81,9 +129,9 @@ export const getMetals = async (userEmail) => {
   }
 };
 
-export const fetchNotification = async (userId) => {
+export const fetchNotification = async (adminId) => {
   try {
-    const createdBy = new mongoose.Types.ObjectId(userId);
+    const createdBy = new mongoose.Types.ObjectId(adminId);
     const notifications = await NotificationModel.findOne({ createdBy });
     if (!notifications) {
       return { success: false, message: "Notification not found" };

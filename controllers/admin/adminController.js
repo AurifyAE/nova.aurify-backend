@@ -18,10 +18,13 @@ import {
   updateNotification,
 } from "../../helper/admin/adminHelper.js";
 import adminModel from "../../model/adminSchema.js";
-import { adminVerfication } from "../../helper/admin/adminHelper.js";
+import {
+  adminVerfication,
+  userCollectionSave,
+} from "../../helper/admin/adminHelper.js";
+import { verifyToken, generateToken } from "../../utils/jwt.js";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
-import { generateToken } from "../../utils/jwt.js";
 import { decryptPassword } from "../../utils/crypto.js";
 
 export const adminLoginController = async (req, res, next) => {
@@ -62,7 +65,9 @@ export const adminTokenVerificationApi = async (req, res, next) => {
   try {
     const token = req.body.token;
     if (!token) {
-      return res.status(401).json({ message: "Authentication token is missing" });
+      return res
+        .status(401)
+        .json({ message: "Authentication token is missing" });
     }
 
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
@@ -77,12 +82,15 @@ export const adminTokenVerificationApi = async (req, res, next) => {
 
     if (serviceEndDate < currentDate) {
       return res.status(403).json({
-        message: "Your service has ended. Please renew to continue using the system.",
+        message:
+          "Your service has ended. Please renew to continue using the system.",
         serviceExpired: true,
       });
     }
 
-    const reminderDate = new Date(serviceEndDate.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days before expiration
+    const reminderDate = new Date(
+      serviceEndDate.getTime() - 7 * 24 * 60 * 60 * 1000
+    ); // 7 days before expiration
     if (currentDate >= reminderDate && currentDate < serviceEndDate) {
       return res.status(200).json({
         admin: {
@@ -90,7 +98,8 @@ export const adminTokenVerificationApi = async (req, res, next) => {
           serviceEndDate: admin.serviceEndDate,
         },
         serviceExpired: false,
-        reminderMessage: "Your service is about to expire in less than a week. Please renew soon.",
+        reminderMessage:
+          "Your service is about to expire in less than a week. Please renew soon.",
       });
     }
 
@@ -104,9 +113,13 @@ export const adminTokenVerificationApi = async (req, res, next) => {
     });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Token has expired", tokenExpired: true });
+      return res
+        .status(401)
+        .json({ message: "Token has expired", tokenExpired: true });
     } else if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Invalid token", tokenInvalid: true });
+      return res
+        .status(401)
+        .json({ message: "Invalid token", tokenInvalid: true });
     }
     next(error);
   }
@@ -114,8 +127,8 @@ export const adminTokenVerificationApi = async (req, res, next) => {
 
 export const deleteNotification = async (req, res, next) => {
   try {
-    const { userId, notificationId } = req.params;
-    const response = await updateNotification(userId, notificationId);
+    const { adminId, notificationId } = req.params;
+    const response = await updateNotification(adminId, notificationId);
     res
       .status(200)
       .json({ message: response.message, success: response.success });
@@ -151,9 +164,6 @@ export const updateAdminProfileController = async (req, res, next) => {
   try {
     const { id } = req.params; // Get ID from URL parameters
     const { email, fullName, mobile, location } = req.body; // Get updated data from request body
-
-    console.log("Request body:", req.body); // Log the request body
-    console.log("URL parameters:", req.params); // Log the URL parameters
 
     if (!id) {
       throw createAppError("ID parameter is required.", 400);
@@ -208,10 +218,10 @@ export const updateLogo = async (req, res) => {
 };
 
 export const updateSpread = async (req, res) => {
-  const { userId, metal, type, value } = req.body;
+  const { adminId, metal, type, value } = req.body;
 
   try {
-    const createdBy = new mongoose.Types.ObjectId(userId);
+    const createdBy = new mongoose.Types.ObjectId(adminId);
     let spotRate = await spotRateModel.findOne({ createdBy });
 
     if (!spotRate) {
@@ -280,10 +290,12 @@ export const getCommodityController = async (req, res, next) => {
 
 export const getSpotRate = async (req, res, next) => {
   try {
-    const { userId } = req.params;
-
-    const spotRates = await spotRateModel.findOne({ createdBy: userId });
-
+    const { adminId } = req.params;
+    console.log(adminId);
+    const createdBy = new mongoose.Types.ObjectId(adminId);
+    console.log(createdBy);
+    const spotRates = await spotRateModel.findOne({ createdBy });
+    console.log(spotRates);
     if (!spotRates) {
       return res
         .status(404)
@@ -299,23 +311,24 @@ export const getSpotRate = async (req, res, next) => {
 
 export const createCommodity = async (req, res, next) => {
   try {
-    const { userId, commodity } = req.body;
-    console.log(commodity)
-    console.log(userId)
-    const createdBy = new mongoose.Types.ObjectId(userId);
-    const spotrate = await spotRateModel.findOne({ createdBy });
-    console.log(spotrate)
+    const { adminId, commodity } = req.body;
+    const createdBy = new mongoose.Types.ObjectId(adminId);
+    let spotrate = await spotRateModel.findOne({ createdBy });
+
     if (!spotrate) {
-      return res
-        .status(404)
-        .json({ message: "Spotrate not found for this user" });
+      // If no document exists for this user, create a new one
+      spotrate = new spotRateModel({
+        createdBy,
+      });
     }
     spotrate.commodities.push(commodity);
     const updatedSpotrate = await spotrate.save();
-    res.status(200).json({
-      message: "Commodity created successfully",
-      data: updatedSpotrate,
-    });
+    res
+      .status(200)
+      .json({
+        message: "Commodity created successfully",
+        data: updatedSpotrate,
+      });
   } catch (error) {
     console.error("Error creating commodity:", error);
     res
@@ -326,22 +339,23 @@ export const createCommodity = async (req, res, next) => {
 
 export const getSpotRateCommodity = async (req, res, next) => {
   try {
-    const userId = req.params;
-    if (!userId) {
-      throw createAppError("email parameter is required.", 400);
+    console.log(req.params);
+    const adminId = req.params.adminId; // Correctly extract adminId
+
+    if (!adminId) {
+      throw createAppError("adminId parameter is required.", 400); // Correct the error message
     }
 
-    const spotRateCommodity = await spotRateModel.findOne({
-      createdBy: userId,
-    });
+    const createdBy = new mongoose.Types.ObjectId(adminId);
+    const spotRateCommodity = await spotRateModel.findOne({ createdBy });
 
     if (!spotRateCommodity) {
-      throw createAppError("data not found.", 404);
+      throw createAppError("Data not found.", 404);
     }
 
     res.status(200).json({
       success: true,
-      data: adminData,
+      data: spotRateCommodity,
     });
   } catch (error) {
     console.log("Error:", error.message);
@@ -374,13 +388,13 @@ export const getMetalCommodity = async (req, res, next) => {
 
 export const getNotification = async (req, res, next) => {
   try {
-    const { userId } = req.params;
+    const { adminId } = req.params;
 
-    if (!userId) {
+    if (!adminId) {
       throw createAppError("User ID is required.", 400);
     }
 
-    const response = await fetchNotification(userId);
+    const response = await fetchNotification(adminId);
 
     res.status(200).json({
       message: response.message,
@@ -441,12 +455,8 @@ export const updateBankDetailsController = async (req, res, next) => {
       });
     }
 
-    // Directly update the bank details using the account number
-    const updatedAdmin = await adminModel.findOneAndUpdate(
-      { email, "bankDetails.accountNumber": bankDetails.accountNumber },
-      { $set: { "bankDetails.$": bankDetails } },
-      { new: true } // Return the updated document
-    );
+    // Find the admin by email
+    const admin = await adminModel.findOne({ email });
 
     if (!admin) {
       return res
@@ -454,7 +464,7 @@ export const updateBankDetailsController = async (req, res, next) => {
         .json({ success: false, message: "Admin not found." });
     }
 
-    // Find the index of the bank details to update
+    // Find the bank details by account number
     const bankIndex = admin.bankDetails.findIndex(
       (b) => b.accountNumber === bankDetails.accountNumber
     );
@@ -465,27 +475,19 @@ export const updateBankDetailsController = async (req, res, next) => {
         .json({ success: false, message: "Bank details not found." });
     }
 
-    // Update the bank details
+    // Update the specific bank details
     admin.bankDetails[bankIndex] = {
       ...admin.bankDetails[bankIndex],
       ...bankDetails,
     };
 
     // Save the updated admin document
-    await admin.save();
-
-    if (!updatedAdmin) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Admin or bank details not found." });
-    }
+    const updatedAdmin = await admin.save();
 
     res.status(200).json({
       success: true,
       message: "Bank details updated successfully",
-      data: updatedAdmin.bankDetails.find(
-        (b) => b.accountNumber === bankDetails.accountNumber
-      ),
+      data: updatedAdmin.bankDetails[bankIndex],
     });
   } catch (error) {
     console.error("Error updating bank details:", error.message);
