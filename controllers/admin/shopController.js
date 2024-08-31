@@ -5,6 +5,7 @@ import {
     getAllShopItems,
     updateShopItem
 } from "../../helper/admin/shopHelper.js";
+import { createAppError } from "../../utils/errorHandler.js";
 
 
 // Add a new shop item

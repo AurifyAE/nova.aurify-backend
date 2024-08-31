@@ -44,26 +44,53 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('sendMessage', async ({ senderId, receiverId, content }) => {
-    const message = new ChatModel({
-      sender: senderId,
-      receiver: receiverId,
-      content,
-    });
-    await message.save();
+  socket.on('joinRoom', (room) => {
+    socket.join(room);
+    console.log(`Socket ${socket.id} joined room ${room}`);
+  });
 
-    // Find receiver's socket ID
-    let receiverSocket;
-    const admin = await adminModel.findById(receiverId);
-    if (admin) {
-      receiverSocket = admin.socketId;
-    } else {
-      const user = await UsersModel.findOne({ 'users._id': receiverId });
-      receiverSocket = user.users.find(u => u._id.toString() === receiverId).socketId;
-    }
+  socket.on('leaveRoom', (room) => {
+    socket.leave(room);
+    console.log(`Socket ${socket.id} left room ${room}`);
+  });
 
-    if (receiverSocket) {
-      io.to(receiverSocket).emit('newMessage', message);
+  socket.on('sendMessage', async ({ sender, receiver, content, room }) => {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(sender) || !mongoose.Types.ObjectId.isValid(receiver)) {
+        throw new Error('Invalid sender or receiver ID');
+      }
+
+      if (!content || typeof content !== 'string' || content.trim() === '') {
+        throw new Error('Invalid message content');
+      }
+
+      let chat = await ChatModel.findOne({ 
+        $or: [
+          { user: sender, 'conversation.sender': receiver },
+          { user: receiver, 'conversation.sender': sender }
+        ]
+      });
+
+      if (!chat) {
+        chat = new ChatModel({
+          user: receiver,
+          conversation: []
+        });
+      }
+
+      chat.conversation.push({
+        sender,
+        message: content,
+        time: new Date()
+      });
+
+      await chat.save();
+
+      io.to(room).emit('message', { sender, receiver, content, time: new Date() });
+      console.log(`Message sent in room ${room}:`, { sender, receiver, content });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      socket.emit('error', { message: error.message || 'Failed to send message' });
     }
   });
 
@@ -120,4 +147,16 @@ app.use(errorHandler);
 server.listen(port, () => {
   console.log("server running !!!!!");
   console.log(`http://localhost:${port}`);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Perform any necessary cleanup
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Perform any necessary cleanup
 });

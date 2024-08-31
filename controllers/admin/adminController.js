@@ -84,7 +84,6 @@ export const adminTokenVerificationApi = async (req, res, next) => {
 
     const reminderDate = new Date(serviceEndDate.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days before expiration
     if (currentDate >= reminderDate && currentDate < serviceEndDate) {
-      console.log("first")
       return res.status(200).json({
         admin: {
           adminId: admin._id,
@@ -153,8 +152,6 @@ export const updateAdminProfileController = async (req, res, next) => {
     const { id } = req.params; // Get ID from URL parameters
     const { email, fullName, mobile, location } = req.body; // Get updated data from request body
 
-    console.log("Request body:", req.body); // Log the request body
-    console.log("URL parameters:", req.params); // Log the URL parameters
 
     if (!id) {
       throw createAppError("ID parameter is required.", 400);
@@ -282,9 +279,11 @@ export const getCommodityController = async (req, res, next) => {
 export const getSpotRate = async (req, res, next) => {
   try {
     const { adminId } = req.params;
-
-    const spotRates = await spotRateModel.findOne({ createdBy: adminId });
-
+    console.log(adminId);
+    const createdBy = new mongoose.Types.ObjectId(adminId);
+    console.log(createdBy);
+    const spotRates = await spotRateModel.findOne({ createdBy });
+    console.log(spotRates);
     if (!spotRates) {
       return res
         .status(404)
@@ -321,8 +320,8 @@ export const createCommodity = async (req, res, next) => {
 
 export const getSpotRateCommodity = async (req, res, next) => {
   try {
+    console.log(req.params);
     const adminId = req.params.adminId; // Correctly extract adminId
-    console.log(adminId);
 
     if (!adminId) {
       throw createAppError("adminId parameter is required.", 400); // Correct the error message
@@ -330,7 +329,6 @@ export const getSpotRateCommodity = async (req, res, next) => {
 
     const createdBy = new mongoose.Types.ObjectId(adminId);
     const spotRateCommodity = await spotRateModel.findOne({ createdBy });
-    console.log(spotRateCommodity);
 
     if (!spotRateCommodity) {
       throw createAppError("Data not found.", 404);
@@ -550,7 +548,6 @@ export const fetchUsersForAdmin = async (req, res, next) => {
   try {
     const { adminId } = req.params;
     const response = await getUsersForAdmin(adminId);
-    console.log(response);
     res.status(200).json(response);
   } catch (error) {
     next(error);

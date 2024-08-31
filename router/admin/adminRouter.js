@@ -105,7 +105,7 @@ router.post('/contact', validateContact, sendContactEmail);
 router.get('/user-data', getUserData);
 
 router.get('/messages/:adminId/:userId',getMessages);
-router.post('/messages',storeMessage);
+router.post('/messages/:userId', storeMessage);
 
 
 export default router
