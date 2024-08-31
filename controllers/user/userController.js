@@ -1,4 +1,4 @@
-import { userCollectionSave, userUpdateSpread, userVerfication } from "../../helper/user/userHelper.js";
+import { userCollectionSave, userUpdateSpread, userVerfication,requestPassInAdmin } from "../../helper/user/userHelper.js";
 
 export const registerUser = async (req, res, next) => {
     try {
@@ -38,6 +38,19 @@ export const registerUser = async (req, res, next) => {
       const { adminId, userId } = req.params;
       const { spread,title } = req.body;
       const response = await userUpdateSpread(adminId, userId, spread,title);
+      res
+        .status(200)
+        .json({ message: response.message, success: response.success });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  export const requestAdmin = async (req, res, next) => {
+    try {
+      const { adminId,} = req.params;
+      const { request} = req.body;
+      const response = await requestPassInAdmin(adminId, request);
       res
         .status(200)
         .json({ message: response.message, success: response.success });

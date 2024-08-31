@@ -7,7 +7,7 @@ export const updateCommodity = async (req, res, next) => {
   try {
     const { adminId, commodityId } = req.params;
     const commodity  = req.body;
-
+    console.log(commodity)
     // Update the specific commodity within the commodities array
     const updatedSpotRate = await spotRateModel.findOneAndUpdate(
       { createdBy: adminId, 'commodities._id': commodityId },

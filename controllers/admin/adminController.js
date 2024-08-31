@@ -18,7 +18,10 @@ import {
   updateNotification,
 } from "../../helper/admin/adminHelper.js";
 import adminModel from "../../model/adminSchema.js";
-import { adminVerfication, userCollectionSave } from "../../helper/admin/adminHelper.js";
+import {
+  adminVerfication,
+  userCollectionSave,
+} from "../../helper/admin/adminHelper.js";
 import { verifyToken, generateToken } from "../../utils/jwt.js";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
@@ -62,7 +65,9 @@ export const adminTokenVerificationApi = async (req, res, next) => {
   try {
     const token = req.body.token;
     if (!token) {
-      return res.status(401).json({ message: "Authentication token is missing" });
+      return res
+        .status(401)
+        .json({ message: "Authentication token is missing" });
     }
 
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
@@ -77,12 +82,15 @@ export const adminTokenVerificationApi = async (req, res, next) => {
 
     if (serviceEndDate < currentDate) {
       return res.status(403).json({
-        message: "Your service has ended. Please renew to continue using the system.",
+        message:
+          "Your service has ended. Please renew to continue using the system.",
         serviceExpired: true,
       });
     }
 
-    const reminderDate = new Date(serviceEndDate.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days before expiration
+    const reminderDate = new Date(
+      serviceEndDate.getTime() - 7 * 24 * 60 * 60 * 1000
+    ); // 7 days before expiration
     if (currentDate >= reminderDate && currentDate < serviceEndDate) {
       return res.status(200).json({
         admin: {
@@ -90,7 +98,8 @@ export const adminTokenVerificationApi = async (req, res, next) => {
           serviceEndDate: admin.serviceEndDate,
         },
         serviceExpired: false,
-        reminderMessage: "Your service is about to expire in less than a week. Please renew soon.",
+        reminderMessage:
+          "Your service is about to expire in less than a week. Please renew soon.",
       });
     }
 
@@ -104,9 +113,13 @@ export const adminTokenVerificationApi = async (req, res, next) => {
     });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Token has expired", tokenExpired: true });
+      return res
+        .status(401)
+        .json({ message: "Token has expired", tokenExpired: true });
     } else if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Invalid token", tokenInvalid: true });
+      return res
+        .status(401)
+        .json({ message: "Invalid token", tokenInvalid: true });
     }
     next(error);
   }
@@ -151,7 +164,6 @@ export const updateAdminProfileController = async (req, res, next) => {
   try {
     const { id } = req.params; // Get ID from URL parameters
     const { email, fullName, mobile, location } = req.body; // Get updated data from request body
-
 
     if (!id) {
       throw createAppError("ID parameter is required.", 400);
@@ -311,39 +323,19 @@ export const createCommodity = async (req, res, next) => {
     }
     spotrate.commodities.push(commodity);
     const updatedSpotrate = await spotrate.save();
-    res.status(200).json({ message: 'Commodity created successfully', data: updatedSpotrate });
+    res
+      .status(200)
+      .json({
+        message: "Commodity created successfully",
+        data: updatedSpotrate,
+      });
   } catch (error) {
-    console.error('Error creating commodity:', error);
-    res.status(500).json({ message: 'Error creating commodity', error: error.message });
+    console.error("Error creating commodity:", error);
+    res
+      .status(500)
+      .json({ message: "Error creating commodity", error: error.message });
   }
 };
-
-export const getSpotRateCommodity = async (req, res, next) => {
-  try {
-    console.log(req.params);
-    const adminId = req.params.adminId; // Correctly extract adminId
-
-    if (!adminId) {
-      throw createAppError("adminId parameter is required.", 400); // Correct the error message
-    }
-
-    const createdBy = new mongoose.Types.ObjectId(adminId);
-    const spotRateCommodity = await spotRateModel.findOne({ createdBy });
-
-    if (!spotRateCommodity) {
-      throw createAppError("Data not found.", 404);
-    }
-
-    res.status(200).json({
-      success: true,
-      data: spotRateCommodity,
-    });
-  } catch (error) {
-    console.log('Error:', error.message);
-    next(error); // Pass the error to the global error handler
-  }
-};
-
 
 export const getMetalCommodity = async (req, res, next) => {
   try {

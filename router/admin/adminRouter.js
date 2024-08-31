@@ -1,47 +1,62 @@
 import { Router } from "express";
 import {
-    saveBankDetailsController,
-    updateBankDetailsController,
-    deleteBankDetailsController,
-    getAdminDataController,
-    getAdminFeaturesController,
-    getNotification,
-    deleteNotification,
+  saveBankDetailsController,
+  updateBankDetailsController,
+  deleteBankDetailsController,
+  getAdminDataController,
+  getAdminFeaturesController,
+  getNotification,
+  deleteNotification,
 } from "../../controllers/admin/adminController.js";
 
 import {
-    addManualNewsController,
-    getManualNewsController,
-    updateManualNewsController,
-    deleteManualNewsController
+  addManualNewsController,
+  getManualNewsController,
+  updateManualNewsController,
+  deleteManualNewsController,
 } from "../../controllers/admin/newsController.js";
 
 import {
-    fetchUsersForAdmin,
-    fetchSpreadValues,
-    addCustomSpread,
-    deleteSpreadValueController,
-    adminTokenVerificationApi
-} from '../../controllers/admin/adminController.js';
-import { updateAdminProfileController } from "../../controllers/admin/adminController.js"
+  fetchUsersForAdmin,
+  fetchSpreadValues,
+  addCustomSpread,
+  deleteSpreadValueController,
+  adminTokenVerificationApi,
+} from "../../controllers/admin/adminController.js";
+import { updateAdminProfileController } from "../../controllers/admin/adminController.js";
 import { updateLogo } from "../../controllers/admin/adminController.js";
 import { uploadSingle } from "../../middleware/multer.js";
 import { getServerController } from "../../controllers/admin/serverController.js";
 import { updateSpread } from "../../controllers/admin/adminController.js";
 import { getCommodityController } from "../../controllers/admin/adminController.js";
 import { getSpotRate } from "../../controllers/admin/adminController.js";
-import {  createCommodity } from "../../controllers/admin/adminController.js";
-import { deleteSpotRateCommodity, updateCommodity } from "../../controllers/admin/spotRateController.js";
+
+import {
+  createCommodity,
+} from "../../controllers/admin/adminController.js";
+import {
+  deleteSpotRateCommodity,
+  updateCommodity,
+} from "../../controllers/admin/spotRateController.js";
 import { getMetalCommodity } from "../../controllers/admin/adminController.js";
 import { adminLoginController } from "../../controllers/admin/adminController.js";
 import { getBanner } from "../../controllers/admin/bannerController.js";
-import { createShopItem, fetchShopItems, editShopItem, removeShopItem } from "../../controllers/admin/shopController.js";
+
+import {
+  createShopItem,
+  fetchShopItems,
+  editShopItem,
+  removeShopItem,
+} from "../../controllers/admin/shopController.js";
 import { validateContact } from "../../middleware/validators.js";
 import { sendContactEmail } from "../../controllers/admin/contactController.js";
-import { getUserData } from "../../helper/admin/adminHelper.js"; 
-import { getMessages, storeMessage } from "../../controllers/admin/messageController.js";
+import { getUserData } from "../../helper/admin/adminHelper.js";
+import {
+  getMessages,
+  storeMessage,
+} from "../../controllers/admin/messageController.js";
 
-const router = Router()
+const router = Router();
 
 //admin router
 router.post('/login',adminLoginController);
@@ -67,25 +82,27 @@ router.get('/notifications/:adminId',getNotification);
 router.delete('/notifications/:adminId/:notificationId',deleteNotification);
 
 
-//Bank router
 router.post('/save-bank-details', saveBankDetailsController);
 router.delete('/delete-bank-details', deleteBankDetailsController);
 router.put('/update-bank-details', updateBankDetailsController);
 
-
-//feature router
 router.get('/features', getAdminFeaturesController);
 
-
-//banner router
 router.get('/banners/:adminId',getBanner);
 
+router.get("/banners/:userId", getBanner);
 
 //news-routers
-router.post('/add-manual-news', addManualNewsController);
-router.get('/get-manual-news', getManualNewsController);
-router.patch('/update-manual-news/:newsId/:newsItemId', updateManualNewsController);
-router.delete('/delete-manual-news/:newsId/:newsItemId', deleteManualNewsController);
+router.post("/add-manual-news", addManualNewsController);
+router.get("/get-manual-news", getManualNewsController);
+router.patch(
+  "/update-manual-news/:newsId/:newsItemId",
+  updateManualNewsController
+);
+router.delete(
+  "/delete-manual-news/:newsId/:newsItemId",
+  deleteManualNewsController
+);
 
 
 //user router
@@ -111,4 +128,4 @@ router.get('/messages/:adminId/:userId',getMessages);
 router.post('/messages/:userId', storeMessage);
 
 
-export default router
+export default router;
