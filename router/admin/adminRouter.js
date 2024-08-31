@@ -48,8 +48,8 @@ import {
   editShopItem,
   removeShopItem,
 } from "../../controllers/admin/shopController.js";
-import { validateContact } from "../../middleware/validators.js";
-import { sendContactEmail } from "../../controllers/admin/contactController.js";
+import { validateContact, validateFeatureRequest } from "../../middleware/validators.js";
+import { sendContactEmail, sendFeatureRequestEmail } from "../../controllers/admin/contactController.js";
 import { getUserData } from "../../helper/admin/adminHelper.js";
 import {
   getMessages,
@@ -87,6 +87,7 @@ router.delete('/delete-bank-details', deleteBankDetailsController);
 router.put('/update-bank-details', updateBankDetailsController);
 
 router.get('/features', getAdminFeaturesController);
+router.post('/request-feature', validateFeatureRequest, sendFeatureRequestEmail);
 
 router.get('/banners/:adminId',getBanner);
 
@@ -126,6 +127,8 @@ router.get('/user-data', getUserData);
 //messages router
 router.get('/messages/:adminId/:userId',getMessages);
 router.post('/messages/:userId', storeMessage);
+
+
 
 
 export default router;

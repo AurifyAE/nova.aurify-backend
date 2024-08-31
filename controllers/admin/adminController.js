@@ -503,38 +503,7 @@ export const deleteBankDetailsController = async (req, res, next) => {
   }
 };
 
-//Sidebar Features
-export const getAdminFeaturesController = async (req, res, next) => {
-  try {
-    const { email } = req.query; // Using query parameter for consistency with your frontend
 
-    if (!email) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email parameter is required." });
-    }
-
-    const admin = await adminModel.findOne({ email }).select("features");
-
-    if (!admin) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Admin not found." });
-    }
-
-    // Assuming 'features' is an array in your admin document
-    const features = admin.features || [];
-
-    res.status(200).json({
-      success: true,
-      message: "Features fetched successfully",
-      data: features,
-    });
-  } catch (error) {
-    console.error("Error fetching admin features:", error.message);
-    next(error);
-  }
-};
 
 export const fetchUsersForAdmin = async (req, res, next) => {
   try {
@@ -586,6 +555,40 @@ export const deleteSpreadValueController = async (req, res, next) => {
       });
     }
   } catch (error) {
+    next(error);
+  }
+};
+
+
+//Sidebar Features
+export const getAdminFeaturesController = async (req, res, next) => {
+  try {
+    const { email } = req.query; // Using query parameter for consistency with your frontend
+
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email parameter is required." });
+    }
+
+    const admin = await adminModel.findOne({ email }).select("features");
+
+    if (!admin) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found." });
+    }
+
+    // Assuming 'features' is an array in your admin document
+    const features = admin.features || [];
+
+    res.status(200).json({
+      success: true,
+      message: "Features fetched successfully",
+      data: features,
+    });
+  } catch (error) {
+    console.error("Error fetching admin features:", error.message);
     next(error);
   }
 };

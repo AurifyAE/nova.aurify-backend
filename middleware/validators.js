@@ -59,6 +59,38 @@ const contactSchema = Joi.object({
   }),
 });
 
+//Addtional feature request validator
+
+const featureRequestSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    "string.email": "Email must be a valid email address",
+    "any.required": "Email is required",
+  }),
+  feature: Joi.string().min(3).max(100).required().messages({
+    "string.base": "Feature should be a type of text",
+    "string.empty": "Feature cannot be empty",
+    "string.min": "Feature should have a minimum length of 3",
+    "string.max": "Feature should have a maximum length of 100",
+    "any.required": "Feature is required",
+  }),
+  reason: Joi.string().min(10).max(500).required().messages({
+    "string.base": "Reason should be a type of text",
+    "string.empty": "Reason cannot be empty",
+    "string.min": "Reason should have a minimum length of 10",
+    "string.max": "Reason should have a maximum length of 500",
+    "any.required": "Reason is required",
+  }),
+  requestType: Joi.string()
+});
+
+export const validateFeatureRequest = (req, res, next) => {
+  const { error } = featureRequestSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+  next();
+};
+
 export const validateUser = (req, res, next) => {
   const { error } = userSchema.validate(req.body);
   if (error) {
