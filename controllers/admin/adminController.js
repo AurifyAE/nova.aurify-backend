@@ -291,11 +291,8 @@ export const getCommodityController = async (req, res, next) => {
 export const getSpotRate = async (req, res, next) => {
   try {
     const { adminId } = req.params;
-    console.log(adminId);
     const createdBy = new mongoose.Types.ObjectId(adminId);
-    console.log(createdBy);
     const spotRates = await spotRateModel.findOne({ createdBy });
-    console.log(spotRates);
     if (!spotRates) {
       return res
         .status(404)
@@ -503,38 +500,7 @@ export const deleteBankDetailsController = async (req, res, next) => {
   }
 };
 
-//Sidebar Features
-export const getAdminFeaturesController = async (req, res, next) => {
-  try {
-    const { email } = req.query; // Using query parameter for consistency with your frontend
 
-    if (!email) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email parameter is required." });
-    }
-
-    const admin = await adminModel.findOne({ email }).select("features");
-
-    if (!admin) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Admin not found." });
-    }
-
-    // Assuming 'features' is an array in your admin document
-    const features = admin.features || [];
-
-    res.status(200).json({
-      success: true,
-      message: "Features fetched successfully",
-      data: features,
-    });
-  } catch (error) {
-    console.error("Error fetching admin features:", error.message);
-    next(error);
-  }
-};
 
 export const fetchUsersForAdmin = async (req, res, next) => {
   try {
@@ -570,10 +536,8 @@ export const fetchSpreadValues = async (req, res, next) => {
 export const deleteSpreadValueController = async (req, res, next) => {
   try {
     const { spreadValueId } = req.params;
-    const { email } = req.query; // Assuming you'll send admin email as a query parameter
-
+    const { email } = req.query; 
     const result = await deleteSpreadValue(email, spreadValueId);
-
     if (result.success) {
       res.status(200).json({
         success: true,
@@ -586,6 +550,40 @@ export const deleteSpreadValueController = async (req, res, next) => {
       });
     }
   } catch (error) {
+    next(error);
+  }
+};
+
+
+//Sidebar Features
+export const getAdminFeaturesController = async (req, res, next) => {
+  try {
+    const { email } = req.query; // Using query parameter for consistency with your frontend
+
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email parameter is required." });
+    }
+
+    const admin = await adminModel.findOne({ email }).select("features");
+
+    if (!admin) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found." });
+    }
+
+    // Assuming 'features' is an array in your admin document
+    const features = admin.features || [];
+
+    res.status(200).json({
+      success: true,
+      message: "Features fetched successfully",
+      data: features,
+    });
+  } catch (error) {
+    console.error("Error fetching admin features:", error.message);
     next(error);
   }
 };

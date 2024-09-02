@@ -56,7 +56,6 @@ export const fetchBanners = async (req, res, next) => {
 export const getBannerAdmin = async (req, res, next) => {
   try {
     const banners = await fetchAdminBanners();
-    console.log(banners)
     res.status(200).json({ info: banners });
   } catch (error) {
     next(error);
