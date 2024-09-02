@@ -182,13 +182,15 @@ export const addFCMToken = async (email, fcmToken) => {
   }
 };
 
-export const getUsersForAdmin = async (adminEmail) => {
+export const getUsersForAdmin = async (adminId) => {
   try {
-    const user = await adminModel.findOne({ email: adminEmail });
-    if (!user) {
-      return null;
-    }
-    const usersDoc = await UsersModel.findOne({ createdBy: user._id });
+    // console.log(adminEmail);
+    // const user = await adminModel.findOne({ email: adminEmail });
+    // if (!user) {
+    //   return null;
+    // }
+    const createdBy = new mongoose.Types.ObjectId(adminId);
+    const usersDoc = await UsersModel.findOne({ createdBy });
 
     if (!usersDoc) {
       return { success: false, message: "No users found for this admin" };
@@ -250,9 +252,11 @@ export const getSpreadValues = async (adminEmail) => {
   }
 };
 
-export const deleteSpreadValue = async (adminEmail, spreadValueId) => {
+export const deleteSpreadValue = async (adminId, spreadValueId) => {
   try {
-    const user = await adminModel.findOne({ email: adminEmail });
+    console.log(adminId);
+    const user = await adminModel.findOne({ _id: adminId });
+    console.log(user);
     if (!user) {
       return { success: false, message: "Admin not found" };
     }

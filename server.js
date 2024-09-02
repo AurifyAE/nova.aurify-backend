@@ -31,8 +31,6 @@ const io = new Server(server, {
 });
 
 io.on('connection', (socket) => {
-  console.log('New client connected');
-
   socket.on('login', async ({ userId, userType }) => {
     if (userType === 'admin') {
       await adminModel.findByIdAndUpdate(userId, { socketId: socket.id });
@@ -46,12 +44,10 @@ io.on('connection', (socket) => {
 
   socket.on('joinRoom', (room) => {
     socket.join(room);
-    console.log(`Socket ${socket.id} joined room ${room}`);
   });
 
   socket.on('leaveRoom', (room) => {
     socket.leave(room);
-    console.log(`Socket ${socket.id} left room ${room}`);
   });
 
   socket.on('sendMessage', async ({ sender, receiver, content, room }) => {
@@ -87,7 +83,6 @@ io.on('connection', (socket) => {
       await chat.save();
 
       io.to(room).emit('message', { sender, receiver, content, time: new Date() });
-      console.log(`Message sent in room ${room}:`, { sender, receiver, content });
     } catch (error) {
       console.error('Error sending message:', error);
       socket.emit('error', { message: error.message || 'Failed to send message' });
@@ -100,7 +95,6 @@ io.on('connection', (socket) => {
       { 'users.socketId': socket.id },
       { $unset: { 'users.$.socketId': 1 } }
     );
-    console.log('Client disconnected');
   });
 });
 

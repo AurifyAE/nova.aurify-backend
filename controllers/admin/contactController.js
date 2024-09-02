@@ -1,5 +1,6 @@
 import mjml2html from 'mjml';
 import nodemailer from 'nodemailer';
+import adminModel from '../../model/adminSchema.js';
 import { UsersModel } from '../../model/usersSchema.js'; // Ensure you're importing correctly
 
 export const sendContactEmail = async (req, res) => {
@@ -30,6 +31,7 @@ export const sendContactEmail = async (req, res) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: 'aurifycontact@gmail.com', // Replace with your company's email
+      cc: email, //for admins to get email copy 
       subject: 'New Contact Form Submission',
       attachments: [{
         filename: 'logo.png',
@@ -98,26 +100,29 @@ export const sendContactEmail = async (req, res) => {
 
 
 
-//Addtional feature request 
+//Additoinal features 
 export const sendFeatureRequestEmail = async (req, res) => {
-  const { email, feature, reason } = req.body;
+  const {  email, feature,  } = req.body;
+  
   try {
+    const user = await adminModel.findOne({ email });
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: "aurifycontact@gmail.com",
-        pass: "hnrgcobxcinqbuae",
+        user: process.env.EMAIL_USER || "aurifycontact@gmail.com",
+        pass: process.env.EMAIL_PASSWORD || "hnrgcobxcinqbuae",
       },
     });
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: email ,// Origin email will be constant 
       to: 'aurifycontact@gmail.com', // Replace with your company's email
+      cc: email, //for admins to get email copy
       subject: 'New Feature Request',
       attachments: [{
         filename: 'logo.png',
         path: 'public/logo.png',
-        cid: 'Logo' //same cid value as in the html img src
+        cid: 'Logo' // same cid value as in the HTML img src
       }],
       html: mjml2html(`
         <mjml>
@@ -147,9 +152,11 @@ export const sendFeatureRequestEmail = async (req, res) => {
               <mj-column>
                 <mj-divider border-width="2px" border-color="#1e3a8a" />
                 <mj-text font-size="16px" color="#333333" line-height="1.8em" padding="10px 0">
+                  <strong>Name:</strong> ${user.userName} <br />
                   <strong>User Email:</strong> ${email} <br />
+                  <strong>Phone:</strong> ${user.contact} <br />
+                  <strong>Address:</strong> ${user.address} <br />
                   <strong>Requested Feature:</strong> ${feature} <br />
-                  <strong>Reason:</strong> ${reason}
                 </mj-text>
               </mj-column>
             </mj-section>

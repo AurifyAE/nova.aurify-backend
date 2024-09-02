@@ -80,7 +80,8 @@ const featureRequestSchema = Joi.object({
     "string.max": "Reason should have a maximum length of 500",
     "any.required": "Reason is required",
   }),
-  requestType: Joi.string()
+  requestType: Joi.string(),
+  
 });
 
 export const validateFeatureRequest = (req, res, next) => {

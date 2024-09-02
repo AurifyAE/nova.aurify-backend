@@ -59,7 +59,6 @@ export const userCollectionSave = async (data, adminId) => {
     const fcmTokens = await FCMTokenModel.findOne({ createdBy: adminId })
       .select("FCMTokens.token")
       .lean();
-    console.log(fcmTokens)
     if (fcmTokens && fcmTokens.FCMTokens.length > 0) {
       // Send push notifications to all tokens
       for (const tokenObj of fcmTokens.FCMTokens) {

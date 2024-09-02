@@ -53,6 +53,7 @@ import { sendContactEmail, sendFeatureRequestEmail } from "../../controllers/adm
 import { getUserData } from "../../helper/admin/adminHelper.js";
 import {
   getMessages,
+  getUserAdmin,
   storeMessage,
 } from "../../controllers/admin/messageController.js";
 
@@ -127,6 +128,7 @@ router.get('/user-data', getUserData);
 //messages router
 router.get('/messages/:adminId/:userId',getMessages);
 router.post('/messages/:userId', storeMessage);
+router.get('/user/:userId/:adminId',getUserAdmin);
 
 
 

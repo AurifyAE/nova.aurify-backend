@@ -291,11 +291,8 @@ export const getCommodityController = async (req, res, next) => {
 export const getSpotRate = async (req, res, next) => {
   try {
     const { adminId } = req.params;
-    console.log(adminId);
     const createdBy = new mongoose.Types.ObjectId(adminId);
-    console.log(createdBy);
     const spotRates = await spotRateModel.findOne({ createdBy });
-    console.log(spotRates);
     if (!spotRates) {
       return res
         .status(404)
@@ -539,10 +536,8 @@ export const fetchSpreadValues = async (req, res, next) => {
 export const deleteSpreadValueController = async (req, res, next) => {
   try {
     const { spreadValueId } = req.params;
-    const { email } = req.query; // Assuming you'll send admin email as a query parameter
-
+    const { email } = req.query; 
     const result = await deleteSpreadValue(email, spreadValueId);
-
     if (result.success) {
       res.status(200).json({
         success: true,
