@@ -1,14 +1,12 @@
 import {
+  addFCMToken,
   getUsersForAdmin,
-
+  fetchActiveDevice,
+  adminVerfication,
+  getUserData
 } from "../../helper/admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
-import { getUserData } from "../../helper/admin/adminHelper.js";
-
 import adminModel from "../../model/adminSchema.js";
-import {
-  adminVerfication,
-} from "../../helper/admin/adminHelper.js";
 import { verifyToken, generateToken } from "../../utils/jwt.js";
 import jwt from "jsonwebtoken";
 import { decryptPassword } from "../../utils/crypto.js";
@@ -26,7 +24,7 @@ export const adminLoginController = async (req, res, next) => {
       if (password !== decryptedPassword) {
         throw createAppError("Incorrect password.", 401);
       }
-
+      await addFCMToken(email,fcmToken)
       const expiresIn = rememberMe ? "30d" : "3d";
 
       const token = generateToken({ adminId: authLogin._id }, expiresIn);
@@ -256,14 +254,45 @@ export const deleteBankDetailsController = async (req, res, next) => {
 export const fetchUsersForAdmin = async (req, res, next) => {
   try {
     const { adminId } = req.params;
-    console.log(adminId)
-    const response = await getUsersForAdmin(adminId);
-    res.status(200).json(response);
+    
+    const {success,message,users} = await getUsersForAdmin(adminId);
+    if (!success) {
+      return res.status(404).json({
+        success: false,
+        message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      users,
+      message: message
+    });
   } catch (error) {
     next(error);
   }
 };
 
+export const fetchAdminDevice = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+
+    const {success,message,activeDeviceCount} = await fetchActiveDevice(adminId);
+    if (!success) {
+      return res.status(404).json({
+        success: false,
+        message,
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      activeDeviceCount,
+      message: message
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 
 //Sidebar Features
