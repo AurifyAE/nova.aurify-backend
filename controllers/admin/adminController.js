@@ -505,6 +505,7 @@ export const deleteBankDetailsController = async (req, res, next) => {
 export const fetchUsersForAdmin = async (req, res, next) => {
   try {
     const { adminId } = req.params;
+    console.log(adminId)
     const response = await getUsersForAdmin(adminId);
     res.status(200).json(response);
   } catch (error) {

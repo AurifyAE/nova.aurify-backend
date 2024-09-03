@@ -81,17 +81,12 @@ router.get('metalCommodities/:email', getMetalCommodity);
 //Notification router
 router.get('/notifications/:adminId',getNotification);
 router.delete('/notifications/:adminId/:notificationId',deleteNotification);
-
-
 router.post('/save-bank-details', saveBankDetailsController);
 router.delete('/delete-bank-details', deleteBankDetailsController);
 router.put('/update-bank-details', updateBankDetailsController);
-
 router.get('/features', getAdminFeaturesController);
 router.post('/request-feature', validateFeatureRequest, sendFeatureRequestEmail);
-
 router.get('/banners/:adminId',getBanner);
-
 router.get("/banners/:userId", getBanner);
 
 //news-routers

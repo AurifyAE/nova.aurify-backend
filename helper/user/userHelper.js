@@ -58,7 +58,6 @@ export const userCollectionSave = async (data, adminId) => {
 
     // Fetch FCM tokens
     let fcmTokenDoc = await FCMTokenModel.findOne({ createdBy: adminId });
-    console.log("FCM tokens document:", fcmTokenDoc);
 
     if (fcmTokenDoc && fcmTokenDoc.FCMTokens.length > 0) {
       const invalidTokens = [];

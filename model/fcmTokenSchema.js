@@ -1,9 +1,13 @@
 import mongoose from "mongoose";
 
 const FCMTokenSchema = new mongoose.Schema({
-    FCMTokens: [
+  FCMTokens: [
     {
-      token: { type: String},
+      token: {
+        type: String,
+        unique: true, // Ensure the token is unique
+        required: true, // Ensure the token is required
+      },
     },
   ],
 
@@ -13,6 +17,9 @@ const FCMTokenSchema = new mongoose.Schema({
     required: true,
   },
 });
+
+// Create a unique index on the 'FCMTokens.token' field
+FCMTokenSchema.index({ 'FCMTokens.token': 1 }, { unique: true });
 
 const FCMTokenModel = mongoose.model("FCMToken", FCMTokenSchema);
 export default FCMTokenModel;

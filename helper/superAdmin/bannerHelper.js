@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import BannerModel from "../../model/bannerSchema.js";
 import NotificationModel from "../../model/notificationSchema.js";
 import FCMTokenModel from "../../model/fcmTokenSchema.js";
-import NotificationService from '../../utils/sendPushNotification.js'
+import NotificationService from "../../utils/sendPushNotification.js";
 import adminModel from "../../model/adminSchema.js";
 export const addNewBanner = async (data) => {
   try {
@@ -43,13 +43,15 @@ export const addNewBanner = async (data) => {
     }
     await notificationDoc.save();
 
-    const fcmTokens = await FCMTokenModel.findOne({ createdBy: objectId })
-      .select("FCMTokens.token")
-      .lean();
+    // Fetch FCM tokens
+    let fcmTokenDoc = await FCMTokenModel.findOne({ createdBy: adminId });
+    console.log("FCM tokens document:", fcmTokenDoc);
 
-    if (fcmTokens && fcmTokens.FCMTokens.length > 0) {
+    if (fcmTokenDoc && fcmTokenDoc.FCMTokens.length > 0) {
+      const invalidTokens = [];
+
       // Send push notifications to all tokens
-      for (const tokenObj of fcmTokens.FCMTokens) {
+      for (const tokenObj of fcmTokenDoc.FCMTokens) {
         try {
           await NotificationService.sendNotification(
             tokenObj.token,
@@ -60,9 +62,31 @@ export const addNewBanner = async (data) => {
               imageUrl: imageUrl,
             }
           );
+          console.log(
+            `Notification sent successfully to token: ${tokenObj.token}`
+          );
         } catch (error) {
-          console.error(`Failed to send notification to token: ${tokenObj.token}`, error);
+          console.error(
+            `Failed to send notification to token: ${tokenObj.token}`,
+            error
+          );
+          if (
+            error.errorInfo &&
+            error.errorInfo.code ===
+              "messaging/registration-token-not-registered"
+          ) {
+            invalidTokens.push(tokenObj.token);
+          }
         }
+      }
+
+      // Remove invalid tokens if any were found
+      if (invalidTokens.length > 0) {
+        console.log(`Removing ${invalidTokens.length} invalid tokens`);
+        fcmTokenDoc.FCMTokens = fcmTokenDoc.FCMTokens.filter(
+          (tokenObj) => !invalidTokens.includes(tokenObj.token)
+        );
+        await fcmTokenDoc.save();
       }
     }
 
@@ -117,10 +141,9 @@ export const fetchBannersDetails = async () => {
 export const fetchAdminBanners = async () => {
   try {
     return await adminModel.find({
-      features: { $elemMatch: { name: "Digital Marketing", enabled: true } }
+      features: { $elemMatch: { name: "Digital Marketing", enabled: true } },
     });
   } catch (error) {
     throw new Error("Error fetching Admin Banner data");
   }
 };
-

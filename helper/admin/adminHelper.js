@@ -187,8 +187,9 @@ export const getUsersForAdmin = async (adminId) => {
     // console.log(adminEmail);
     // const user = await adminModel.findOne({ email: adminEmail });
     // if (!user) {
-    //   return null;
+    //   return null;ccc
     // }
+  
     const createdBy = new mongoose.Types.ObjectId(adminId);
     const usersDoc = await UsersModel.findOne({ createdBy });
 

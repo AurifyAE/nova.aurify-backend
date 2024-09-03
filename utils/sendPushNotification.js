@@ -2,24 +2,28 @@ import admin from "./firebase.js";
 
 class NotificationService {
   static async sendNotification(deviceToken, title, body, data = {}) {
+    if (!deviceToken || typeof deviceToken !== 'string' || deviceToken.trim() === '') {
+      console.error("Invalid device token:", deviceToken);
+      throw new Error("Invalid device token");
+    }
+
     const message = {
       notification: {
         title: title,
         body: body,
       },
-      token: deviceToken,
-      data: data, // Optional data payload, e.g., { key1: 'value1', key2: 'value2' }
+      token: deviceToken.trim(),
+      data: data,
       android: {
-        priority: "high", // Set high priority for Android notifications
+        priority: "high",
         notification: {
-          sound: "default", // Set the sound for Android
-          channelId: "high_importance_channel", // Optional: Use a specific notification channel for high-priority sounds
+          sound: "default",
+          channelId: "high_importance_channel",
         },
       },
-
       apns: {
         headers: {
-          "apns-priority": "10", // Set high priority for iOS notifications
+          "apns-priority": "10",
         },
         payload: {
           aps: {
@@ -28,7 +32,7 @@ class NotificationService {
               body: body,
             },
             sound: "default",
-            "content-available": 1, // Ensure high priority for background notifications
+            "content-available": 1,
           },
         },
       },
@@ -39,6 +43,7 @@ class NotificationService {
       return response;
     } catch (error) {
       console.error("Error sending notification:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
       throw error;
     }
   }
