@@ -42,11 +42,6 @@ export const adminLoginController = async (req, res, next) => {
         throw createAppError("Incorrect password.", 401);
       }
 
-      // Only add FCM token if it's not empty or undefined
-      if (fcmToken && fcmToken.trim() !== '') {
-        await addFCMToken(email, fcmToken);
-      }
-
       const expiresIn = rememberMe ? "30d" : "3d";
 
       const token = generateToken({ adminId: authLogin._id }, expiresIn);
