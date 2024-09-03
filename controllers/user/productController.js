@@ -4,7 +4,8 @@ import {
   deleteCart,
   getUserCarts,
   updateWishlistCollection,
-  getUserWishlists
+  getUserWishlists,
+  deleteWishlistItem
 } from "../../helper/user/productHelper.js";
 
 export const getProductDetails = async (req, res, next) => {
@@ -133,6 +134,30 @@ export const deleteCartItem = async (req, res, next) => {
   }
 };
 
+export const deleteWishlist = async (req, res, next) => {
+  try {
+    const { userId, adminId, productId } = req.params;
+    const { success, data, message } = await deleteWishlistItem(
+      userId,
+      productId,
+      adminId
+    );
+    if (success) {
+      res.status(200).json({
+        success: true,
+        message: "Item deleted successfully from the Wishlist.",
+        cart: data,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: message || "Failed to delete the item from the Wishlist.",
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
 export const getUserCart = async (req, res, next) => {
   try {
     const { userId } = req.params;

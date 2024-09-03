@@ -120,6 +120,43 @@ export const deleteCart = async (userId, productId, adminId) => {
   }
 };
 
+export const deleteWishlistItem = async (userId, productId, adminId) => {
+  try {
+    if (!userId || !productId || !adminId) {
+      throw new Error("Missing required fields");
+    }
+
+    const wishlist = await Wishlist.findOne({ userId });
+    if (!wishlist) {
+      throw new Error("Wishlist not found");
+    }
+    const shop = await shopModel.findOne({
+      createdBy: adminId,
+      "shops._id": productId,
+    });
+    if (!shop) {
+      throw new Error("Shop or product not found");
+    }
+
+     // Remove the product from the user's wishlist
+     const updatedWishlist = await Wishlist.findOneAndUpdate(
+      { userId },
+      { $pull: { items: { productId } } },
+      { new: true }
+    );
+
+    if (!updatedWishlist) {
+      throw new Error("Wishlist not found or product was not in wishlist");
+    }
+
+    return { success: true, data: updatedWishlist };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error deleting wishlist item: " + error.message,
+    };
+  }
+};
 
 export const getUserCarts = async (userId) => {
   try {
@@ -137,14 +174,14 @@ export const getUserCarts = async (userId) => {
           let: { productId: "$items.productId" },
           pipeline: [
             { $unwind: "$shops" },
-            { 
-              $match: { 
-                $expr: { $eq: ["$shops._id", "$$productId"] }
-              }
-            }
+            {
+              $match: {
+                $expr: { $eq: ["$shops._id", "$$productId"] },
+              },
+            },
           ],
-          as: "items.productDetails"
-        }
+          as: "items.productDetails",
+        },
       },
       { $unwind: "$items.productDetails" },
       {
@@ -156,12 +193,24 @@ export const getUserCarts = async (userId) => {
               productId: "$items.productId",
               quantity: "$items.quantity",
               productDetails: "$items.productDetails.shops",
-              itemTotal: { $multiply: ["$items.quantity", "$items.productDetails.shops.rate"] }
-            }
+              itemTotal: {
+                $multiply: [
+                  "$items.quantity",
+                  "$items.productDetails.shops.rate",
+                ],
+              },
+            },
           },
-          totalPrice: { $sum: { $multiply: ["$items.quantity", "$items.productDetails.shops.rate"] } },
-          updatedAt: { $first: "$updatedAt" }
-        }
+          totalPrice: {
+            $sum: {
+              $multiply: [
+                "$items.quantity",
+                "$items.productDetails.shops.rate",
+              ],
+            },
+          },
+          updatedAt: { $first: "$updatedAt" },
+        },
       },
       {
         $project: {
@@ -169,9 +218,9 @@ export const getUserCarts = async (userId) => {
           userId: 1,
           items: 1,
           totalPrice: 1,
-          updatedAt: 1
-        }
-      }
+          updatedAt: 1,
+        },
+      },
     ]);
     return { success: true, data: cartInfo };
   } catch (error) {
@@ -182,8 +231,12 @@ export const getUserCarts = async (userId) => {
   }
 };
 
-
-export const updateWishlistCollection = async (userId, adminId, productId, action) => {
+export const updateWishlistCollection = async (
+  userId,
+  adminId,
+  productId,
+  action
+) => {
   try {
     if (!userId || !adminId || !productId || !action) {
       throw new Error("Missing required fields");
@@ -211,15 +264,17 @@ export const updateWishlistCollection = async (userId, adminId, productId, actio
     }
 
     // Add or remove the product based on the action
-    const existingItemIndex = wishlist.items.findIndex(item => item.productId.toString() === productId);
+    const existingItemIndex = wishlist.items.findIndex(
+      (item) => item.productId.toString() === productId
+    );
 
-    if (action === 'add') {
+    if (action === "add") {
       if (existingItemIndex === -1) {
         wishlist.items.push({ productId });
       } else {
         return { success: false, message: "Product already in wishlist" };
       }
-    } else if (action === 'remove') {
+    } else if (action === "remove") {
       if (existingItemIndex !== -1) {
         wishlist.items.splice(existingItemIndex, 1);
       } else {
@@ -234,10 +289,12 @@ export const updateWishlistCollection = async (userId, adminId, productId, actio
 
     return { success: true, data: wishlist };
   } catch (error) {
-    return { success: false, message: "Error updating wishlist: " + error.message };
+    return {
+      success: false,
+      message: "Error updating wishlist: " + error.message,
+    };
   }
 };
-
 
 export const getUserWishlists = async (userId) => {
   try {
@@ -259,8 +316,8 @@ export const getUserWishlists = async (userId) => {
             { $unwind: "$shops" },
             {
               $match: {
-                $expr: { $eq: ["$shops._id", "$$productId"] }
-              }
+                $expr: { $eq: ["$shops._id", "$$productId"] },
+              },
             },
             {
               $project: {
@@ -270,11 +327,11 @@ export const getUserWishlists = async (userId) => {
                 type: "$shops.type",
                 weight: "$shops.weight",
                 image: "$shops.image",
-              }
-            }
+              },
+            },
           ],
-          as: "items.productDetails"
-        }
+          as: "items.productDetails",
+        },
       },
       { $unwind: "$items.productDetails" },
       {
@@ -285,16 +342,16 @@ export const getUserWishlists = async (userId) => {
             $push: {
               productId: "$items.productId",
               productDetails: "$items.productDetails",
-            }
-          }
-        }
+            },
+          },
+        },
       },
       {
         $project: {
           _id: 0,
           items: 1,
-        }
-      }
+        },
+      },
     ]);
 
     return { success: true, data: wishlistDetails };

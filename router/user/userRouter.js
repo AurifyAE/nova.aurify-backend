@@ -20,6 +20,7 @@ import {
   getUserCart,
   addItemToWishlist,
   getUserWishlist,
+  deleteWishlist
 } from "../../controllers/user/productController.js";
 
 const router = Router();
@@ -40,5 +41,7 @@ router.patch("/cart/increment/:adminId/:userId/:productId", incrementCartItem);
 router.patch("/cart/decrement/:adminId/:userId/:productId", decrementCartItem);
 router.delete("/cart/:adminId/:userId/:productId", deleteCartItem);
 router.patch("/wishlist/:adminId/:userId/:productId", addItemToWishlist);
+router.delete("/wishlist/:adminId/:userId/:productId", deleteWishlist);
 router.put("/forgot-password/:adminId/:userId", forgotPassword);
+
 export default router;
