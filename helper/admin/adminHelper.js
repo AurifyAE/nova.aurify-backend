@@ -149,10 +149,6 @@ export const fetchNotification = async (adminId) => {
 
 export const addFCMToken = async (email, fcmToken) => {
   try {
-    if (!fcmToken || fcmToken.trim() === '') {
-      return { success: false, message: "Invalid FCM token." };
-    }
-
     const admin = await adminModel.findOne({ email });
 
     if (!admin) {
@@ -188,12 +184,6 @@ export const addFCMToken = async (email, fcmToken) => {
 
 export const getUsersForAdmin = async (adminId) => {
   try {
-    // console.log(adminEmail);
-    // const user = await adminModel.findOne({ email: adminEmail });
-    // if (!user) {
-    //   return null;ccc
-    // }
-  
     const createdBy = new mongoose.Types.ObjectId(adminId);
     const usersDoc = await UsersModel.findOne({ createdBy });
 
@@ -259,9 +249,7 @@ export const getSpreadValues = async (adminEmail) => {
 
 export const deleteSpreadValue = async (adminId, spreadValueId) => {
   try {
-   
     const user = await adminModel.findOne({ _id: adminId });
-    console.log(user);
     if (!user) {
       return { success: false, message: "Admin not found" };
     }

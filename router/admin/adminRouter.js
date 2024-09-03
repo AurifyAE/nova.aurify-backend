@@ -5,8 +5,6 @@ import {
   deleteBankDetailsController,
   getAdminDataController,
   getAdminFeaturesController,
-  getNotification,
-  deleteNotification,
 } from "../../controllers/admin/adminController.js";
 
 import {
@@ -18,29 +16,24 @@ import {
 
 import {
   fetchUsersForAdmin,
-  fetchSpreadValues,
-  addCustomSpread,
-  deleteSpreadValueController,
   adminTokenVerificationApi,
 } from "../../controllers/admin/adminController.js";
-import { updateAdminProfileController } from "../../controllers/admin/adminController.js";
-import { updateLogo } from "../../controllers/admin/adminController.js";
+
 import { uploadSingle } from "../../middleware/multer.js";
 import { getServerController } from "../../controllers/admin/serverController.js";
-import { updateSpread } from "../../controllers/admin/adminController.js";
-import { getCommodityController } from "../../controllers/admin/adminController.js";
-import { getSpotRate } from "../../controllers/admin/adminController.js";
-
 import {
   createCommodity,
-} from "../../controllers/admin/adminController.js";
-import {
   deleteSpotRateCommodity,
+  getCommodityController,
+  getMetalCommodity,
+  getSpotRate,
   updateCommodity,
+  updateSpread,
 } from "../../controllers/admin/spotRateController.js";
-import { getMetalCommodity } from "../../controllers/admin/adminController.js";
 import { adminLoginController } from "../../controllers/admin/adminController.js";
 import { getBanner } from "../../controllers/admin/bannerController.js";
+import { addCustomSpread, deleteSpreadValueController, fetchSpreadValues } from "../../controllers/admin/spreadValuesController.js";
+
 
 import {
   createShopItem,
@@ -56,6 +49,8 @@ import {
   getUserAdmin,
   storeMessage,
 } from "../../controllers/admin/messageController.js";
+import { deleteNotification, getNotification } from "../../controllers/admin/notificationController.js";
+import { updateAdminProfileController, updateLogo } from "../../controllers/admin/profileController.js";
 
 const router = Router();
 

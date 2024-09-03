@@ -1,4 +1,3 @@
-// controllers/Admin/newsController.js
 import {
     addManualNews,
     getManualNews,
@@ -42,7 +41,6 @@ export const getManualNewsController = async (req, res, next) => {
     }
 };
 
-// controllers/Admin/newsController.js
 
 export const updateManualNewsController = async (req, res, next) => {
     try {
