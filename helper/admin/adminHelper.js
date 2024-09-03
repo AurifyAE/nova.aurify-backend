@@ -149,6 +149,10 @@ export const fetchNotification = async (adminId) => {
 
 export const addFCMToken = async (email, fcmToken) => {
   try {
+    if (!fcmToken || fcmToken.trim() === '') {
+      return { success: false, message: "Invalid FCM token." };
+    }
+
     const admin = await adminModel.findOne({ email });
 
     if (!admin) {
@@ -255,7 +259,7 @@ export const getSpreadValues = async (adminEmail) => {
 
 export const deleteSpreadValue = async (adminId, spreadValueId) => {
   try {
-    console.log(adminId);
+   
     const user = await adminModel.findOne({ _id: adminId });
     console.log(user);
     if (!user) {
