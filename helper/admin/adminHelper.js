@@ -249,9 +249,7 @@ export const getSpreadValues = async (adminEmail) => {
 
 export const deleteSpreadValue = async (adminId, spreadValueId) => {
   try {
-    console.log(adminId);
     const user = await adminModel.findOne({ _id: adminId });
-    console.log(user);
     if (!user) {
       return { success: false, message: "Admin not found" };
     }
