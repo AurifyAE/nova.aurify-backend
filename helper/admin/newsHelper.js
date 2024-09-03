@@ -85,11 +85,9 @@ export const deleteManualNews = async (email, newsId, newsItemId) => {
         );
 
         if (!result) {
-            console.log('News item not found or deletion failed.');
             throw createAppError("News item not found or deletion failed.", 404);
         }
 
-        console.log('News item deleted successfully');
         return result;
     } catch (error) {
         console.error('Error in deleteManualNews:', error);

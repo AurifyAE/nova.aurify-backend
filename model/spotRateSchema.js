@@ -30,6 +30,8 @@ const SpotRateSchema = new mongoose.Schema({
       weight: { type: String },
       buyPremium: { type: Number, default: 0 },
       sellPremium: { type: Number, default: 0 },
+      buyCharge: { type: Number, default: 0 },
+      sellCharge: { type: Number, default: 0 },
     },
   ],
 });

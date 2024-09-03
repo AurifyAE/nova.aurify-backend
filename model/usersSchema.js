@@ -28,7 +28,6 @@ const UsersSchema = new mongoose.Schema({
       email: {
         type: String,
         required: true,
-        unique: true, // Ensure the email is unique across all users
         match: [/.+\@.+\..+/, "Please enter a valid email address"],
       },
       password: {
@@ -43,5 +42,6 @@ const UsersSchema = new mongoose.Schema({
   ],
 });
 
+UsersSchema.index({ createdBy: 1, "users.email": 1 }, { unique: true });
 const UsersModel = mongoose.model("Users", UsersSchema);
 export { UsersModel };

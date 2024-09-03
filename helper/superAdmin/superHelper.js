@@ -1,6 +1,7 @@
 import adminModel from "../../model/adminSchema.js";
 import bcrypt from "bcrypt";
 import { decryptPassword, encryptPassword } from "../../utils/crypto.js";
+import DeviceModel from "../../model/deviceSchema.js";
 
 // Function to hash the password
 const hashPassword = async (password) => {
@@ -92,8 +93,11 @@ export const userCollectionSave = async (userData) => {
 export const fetchAdminData = async () => {
   try {
     const admins = await adminModel.find({});
-    return admins.map(admin => {
-      const decryptedPassword = decryptPassword(admin.password, admin.passwordAccessKey); // Assuming the `iv` field is stored in the admin schema
+    return admins.map((admin) => {
+      const decryptedPassword = decryptPassword(
+        admin.password,
+        admin.passwordAccessKey
+      ); // Assuming the `iv` field is stored in the admin schema
       return {
         ...admin.toObject(), // Convert Mongoose document to plain JavaScript object
         password: decryptedPassword, // Replace encrypted password with the decrypted one
@@ -143,5 +147,84 @@ export const collectionUpdate = async (adminId, userData) => {
     return updatedAdmin;
   } catch (error) {
     throw new Error(`Error updating admin data: ${error.message}`);
+  }
+};
+
+export const fetchAdminDevice = async () => {
+  try {
+    return await adminModel.find({
+      features: { $elemMatch: { name: "TV View", enabled: true } },
+    });
+  } catch (error) {
+    throw new Error("Error fetching Admin Device data");
+  }
+};
+
+export const fetchDeviceDetails = async () => {
+  try {
+    return await DeviceModel.find({});
+  } catch (error) {
+    throw new Error("Error fetching Device data");
+  }
+};
+
+export const deviceStatusChange = async (adminId, deviceId) => {
+  try {
+    const deviceDoc = await DeviceModel.findOne({
+      adminId: adminId,
+      "devices._id": deviceId,
+    });
+
+    if (!deviceDoc) {
+      return { status: false, message: "Device not found" };
+    }
+
+    // Find the device within the devices array and toggle the isActive status
+    const device = deviceDoc.devices.id(deviceId);
+    const newStatus = !device.isActive;
+
+    await DeviceModel.findOneAndUpdate(
+      { adminId: adminId, "devices._id": deviceId },
+      { $set: { "devices.$.isActive": newStatus } },
+      { new: true }
+    );
+
+    return {
+      status: true,
+      message: `Device ${newStatus ? "unblocked" : "blocked"} successfully`,
+    };
+  } catch (error) {
+    throw new Error("Error updating device status:", error);
+  }
+};
+
+
+export const deleteDeviceMacAddress = async (adminId, deviceId) => {
+  try {
+    const deviceDoc = await DeviceModel.findOne({
+      adminId: adminId,
+      "devices._id": deviceId,
+    });
+
+    if (!deviceDoc) {
+      return { status: false, message: "Device not found" };
+    }
+
+    
+    const result = await DeviceModel.updateOne(
+      { adminId: adminId, 'devices._id': deviceId },
+      { $pull: { devices: { _id: deviceId } } } // Remove the device from the devices array
+    );
+
+    if (result.nModified === 0) {
+      return { status: false, message: 'Device not found or not deleted' };
+    }
+
+    return {
+      status: true,
+      message: 'Device deleted successfully',
+    };
+  } catch (error) {
+    throw new Error(`Error deleting device: ${error.message}`);
   }
 };

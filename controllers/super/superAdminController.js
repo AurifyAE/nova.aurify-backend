@@ -2,6 +2,10 @@ import {
   userCollectionSave,
   fetchAdminData,
   collectionUpdate,
+  fetchAdminDevice,
+  fetchDeviceDetails,
+  deviceStatusChange,
+  deleteDeviceMacAddress,
 } from "../../helper/superAdmin/superHelper.js";
 
 export const registerAdmin = async (req, res, next) => {
@@ -16,7 +20,7 @@ export const registerAdmin = async (req, res, next) => {
       whatsapp: req.body.whatsapp,
       userType: req.body.userType,
       solutions: req.body.solutions,
-      screenCount:req.body.screenCount ? +req.body.screenCount : 0 ,
+      screenCount: req.body.screenCount ? +req.body.screenCount : 0,
       features: req.body.additionalFeatures,
       commodities: req.body.commodities,
       workCompletionDate: req.body.workCompletionDate,
@@ -67,6 +71,62 @@ export const editAdmin = async (req, res, next) => {
     };
 
     await collectionUpdate(adminId, userData);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const fetchDeviceAdmin = async (req, res, next) => {
+  try {
+    const infoAdmin = await fetchAdminDevice();
+    res.json({ info: infoAdmin }).status(201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const fetchDevice = async (req, res, next) => {
+  try {
+    const infoDevice = await fetchDeviceDetails();
+    res.json({ info: infoDevice }).status(201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changeDeviceStatus = async (req, res, next) => {
+  try {
+    const { adminId, id } = req.query;
+    const { success, message } = deviceStatusChange(adminId, id);
+    if (!success) {
+      return res.status(404).json({
+        success: false,
+        message,
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteDevice = async (req, res, next) => {
+  try {
+    const { adminId, id } = req.query;
+    const { success, message } = deleteDeviceMacAddress(adminId, id);
+    if (!success) {
+      return res.status(404).json({
+        success: false,
+        message,
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: message,
+    });
   } catch (error) {
     next(error);
   }
