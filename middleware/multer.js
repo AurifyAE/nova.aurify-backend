@@ -6,7 +6,6 @@ const storage = sharpMulter({
     fileFormat: "webp",
     quality: 50,
     useTimestamp: true
-    // resize: { width: 500, height: 500, resizeMode: "contain" },
   },
   destination: function (req, file, cb) {
     cb(null, 'public/uploads/'); // Save files in the public/uploads directory

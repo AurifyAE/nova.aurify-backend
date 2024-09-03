@@ -184,11 +184,6 @@ export const addFCMToken = async (email, fcmToken) => {
 
 export const getUsersForAdmin = async (adminId) => {
   try {
-    // console.log(adminEmail);
-    // const user = await adminModel.findOne({ email: adminEmail });
-    // if (!user) {
-    //   return null;
-    // }
     const createdBy = new mongoose.Types.ObjectId(adminId);
     const usersDoc = await UsersModel.findOne({ createdBy });
 

@@ -10,7 +10,6 @@ import { createAppError } from "../../utils/errorHandler.js";
 
 // Add a new shop item
 export const createShopItem = async (req, res) => {
-    // try {
     const { name, type, weight, rate } = req.body;
     const { email } = req.params;
     // Multer stores the image file information in req.file
@@ -20,16 +19,11 @@ export const createShopItem = async (req, res) => {
     if (image == null) {
         throw createAppError("image is not find", 400);
     }
-    // const imageBase64 = fs.readFileSync(req.file.path, { encoding: 'base64' });
-    // const img = `data:${req.file.mimetype};base64,${imageBase64}`;
     const img = image;
 
     // Pass the image path instead of the base64 string to the helper function
     const newShopItem = await addShopItem(email, name, type, weight, rate, img);
     res.status(201).json(newShopItem);
-    // } catch (error) {
-    //     res.status(error.statusCode || 500).json({ message: error.message });
-    // }
 };
 
 // Get all shop items for a specific admin

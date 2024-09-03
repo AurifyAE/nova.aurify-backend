@@ -9,11 +9,6 @@ export const sendContactEmail = async (req, res) => {
     // Fetch user data from the database using email
     const user = await UsersModel.findOne({ 'users.email': email }, { 'users.$': 1 });
 
-    // if (!user) {
-    //   return res.status(404).json({ message: 'User not found' });
-    // }
-
-
     const foundUser = user?.users?.[0] || {}; // Extract the user from the array
 
     // Use user data if available, otherwise use form data
