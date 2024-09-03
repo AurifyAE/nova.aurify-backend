@@ -45,8 +45,7 @@ export const addNewBanner = async (data) => {
 
     // Fetch FCM tokens
     let fcmTokenDoc = await FCMTokenModel.findOne({ createdBy: adminId });
-    console.log("FCM tokens document:", fcmTokenDoc);
-
+ 
     if (fcmTokenDoc && fcmTokenDoc.FCMTokens.length > 0) {
       const invalidTokens = [];
 
@@ -61,9 +60,6 @@ export const addNewBanner = async (data) => {
               bannerTitle: title,
               imageUrl: imageUrl,
             }
-          );
-          console.log(
-            `Notification sent successfully to token: ${tokenObj.token}`
           );
         } catch (error) {
           console.error(

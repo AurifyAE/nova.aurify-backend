@@ -5,7 +5,6 @@ const FCMTokenSchema = new mongoose.Schema({
     {
       token: {
         type: String,
-        unique: true, // Ensure the token is unique
         required: true, // Ensure the token is required
       },
     },
@@ -19,7 +18,7 @@ const FCMTokenSchema = new mongoose.Schema({
 });
 
 // Create a unique index on the 'FCMTokens.token' field
-FCMTokenSchema.index({ 'FCMTokens.token': 1 }, { unique: true });
+FCMTokenSchema.index({createdBy: 1,  'FCMTokens.token': 1 }, { unique: true });
 
 const FCMTokenModel = mongoose.model("FCMToken", FCMTokenSchema);
 export default FCMTokenModel;
