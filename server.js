@@ -1,19 +1,23 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import adminRouter from "./router/admin/adminRouter.js";
-import superRouter from "./router/super/superRouter.js";
-import deviceRouter from "./router/device/deviceRouter.js";
-import userRouter from "./router/user/userRouter.js";
+import adminRouter from './router/admin/adminRouter.js'
+import superRouter from './router/super/superRouter.js'
+import deviceRouter from './router/device/deviceRouter.js'
+import userRouter from './router/user/userRouter.js'
 import { mongodb } from "./config/connaction.js";
 import { errorHandler } from "./utils/errorHandler.js";
+import { io } from "./config/socket_io.js";
+import socketApi from "./utils/socket_API.js"
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 4444;
 
-app.use(express.static("public"));
+
+
+app.use(express.static('public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -52,7 +56,12 @@ app.use("/user", userRouter);
 // Global error handling middleware
 app.use(errorHandler);
 
-app.listen(port, () => {
+
+const server = app.listen(port, () => {
   console.log("server running !!!!!");
   console.log(`http://localhost:${port}`);
 });
+
+
+io.attach(server)
+socketApi()

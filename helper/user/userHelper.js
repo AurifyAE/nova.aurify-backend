@@ -269,37 +269,4 @@ export const getNewsByAdminId = async (adminId) => {
   }
 };
 
-// export const addFCMToken = async (email, fcmToken) => {
-//   try {
-//     const admin = await adminModel.findOne({ email });
 
-//     if (!admin) {
-//       return { success: false, message: "Invalid email. Admin not found." };
-//     }
-
-//     let fcmEntry = await FCMTokenModel.findOne({ createdBy: admin._id });
-
-//     if (fcmEntry) {
-//       const tokenExists = fcmEntry.FCMTokens.some(
-//         (tokenObj) => tokenObj.token === fcmToken
-//       );
-
-//       if (tokenExists) {
-//         return { success: false, message: "FCM token already exists." };
-//       } else {
-//         fcmEntry.FCMTokens.push({ token: fcmToken });
-//       }
-//     } else {
-//       fcmEntry = new FCMTokenModel({
-//         FCMTokens: [{ token: fcmToken }],
-//         createdBy: admin._id,
-//       });
-//     }
-
-//     await fcmEntry.save();
-
-//     return { success: true, message: "FCM token successfully added." };
-//   } catch (error) {
-//     throw new Error("Error FCMToken " + error.message);
-//   }
-// };
