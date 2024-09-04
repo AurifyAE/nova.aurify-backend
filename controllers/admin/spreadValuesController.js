@@ -21,11 +21,8 @@ export const fetchSpreadValues = async (req, res, next) => {
   
   export const deleteSpreadValueController = async (req, res, next) => {
     try {
-      const { spreadValueId } = req.params;
-      const { email } = req.query; // Assuming you'll send admin email as a query parameter
-  
+      const { spreadValueId, email } = req.params;
       const result = await deleteSpreadValue(email, spreadValueId);
-  
       if (result.success) {
         res.status(200).json({
           success: true,
