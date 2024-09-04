@@ -2,6 +2,7 @@ import adminModel from "../../model/adminSchema.js";
 import { SpreadValueModel } from "../../model/spreadValueSchema.js";
 import bcrypt from "bcrypt";
 import { UsersModel } from "../../model/usersSchema.js";
+import DeviceModel from '../../model/deviceSchema.js'
 import NotificationModel from "../../model/notificationSchema.js";
 import FCMTokenModel from "../../model/fcmTokenSchema.js";
 import mongoose from "mongoose";
@@ -285,5 +286,23 @@ export const updateNotification = async (adminId, notificationId) => {
     return { success: true, message: "Notification cleared" };
   } catch (error) {
     throw new Error("Error updating notification" + error.message);
+  }
+};
+
+export const fetchActiveDevice = async (adminId) => {
+  try {
+    const createdBy = new mongoose.Types.ObjectId(adminId);
+    const deviceDoc = await DeviceModel.findOne({ adminId: createdBy });
+    if (!deviceDoc) {
+      return { success: false, message: "No device found for this admin" };
+    }
+    const activeDeviceCount = deviceDoc.devices.filter(device => device.isActive).length;
+    return {
+      success: true,
+      activeDeviceCount: activeDeviceCount,
+    };
+  } catch (error) {
+    console.error("Error fetching active devices:", error);
+    throw new Error("Error fetching active devices: " + error.message);
   }
 };
