@@ -1,4 +1,5 @@
 import macaddress from "macaddress";
+import mongoose from "mongoose";
 import DeviceModel from "../../model/deviceSchema.js";
 import {
   getNewsByAdminId,
@@ -8,20 +9,28 @@ import { serverModel } from "../../model/serverSchema.js";
 import adminModel from "../../model/adminSchema.js";
 
 export const activateDeviceController = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
+    // Get the MAC address of the device
     const mac = await macaddress.one();
     if (!mac) {
+      await session.abortTransaction();
       return res.status(400).json({ message: "MAC address is required" });
     }
 
-    const { adminId, isNewAdmin, deviceDoc } = req.deviceInfo;
+    const { adminId, deviceDoc, isNewAdmin } = req.deviceInfo;
 
+    // Check if the MAC address already exists in the system
     const existingDevice = await DeviceModel.findOne({
       "devices.macAddress": mac,
-    });
+    }).session(session);
+
     if (existingDevice) {
+      await session.abortTransaction();
       return res
-        .status(201)
+        .status(202)
         .json({ message: "Device with this MAC address already exists" });
     }
 
@@ -30,7 +39,8 @@ export const activateDeviceController = async (req, res) => {
         adminId,
         devices: [{ macAddress: mac }],
       });
-      await newDeviceDoc.save();
+      await newDeviceDoc.save({ session });
+      await session.commitTransaction();
       return res.status(201).json({ message: "New device added successfully" });
     }
 
@@ -38,15 +48,18 @@ export const activateDeviceController = async (req, res) => {
     await DeviceModel.findOneAndUpdate(
       { adminId },
       { $push: { devices: { macAddress: mac } } },
-      { new: true }
+      { session, new: true }
     );
 
+    await session.commitTransaction();
     return res.status(200).json({ message: "New device added successfully" });
   } catch (error) {
-    console.error("Device activation controller error:", error);
+    await session.abortTransaction();
     return res
       .status(500)
       .json({ message: "Internal server error", error: error.message });
+  } finally {
+    session.endSession();
   }
 };
 

@@ -150,6 +150,9 @@ export const fetchNotification = async (adminId) => {
 
 export const addFCMToken = async (email, fcmToken) => {
   try {
+    if (!fcmToken || fcmToken.trim() === '') {
+      return { success: false, message: "Invalid FCM token." };
+    }
     const admin = await adminModel.findOne({ email });
 
     if (!admin) {
@@ -285,7 +288,6 @@ export const updateNotification = async (adminId, notificationId) => {
     throw new Error("Error updating notification" + error.message);
   }
 };
-
 
 export const fetchActiveDevice = async (adminId) => {
   try {

@@ -18,8 +18,8 @@ export const sendContactEmail = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: "aurifycontact@gmail.com",
-        pass: "hnrgcobxcinqbuae",
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
     });
 

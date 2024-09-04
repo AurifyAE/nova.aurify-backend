@@ -1,11 +1,13 @@
 import {
   addFCMToken,
   getUsersForAdmin,
+  addFCMToken,
   fetchActiveDevice,
   adminVerfication,
   getUserData
 } from "../../helper/admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
+
 import adminModel from "../../model/adminSchema.js";
 import { verifyToken, generateToken } from "../../utils/jwt.js";
 import jwt from "jsonwebtoken";
@@ -114,6 +116,7 @@ export const getAdminDataController = async (req, res, next) => {
     if (!userEmail) {
       throw createAppError("email parameter is required.", 400);
     }
+
 
     const adminData = await getUserData(userEmail);
 
@@ -254,7 +257,6 @@ export const deleteBankDetailsController = async (req, res, next) => {
 export const fetchUsersForAdmin = async (req, res, next) => {
   try {
     const { adminId } = req.params;
-    
     const {success,message,users} = await getUsersForAdmin(adminId);
     if (!success) {
       return res.status(404).json({
