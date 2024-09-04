@@ -1,6 +1,6 @@
 import {
   getUsersForAdmin,
-
+  addFCMToken
 } from "../../helper/admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
 import { getUserData } from "../../helper/admin/adminHelper.js";
@@ -25,6 +25,10 @@ export const adminLoginController = async (req, res, next) => {
       );
       if (password !== decryptedPassword) {
         throw createAppError("Incorrect password.", 401);
+      }
+
+      if (fcmToken && fcmToken.trim() !== '') {
+        await addFCMToken(email, fcmToken);
       }
 
       const expiresIn = rememberMe ? "30d" : "3d";
@@ -116,6 +120,7 @@ export const getAdminDataController = async (req, res, next) => {
     if (!userEmail) {
       throw createAppError("email parameter is required.", 400);
     }
+
 
     const adminData = await getUserData(userEmail);
 

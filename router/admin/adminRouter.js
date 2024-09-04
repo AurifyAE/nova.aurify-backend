@@ -32,7 +32,6 @@ import {
 } from "../../controllers/admin/spotRateController.js";
 import { adminLoginController } from "../../controllers/admin/adminController.js";
 import { getBanner } from "../../controllers/admin/bannerController.js";
-import { addCustomSpread, deleteSpreadValueController, fetchSpreadValues } from "../../controllers/admin/spreadValuesController.js";
 
 
 import {
@@ -51,6 +50,7 @@ import {
 } from "../../controllers/admin/messageController.js";
 import { deleteNotification, getNotification } from "../../controllers/admin/notificationController.js";
 import { updateAdminProfileController, updateLogo } from "../../controllers/admin/profileController.js";
+import { addCustomSpread, deleteSpreadValueController, fetchSpreadValues } from "../../controllers/admin/spreadValuesController.js";
 
 const router = Router();
 
@@ -106,7 +106,7 @@ router.delete(
 router.get('/admin/:adminId/users', fetchUsersForAdmin);
 router.post('/admin/:adminId/spread-values', addCustomSpread);
 router.get('/admin/:adminId/spread-values', fetchSpreadValues);
-router.delete('/admin/spread-values/:spreadValueId', deleteSpreadValueController);
+router.delete('/admin/spread-values/:spreadValueId/:email', deleteSpreadValueController);
 
 
 //shop router
