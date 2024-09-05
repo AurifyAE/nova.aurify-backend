@@ -10,7 +10,7 @@ export const addBanner = async (req, res, next) => {
   try {
     const data = {
       title: req.body.title,
-      imageUrl: req.file.filename,
+      imageUrl: req.file.location,
       adminId: req.body.adminId,
     };
     await addNewBanner(data);

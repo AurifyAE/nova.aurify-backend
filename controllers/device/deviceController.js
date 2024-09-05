@@ -15,6 +15,7 @@ export const activateDeviceController = async (req, res) => {
   try {
     // Get the MAC address of the device
     const mac = await macaddress.one();
+    console.log(mac)
     if (!mac) {
       await session.abortTransaction();
       return res.status(400).json({ message: "MAC address is required" });
