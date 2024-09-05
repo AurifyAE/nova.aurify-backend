@@ -14,8 +14,7 @@ export const createShopItem = async (req, res) => {
       const { name, type, weight, rate } = req.body;
       const { email } = req.params;
   
-      // Multer stores the image file information in req.file
-      const image = req.file ? `/uploads/${req.file.filename}` : null;
+      const image = req.file ? req.file.location : null;
   
       if (image == null) {
         throw createAppError("Image is not found", 400);
@@ -57,7 +56,7 @@ export const editShopItem = async (req, res) => {
 
         // Check if a new image was uploaded
         if (req.file) {
-            updatedData.image = `/uploads/${req.file.filename}`;
+            updatedData.image = req.file.location;
         }
 
         const updatedShopItem = await updateShopItem(email, shopItemId, updatedData);

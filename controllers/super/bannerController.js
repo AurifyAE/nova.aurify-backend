@@ -10,7 +10,7 @@ export const addBanner = async (req, res, next) => {
   try {
     const data = {
       title: req.body.title,
-      imageUrl: req.file.filename,
+      imageUrl: req.file.location,
       adminId: req.body.adminId,
     };
     await addNewBanner(data);
@@ -26,7 +26,7 @@ export const editBannerDetails = async (req, res, next) => {
       bannerId: req.params.bannerId,
       adminId: req.body.adminId,
       title: req.body.title,
-      imageUrl: req.file.filename,
+      imageUrl: req.file.location,
     };
     await updateBanner(data);
     res.json({ message: "Banner updated successfully" }).status(200);

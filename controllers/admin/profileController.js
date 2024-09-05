@@ -36,7 +36,7 @@ export const updateAdminProfileController = async (req, res, next) => {
   export const updateLogo = async (req, res) => {
     try {
       const { email } = req.body;
-      const logoName = req.file.filename;
+      const logoName = req.file.location;
   
       // Update the user's logo in the database
       const updatedUser = await updateUserLogo(email, logoName);
