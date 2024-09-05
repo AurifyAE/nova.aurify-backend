@@ -1,5 +1,4 @@
 import {
-  addFCMToken,
   getUsersForAdmin,
   fetchActiveDevice,
   adminVerfication,

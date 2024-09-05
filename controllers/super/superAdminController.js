@@ -12,7 +12,7 @@ export const registerAdmin = async (req, res, next) => {
   try {
     const userData = {
       userName: req.body.userName,
-      logo: req.file ? req.file.filename : undefined,
+      logo: req.file ? req.file.location : undefined,
       address: req.body.address,
       email: req.body.email,
       password: req.body.password,
@@ -55,7 +55,7 @@ export const editAdmin = async (req, res, next) => {
     // Create the updated data object
     const userData = {
       userName: req.body.userName,
-      logo: req.file ? req.file.filename : undefined,
+      logo: req.file ? req.file.location : undefined,
       address: req.body.address,
       email: req.body.email,
       password: req.body.password,

@@ -25,8 +25,8 @@ import {
 } from "../../controllers/super/bannerController.js";
 const router = Router();
 
-router.post("/register", uploadSingle("logo"), registerAdmin);
-router.patch("/edit-admin/:adminId", uploadSingle("logo"), editAdmin);
+router.post("/register", uploadSingle('logo'), registerAdmin);
+router.patch("/edit-admin/:adminId", uploadSingle('logo'), editAdmin);
 router.get("/get-admin", getAdmin);
 router.get("/get-banner-admins", getBannerAdmin);
 router.post("/add-server", addServer);
@@ -38,7 +38,7 @@ router.delete("/delete-device", deleteDevice);
 router.patch("/update-selected-server/:serverId", updateSelectedServer);
 router.delete("/delete-server/:serverId", deleteSelectedServer);
 router.patch("/edit-server/:serverId", editServer);
-router.post("/add-banners", uploadSingle("image"), addBanner);
+router.post("/add-banners", uploadSingle('image'), addBanner);
 router.delete("/banners/:bannerId/:adminId", deleteBanner);
 router.put("/banners/:bannerId", uploadSingle("image"), editBannerDetails);
 router.get("/get-banners", fetchBanners);
