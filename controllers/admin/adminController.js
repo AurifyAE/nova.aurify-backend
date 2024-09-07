@@ -3,7 +3,7 @@ import {
   getUsersForAdmin,
   fetchActiveDevice,
   adminVerfication,
-  getUserData,addFCMToken
+  getUserData
 } from "../../helper/admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
 
@@ -14,9 +14,8 @@ import { decryptPassword } from "../../utils/crypto.js";
 
 export const adminLoginController = async (req, res, next) => {
   try {
-    const { email, password, fcmToken, rememberMe } = req.body;
-
-    const authLogin = await adminVerfication(email);
+    const { userName, password, fcmToken, rememberMe } = req.body;
+    const authLogin = await adminVerfication(userName);
     if (authLogin) {
       const decryptedPassword = decryptPassword(
         authLogin.password,
@@ -25,7 +24,7 @@ export const adminLoginController = async (req, res, next) => {
       if (password !== decryptedPassword) {
         throw createAppError("Incorrect password.", 401);
       }
-      await addFCMToken(email,fcmToken)
+      await addFCMToken(userName,fcmToken)
       const expiresIn = rememberMe ? "30d" : "3d";
 
       const token = generateToken({ adminId: authLogin._id }, expiresIn);
@@ -111,14 +110,12 @@ export const adminTokenVerificationApi = async (req, res, next) => {
 
 export const getAdminDataController = async (req, res, next) => {
   try {
-    const userEmail = req.params.email;
-    if (!userEmail) {
-      throw createAppError("email parameter is required.", 400);
+    const userName = req.params.userName;
+    if (!userName) {
+      throw createAppError("userName parameter is required.", 400);
     }
 
-
-    const adminData = await getUserData(userEmail);
-
+    const adminData = await getUserData(userName);
     if (!adminData) {
       throw createAppError("Admin data not found.", 404);
     }
@@ -136,15 +133,15 @@ export const getAdminDataController = async (req, res, next) => {
 
 export const saveBankDetailsController = async (req, res, next) => {
   try {
-    const { email, bankDetails } = req.body;
-    if (!email || !bankDetails) {
+    const { userName, bankDetails } = req.body;
+    if (!userName || !bankDetails) {
       return res.status(400).json({
         success: false,
-        message: "Email and bank details are required.",
+        message: "userName and bank details are required.",
       });
     }
 
-    const admin = await adminModel.findOne({ email });
+    const admin = await adminModel.findOne({ userName });
 
     if (!admin) {
       return res
@@ -152,7 +149,7 @@ export const saveBankDetailsController = async (req, res, next) => {
         .json({ success: false, message: "Admin not found." });
     }
 
-    await adminModel.updateOne({ email }, { $push: { bankDetails } });
+    await adminModel.updateOne({ userName }, { $push: { bankDetails } });
 
     res.status(200).json({
       success: true,
@@ -168,17 +165,17 @@ export const saveBankDetailsController = async (req, res, next) => {
 // Update bank details
 export const updateBankDetailsController = async (req, res, next) => {
   try {
-    const { email, bankDetails } = req.body;
+    const { userName, bankDetails } = req.body;
 
-    if (!email || !bankDetails) {
+    if (!userName || !bankDetails) {
       return res.status(400).json({
         success: false,
-        message: "Email and bank details are required.",
+        message: "userName and bank details are required.",
       });
     }
 
-    // Find the admin by email
-    const admin = await adminModel.findOne({ email });
+    // Find the admin by userName
+    const admin = await adminModel.findOne({ userName });
 
     if (!admin) {
       return res
@@ -220,18 +217,18 @@ export const updateBankDetailsController = async (req, res, next) => {
 // Delete bank details
 export const deleteBankDetailsController = async (req, res, next) => {
   try {
-    const { email, accountNumber } = req.body;
+    const { userName, accountNumber } = req.body;
 
-    if (!email || !accountNumber) {
+    if (!userName || !accountNumber) {
       return res.status(400).json({
         success: false,
-        message: "Email and account number are required.",
+        message: "userName and account number are required.",
       });
     }
 
     // Attempt to remove the bank detail
     const result = await adminModel.updateOne(
-      { email },
+      { userName },
       { $pull: { bankDetails: { accountNumber } } }
     );
 
@@ -258,7 +255,7 @@ export const fetchUsersForAdmin = async (req, res, next) => {
     const { adminId } = req.params;
     const {success,message,users} = await getUsersForAdmin(adminId);
     if (!success) {
-      return res.status(404).json({
+      return res.status(204).json({
         success: false,
         message,
       });
@@ -278,20 +275,17 @@ export const fetchAdminDevice = async (req, res, next) => {
   try {
     const { adminId } = req.params;
 
-    const {success,message,activeDeviceCount} = await fetchActiveDevice(adminId);
-    if (!success) {
-      return res.status(404).json({
-        success: false,
-        message,
-      });
-    }
+    const { success, message, activeDeviceCount } = await fetchActiveDevice(adminId);
+    
+    // Always return success: true, even if no devices are found
     return res.status(200).json({
       success: true,
       activeDeviceCount,
-      message: message
+      message: message || "Devices fetched successfully",
     });
+    
   } catch (error) {
-    next(error);
+    next(error);  // Pass the error to the global error handler
   }
 };
 
@@ -299,15 +293,15 @@ export const fetchAdminDevice = async (req, res, next) => {
 //Sidebar Features
 export const getAdminFeaturesController = async (req, res, next) => {
   try {
-    const { email } = req.query; // Using query parameter for consistency with your frontend
+    const { userName } = req.query; // Using query parameter for consistency with your frontend
 
-    if (!email) {
+    if (!userName) {
       return res
         .status(400)
-        .json({ success: false, message: "Email parameter is required." });
+        .json({ success: false, message: "userName parameter is required." });
     }
 
-    const admin = await adminModel.findOne({ email }).select("features");
+    const admin = await adminModel.findOne({ userName }).select("features");
 
     if (!admin) {
       return res

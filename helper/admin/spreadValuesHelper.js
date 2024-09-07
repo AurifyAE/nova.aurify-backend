@@ -1,9 +1,9 @@
 import adminModel from "../../model/adminSchema.js";
 import { SpreadValueModel } from "../../model/spreadValueSchema.js";
 
-export const addSpreadValue = async (adminEmail, spreadValue, title) => {
+export const addSpreadValue = async (userName, spreadValue, title) => {
     try {
-      const user = await adminModel.findOne({ email: adminEmail });
+      const user = await adminModel.findOne({ userName: userName });
       if (!user) {
         return { success: false, message: "Admin not found" };
       }
@@ -33,9 +33,9 @@ export const addSpreadValue = async (adminEmail, spreadValue, title) => {
     }
   };
   
-  export const getSpreadValues = async (adminEmail) => {
+  export const getSpreadValues = async (userName) => {
     try {
-      const user = await adminModel.findOne({ email: adminEmail });
+      const user = await adminModel.findOne({ userName: userName });
       if (!user) {
         return null;
       }
@@ -52,9 +52,9 @@ export const addSpreadValue = async (adminEmail, spreadValue, title) => {
     }
   };
   
-  export const deleteSpreadValue = async (adminEmail, spreadValueId) => {
+  export const deleteSpreadValue = async (userName, spreadValueId) => {
     try {
-      const user = await adminModel.findOne({ email: adminEmail });
+      const user = await adminModel.findOne({ userName: userName });
       if (!user) {
         return { success: false, message: "Admin not found" };
       }

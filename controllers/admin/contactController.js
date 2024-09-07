@@ -97,10 +97,10 @@ export const sendContactEmail = async (req, res) => {
 
 //Additoinal features 
 export const sendFeatureRequestEmail = async (req, res) => {
-  const {  email, feature,  } = req.body;
+  const {  userName, feature,  } = req.body;
   
   try {
-    const user = await adminModel.findOne({ email });
+    const user = await adminModel.findOne({ userName });
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
