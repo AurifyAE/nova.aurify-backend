@@ -2,7 +2,7 @@ import {
   getUsersForAdmin,
   fetchActiveDevice,
   adminVerfication,
-  getUserData
+  getUserData,addFCMToken
 } from "../../helper/admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
 
