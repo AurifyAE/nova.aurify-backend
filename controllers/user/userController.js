@@ -87,7 +87,7 @@ export const fetchAdminBankDetails = async (req, res, next) => {
     const { adminId } = req.params;
     const adminData = await adminModel.findById(adminId, "bankDetails");
     if (!adminData) {
-      return res.status(404).json({
+      return res.status(204).json({
         success: false,
         message: "Admin not found",
       });
@@ -108,7 +108,7 @@ export const getSpotrateDetails = async (req, res, next) => {
     const { success, fetchSpotRate } = await getSportrate(adminId);
 
     if (!success || !fetchSpotRate) {
-      return res.status(404).json({
+      return res.status(204).json({
         success: false,
         message: "SpotRate data not found",
       });
@@ -132,7 +132,7 @@ export const getServerDetails = async (req, res, next) => {
     );
 
     if (!serverInfo) {
-      return res.status(404).json({
+      return res.status(204).json({
         success: false,
         message: "No server information found",
       });
@@ -157,7 +157,7 @@ export const getCurrentNews = async (req, res, next) => {
     const { success, news, message } = await getNewsByAdminId(adminId);
 
     if (!success) {
-      return res.status(404).json({
+      return res.status(204).json({
         success: false,
         message,
       });
@@ -178,13 +178,13 @@ export const getCommodities = async (req, res, next) => {
     const { adminId } = req.params;
     const adminData = await adminModel.findById(adminId, "commodities.symbol");
     if (!adminData) {
-      return res.status(404).json({
+      return res.status(204).json({
         success: false,
         message: "Admin not found",
       });
     }
     const commoditySymbols = adminData.commodities.map(
-      (commodity) => commodity.symbol
+      (commodity) => commodity.symbol.toUpperCase()
     );
     return res.status(200).json({
       success: true,
