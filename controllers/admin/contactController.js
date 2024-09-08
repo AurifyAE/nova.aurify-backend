@@ -4,7 +4,9 @@ import adminModel from '../../model/adminSchema.js';
 import { UsersModel } from '../../model/usersSchema.js'; // Ensure you're importing correctly
 
 export const sendContactEmail = async (req, res) => {
+  console.log(req.body);
   const { email, firstName, lastName, companyName, phoneNumber, message } = req.body;
+  console.log(email,firstName,lastName,companyName,phoneNumber,message);
   try {
     // Fetch user data from the database using email
     const user = await UsersModel.findOne({ 'users.email': email }, { 'users.$': 1 });
@@ -97,10 +99,10 @@ export const sendContactEmail = async (req, res) => {
 
 //Additoinal features 
 export const sendFeatureRequestEmail = async (req, res) => {
-  const {  userName, feature,  } = req.body;
+  const {  email, feature,  } = req.body;
   
   try {
-    const user = await adminModel.findOne({ userName });
+    const user = await adminModel.findOne({ email });
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {

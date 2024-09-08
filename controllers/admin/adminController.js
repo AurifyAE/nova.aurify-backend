@@ -35,7 +35,7 @@ export const adminLoginController = async (req, res, next) => {
         token,
       });
     } else {
-      throw createAppError("User not found.", 404);
+      throw createAppError("User not found.", 204);
     }
   } catch (error) {
     next(error);
@@ -145,7 +145,7 @@ export const saveBankDetailsController = async (req, res, next) => {
 
     if (!admin) {
       return res
-        .status(404)
+        .status(204)
         .json({ success: false, message: "Admin not found." });
     }
 
@@ -179,7 +179,7 @@ export const updateBankDetailsController = async (req, res, next) => {
 
     if (!admin) {
       return res
-        .status(404)
+        .status(204)
         .json({ success: false, message: "Admin not found." });
     }
 
@@ -190,11 +190,10 @@ export const updateBankDetailsController = async (req, res, next) => {
 
     if (bankIndex === -1) {
       return res
-        .status(404)
+        .status(204)
         .json({ success: false, message: "Bank details not found." });
     }
-
-    // Update the specific bank details
+    // Update the specific bank details-
     admin.bankDetails[bankIndex] = {
       ...admin.bankDetails[bankIndex],
       ...bankDetails,
@@ -301,7 +300,7 @@ export const getAdminFeaturesController = async (req, res, next) => {
         .json({ success: false, message: "userName parameter is required." });
     }
 
-    const admin = await adminModel.findOne({ userName }).select("features");
+    const admin = await adminModel.findOne({ userName }).select("features email");
 
     if (!admin) {
       return res
@@ -311,14 +310,15 @@ export const getAdminFeaturesController = async (req, res, next) => {
 
     // Assuming 'features' is an array in your admin document
     const features = admin.features || [];
+    const email = admin.email || "";
 
     res.status(200).json({
       success: true,
-      message: "Features fetched successfully",
-      data: features,
+      message: "Features and email fetched successfully",
+      data: { features, email },
     });
   } catch (error) {
-    console.error("Error fetching admin features:", error.message);
+    console.error("Error fetching admin features and email:", error.message);
     next(error);
   }
 };
