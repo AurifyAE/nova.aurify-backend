@@ -2,9 +2,9 @@ import newsModel from "../../model/newsSchema.js";
 import adminModel from "../../model/adminSchema.js";
 import { createAppError } from "../../utils/errorHandler.js";
 
-export const addManualNews = async (email, title, description) => {
+export const addManualNews = async (userName, title, description) => {
     try {
-        const admin = await adminModel.findOne({ email });
+        const admin = await adminModel.findOne({ userName });
 
         if (!admin) {
             throw createAppError("Admin not found.", 404);
@@ -30,9 +30,9 @@ export const addManualNews = async (email, title, description) => {
     }
 };
 
-export const getManualNews = async (email) => {
+export const getManualNews = async (userName) => {
     try {
-        const admin = await adminModel.findOne({ email });
+        const admin = await adminModel.findOne({ userName });
         if (!admin) {
             throw createAppError("Admin not found.", 404);
         }
@@ -44,9 +44,9 @@ export const getManualNews = async (email) => {
     }
 };
 
-export const updateManualNews = async (email, newsId, newsItemId, updatedData) => {
+export const updateManualNews = async (userName, newsId, newsItemId, updatedData) => {
     try {
-        const admin = await adminModel.findOne({ email });
+        const admin = await adminModel.findOne({ userName });
         if (!admin) {
             throw createAppError("Admin not found.", 404);
         }
@@ -70,9 +70,9 @@ export const updateManualNews = async (email, newsId, newsItemId, updatedData) =
     }
 };
 
-export const deleteManualNews = async (email, newsId, newsItemId) => {
+export const deleteManualNews = async (userName, newsId, newsItemId) => {
     try {
-        const admin = await adminModel.findOne({ email });
+        const admin = await adminModel.findOne({ userName });
         if (!admin) {
            throw createAppError("Admin not found.", 404);
         }

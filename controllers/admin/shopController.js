@@ -12,7 +12,7 @@ import { createAppError } from "../../utils/errorHandler.js";
 export const createShopItem = async (req, res) => {
     try {
       const { name, type, weight, rate } = req.body;
-      const { email } = req.params;
+      const { userName } = req.params;
   
       const image = req.file ? req.file.location : null;
   
@@ -21,7 +21,7 @@ export const createShopItem = async (req, res) => {
       }
   
       // Pass the image path instead of the base64 string to the helper function
-      const newShopItem = await addShopItem(email, name, type, weight, rate, image);
+      const newShopItem = await addShopItem(userName, name, type, weight, rate, image);
       res.status(201).json(newShopItem);
     } catch (error) {
       console.error('Error in createShopItem:', error);
@@ -32,8 +32,8 @@ export const createShopItem = async (req, res) => {
 // Get all shop items for a specific admin
 export const fetchShopItems = async (req, res) => {
     try {
-        const { email } = req.query;
-        const shopItems = await getAllShopItems(email);
+        const { userName } = req.params;
+        const shopItems = await getAllShopItems(userName);
         res.status(200).json(shopItems);
     } catch (error) {
         res.status(error.statusCode || 500).json({ message: error.message });
@@ -44,7 +44,7 @@ export const fetchShopItems = async (req, res) => {
 
 export const editShopItem = async (req, res) => {
     try {
-        const { email } = req.query;
+        const { userName } = req.query;
         const { id: shopItemId } = req.params;
         let updatedData = {};
 
@@ -59,7 +59,7 @@ export const editShopItem = async (req, res) => {
             updatedData.image = req.file.location;
         }
 
-        const updatedShopItem = await updateShopItem(email, shopItemId, updatedData);
+        const updatedShopItem = await updateShopItem(userName, shopItemId, updatedData);
         res.status(200).json(updatedShopItem);
     } catch (error) {
         console.error("Detailed error in controller:", error);
@@ -70,9 +70,9 @@ export const editShopItem = async (req, res) => {
 // Delete a shop item
 export const removeShopItem = async (req, res) => {
     try {
-        const { email } = req.query;
+        const { userName } = req.query;
         const { id: shopItemId } = req.params;
-        const result = await deleteShopItem(email, shopItemId);
+        const result = await deleteShopItem(userName, shopItemId);
         res.status(200).json(result);
     } catch (error) {
         res.status(error.statusCode || 500).json({ message: error.message });
