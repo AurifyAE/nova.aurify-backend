@@ -12,6 +12,7 @@ export const registerAdmin = async (req, res, next) => {
   try {
     const userData = {
       userName: req.body.userName,
+      companyName: req.body.companyName,
       logo: req.file ? req.file.location : undefined,
       address: req.body.address,
       email: req.body.email,

@@ -22,6 +22,7 @@ import {
   getUserWishlist,
   deleteWishlist
 } from "../../controllers/user/productController.js";
+import { saveBooking } from "../../controllers/user/bookingController.js";
 
 const router = Router();
 router.post("/register/:adminId", registerUser);
@@ -43,5 +44,5 @@ router.delete("/cart/:adminId/:userId/:productId", deleteCartItem);
 router.patch("/wishlist/:adminId/:userId/:productId", addItemToWishlist);
 router.delete("/wishlist/:adminId/:userId/:productId", deleteWishlist);
 router.put("/forgot-password/:adminId/:userId", forgotPassword);
-
+router.post('/booking/:adminId/:userId',saveBooking)
 export default router;

@@ -52,6 +52,7 @@ import {
 import { deleteNotification, getNotification } from "../../controllers/admin/notificationController.js";
 import { updateAdminProfileController, updateLogo } from "../../controllers/admin/profileController.js";
 import { addCustomSpread, deleteSpreadValueController, fetchSpreadValues } from "../../controllers/admin/spreadValuesController.js";
+import { fetchBookings } from "../../controllers/admin/bookingController.js";
 
 const router = Router();
 
@@ -123,6 +124,8 @@ router.post('/messages/:userId', storeMessage);
 router.get('/user/:userId/:adminId',getUserAdmin);
 
 
+// Order management
+router.get('/booking/:adminId',fetchBookings)
 
 
 export default router;
