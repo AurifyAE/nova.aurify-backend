@@ -6,7 +6,7 @@ export const getBanner = async (req, res) => {
 
       const banner = await BannerModel.findOne({ createdBy: adminId });
       if (!banner || banner.banner.length === 0) {
-        return res.status(404).json({ success: false, message: 'No banners found for this user' });
+        return res.status(204).json({ success: false, message: 'No banners found for this user' });
       }
       res.status(200).json({ success: true, data: banner.banner });
     } catch (error) {

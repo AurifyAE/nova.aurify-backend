@@ -4,13 +4,13 @@ import shopModel from "../../model/shopSchema.js";
 import { createAppError } from '../../utils/errorHandler.js';
 
 // Add a new shop item
-export const addShopItem = async (email, name, type, weight, rate, image) => {
+export const addShopItem = async (userName, name, type, weight, rate, image) => {
     try {
       if (!name) {
         throw createAppError("Shop item name is required.", 400);
       }
   
-      const admin = await adminModel.findOne({ email });
+      const admin = await adminModel.findOne({ userName });
       if (!admin) {
         throw createAppError("Admin not found.", 404);
       }
@@ -37,9 +37,9 @@ export const addShopItem = async (email, name, type, weight, rate, image) => {
 
 
 // Get all shop items for a specific admin
-export const getAllShopItems = async (email) => {
+export const getAllShopItems = async (userName) => {
     try {
-        const admin = await adminModel.findOne({ email });
+        const admin = await adminModel.findOne({ userName });
         if (!admin) {
             throw createAppError("Admin not found.", 404);
         }
@@ -51,10 +51,10 @@ export const getAllShopItems = async (email) => {
 };
 
 
-export const updateShopItem = async (email, shopItemId, updatedData) => {
+export const updateShopItem = async (userName, shopItemId, updatedData) => {
     try {
 
-        const admin = await adminModel.findOne({ email });
+        const admin = await adminModel.findOne({ userName });
         if (!admin) {
             throw createAppError("Admin not found.", 404);
         }
@@ -82,9 +82,9 @@ export const updateShopItem = async (email, shopItemId, updatedData) => {
 };
 
 // Delete a shop item
-export const deleteShopItem = async (email, shopItemId) => {
+export const deleteShopItem = async (userName, shopItemId) => {
     try {
-        const admin = await adminModel.findOne({ email });
+        const admin = await adminModel.findOne({ userName });
         if (!admin) {
             throw createAppError("Admin not found.", 404);
         }

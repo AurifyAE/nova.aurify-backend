@@ -21,8 +21,8 @@ export const fetchSpreadValues = async (req, res, next) => {
   
   export const deleteSpreadValueController = async (req, res, next) => {
     try {
-      const { spreadValueId, email } = req.params;
-      const result = await deleteSpreadValue(email, spreadValueId);
+      const { spreadValueId, userName } = req.params;
+      const result = await deleteSpreadValue(userName, spreadValueId);
       if (result.success) {
         res.status(200).json({
           success: true,

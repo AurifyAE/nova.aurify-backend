@@ -16,6 +16,7 @@ export const userCollectionSave = async (userData) => {
   try {
     const {
       userName,
+      companyName,
       logo,
       address,
       email,
@@ -66,6 +67,7 @@ export const userCollectionSave = async (userData) => {
 
     const authCollection = new adminModel({
       userName,
+      companyName,
       logo,
       address,
       email,

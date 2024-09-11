@@ -14,18 +14,18 @@ const hashPassword = async (password) => {
     throw new Error("Error hashing password");
   }
 };
-export const adminVerfication = async (email) => {
+export const adminVerfication = async (userName) => {
   try {
-    return await adminModel.findOne({ email });
+    return await adminModel.findOne({ userName });
   } catch (error) {
     console.error("Error in userVerfication:", error.message);
     throw new Error("Verification failed: " + error.message);
   }
 };
 
-export const getUserData = async (userEmail) => {
+export const getUserData = async (userName) => {
   try {
-    return await adminModel.findOne({ email: userEmail }).select("-password");
+    return await adminModel.findOne({ userName: userName }).select("-password");
   } catch (error) {
     console.error("Error in finding the user:", error.message);
     throw new Error("searching failed: " + error.message);
@@ -52,10 +52,10 @@ export const updateUserData = async (id, email, fullName, mobile, location) => {
   }
 };
 
-export const updateUserLogo = async (email, logoName) => {
+export const updateUserLogo = async (userName, logoName) => {
   try {
     return await adminModel.findOneAndUpdate(
-      { email: email },
+      { userName: userName },
       { logo: logoName },
       { new: true }
     );
@@ -113,17 +113,17 @@ export const userCollectionSave = async (data, adminId) => {
 };
 
 
-export const getCommodity = async (email) => {
+export const getCommodity = async (userName) => {
   try {
-    return await adminModel.findOne({ email });
+    return await adminModel.findOne({ userName });
   } catch (error) {
     console.error("Error in fetching Commodity:", error.message);
     throw new Error("fetching failed: " + error.message);
   }
 };
-export const getMetals = async (userEmail) => {
+export const getMetals = async (userName) => {
   try {
-    return await adminModel.findOne({ email: userEmail }).select("-password");
+    return await adminModel.findOne({ userName: userName }).select("-password");
   } catch (error) {
     console.error("Error in finding the metals:", error.message);
     throw new Error("searching failed: " + error.message);
@@ -148,15 +148,15 @@ export const fetchNotification = async (adminId) => {
   }
 };
 
-export const addFCMToken = async (email, fcmToken) => {
+export const addFCMToken = async (userName, fcmToken) => {
   try {
     if (!fcmToken || fcmToken.trim() === '') {
       return { success: false, message: "Invalid FCM token." };
     }
-    const admin = await adminModel.findOne({ email });
+    const admin = await adminModel.findOne({ userName });
 
     if (!admin) {
-      return { success: false, message: "Invalid email. Admin not found." };
+      return { success: false, message: "Invalid userName. Admin not found." };
     }
 
     let fcmEntry = await FCMTokenModel.findOne({ createdBy: admin._id });
@@ -200,9 +200,9 @@ export const getUsersForAdmin = async (adminId) => {
   }
 };
 
-export const addSpreadValue = async (adminEmail, spreadValue, title) => {
+export const addSpreadValue = async (userName, spreadValue, title) => {
   try {
-    const user = await adminModel.findOne({ email: adminEmail });
+    const user = await adminModel.findOne({ userName: userName });
     if (!user) {
       return { success: false, message: "Admin not found" };
     }
@@ -232,9 +232,9 @@ export const addSpreadValue = async (adminEmail, spreadValue, title) => {
   }
 };
 
-export const getSpreadValues = async (adminEmail) => {
+export const getSpreadValues = async (userName) => {
   try {
-    const user = await adminModel.findOne({ email: adminEmail });
+    const user = await adminModel.findOne({ userName: userName });
     if (!user) {
       return null;
     }
@@ -293,10 +293,14 @@ export const fetchActiveDevice = async (adminId) => {
   try {
     const createdBy = new mongoose.Types.ObjectId(adminId);
     const deviceDoc = await DeviceModel.findOne({ adminId: createdBy });
+    
+    // If no deviceDoc found, return activeDeviceCount as 0 without throwing an error
     if (!deviceDoc) {
-      return { success: false, message: "No device found for this admin" };
+      return { success: true, message: "No device found", activeDeviceCount: 0 };
     }
+
     const activeDeviceCount = deviceDoc.devices.filter(device => device.isActive).length;
+    
     return {
       success: true,
       activeDeviceCount: activeDeviceCount,

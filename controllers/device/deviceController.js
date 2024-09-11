@@ -15,7 +15,6 @@ export const activateDeviceController = async (req, res) => {
   try {
     // Get the MAC address of the device
     const mac = await macaddress.one();
-    console.log(mac)
     if (!mac) {
       await session.abortTransaction();
       return res.status(400).json({ message: "MAC address is required" });
@@ -119,7 +118,7 @@ export const getCurrentNews = async (req, res, next) => {
     const { success, news, message } = await getNewsByAdminId(adminId);
 
     if (!success) {
-      return res.status(404).json({
+      return res.status(204).json({
         success: false,
         message,
       });

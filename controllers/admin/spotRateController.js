@@ -116,12 +116,12 @@ export const updateCommodity = async (req, res, next) => {
   
   export const getCommodityController = async (req, res, next) => {
     try {
-      const userEmail = req.params.email;
-      if (!userEmail) {
-        throw createAppError("email parameter is required.", 400);
+      const userName = req.params.userName;
+      if (!userName) {
+        throw createAppError("userName parameter is required.", 400);
       }
   
-      const commodityData = await getCommodity(userEmail);
+      const commodityData = await getCommodity(userName);
   
       if (!commodityData) {
         throw createAppError("Admin data not found.", 404);
@@ -144,7 +144,7 @@ export const updateCommodity = async (req, res, next) => {
       const spotRates = await spotRateModel.findOne({ createdBy });
       if (!spotRates) {
         return res
-          .status(404)
+          .status(204)
           .json({ message: "Spot rates not found for this user" });
       }
   
@@ -185,12 +185,12 @@ export const updateCommodity = async (req, res, next) => {
   
   export const getMetalCommodity = async (req, res, next) => {
     try {
-      const userEmail = req.params.email;
-      if (!userEmail) {
+      const userName = req.params.userName;
+      if (!userName) {
         throw createAppError("Id is required.", 400);
       }
   
-      const metalData = await getMetals(userEmail);
+      const metalData = await getMetals(userName);
   
       if (!metalData) {
         throw createAppError("Metal data not found.", 404);
