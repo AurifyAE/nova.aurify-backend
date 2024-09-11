@@ -12,7 +12,8 @@ const ChatSchema = new Schema({
     {
       message: { type: String, required: [true, "message is required"] },
       sender: { type: String, required: [true, "sender is required"] },
-      time: { type: Date, default: Date.now }
+      time: { type: Date, default: Date.now },
+      read: { type: Boolean, default: false }
     },
   ],
 });

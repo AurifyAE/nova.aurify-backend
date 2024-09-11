@@ -10,19 +10,16 @@ export const getMessages = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid adminId or userId' });
     }
 
-    let chat = await ChatModel.findOne({
-        $or: [
-          { user: userId, 'conversation.sender': adminId },
-          { user: adminId, 'conversation.sender': userId }
-        ]
-      });
+
+    const chat = await ChatModel.findOne({
+      $or: [
+        { user: userId, 'conversation.sender': adminId },
+        { user: adminId, 'conversation.sender': userId }
+      ]
+    });
 
     if (!chat) {
-      chat = new ChatModel({
-        user: userId,
-        conversation: []
-      });
-      await chat.save();
+      return res.json({ success: true, chat: null });
     }
 
     res.json({ success: true, chat });
@@ -32,51 +29,7 @@ export const getMessages = async (req, res) => {
   }
 };
 
-export const storeMessage = async (req, res) => {
-  try {
-    const { message, sender, time } = req.body;
-    const receiverId = req.params.userId;
 
-    if (!mongoose.Types.ObjectId.isValid(sender) || !mongoose.Types.ObjectId.isValid(receiverId)) {
-      return res.status(400).json({ success: false, message: 'Invalid sender or receiver ID' });
-    }
-
-    if (!message || typeof message !== 'string' || message.trim() === '') {
-      return res.status(400).json({ success: false, message: 'Invalid message' });
-    }
-
-    if (!time || isNaN(new Date(time).getTime())) {
-      return res.status(400).json({ success: false, message: 'Invalid time' });
-    }
-
-    let chat = await ChatModel.findOne({
-        $or: [
-          { user: sender, 'conversation.sender': receiverId },
-          { user: receiverId, 'conversation.sender': sender }
-        ]
-      });
-
-    if (!chat) {
-      chat = new ChatModel({
-        user: receiverId,
-        conversation: []
-      });
-    }
-
-    chat.conversation.push({
-      message,
-      sender,
-      time
-    });
-
-    await chat.save();
-
-    res.status(201).json({ success: true, message: 'Message stored successfully', data: chat });
-  } catch (error) {
-    console.error('Error storing message:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-};
 
 export const getUserAdmin = async (req, res) => {
     try {
@@ -102,5 +55,28 @@ export const getUserAdmin = async (req, res) => {
     } catch (error) {
       console.error('Error fetching user admin:', error);
       res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  };
+
+  export const markAsRead = async (req, res) => {
+    console.log(req.body);
+    const { userId, adminId } = req.body;
+    console.log(`UserId: ${userId}, AdminId: ${adminId}`);
+  
+    try {
+      const result = await ChatModel.updateMany(
+        { user: adminId, "conversation.sender": userId },
+        { $set: { "conversation.$[elem].read": true } },
+        { 
+          arrayFilters: [{ "elem.sender": userId, "elem.read": false }],
+          multi: true
+        }
+      );
+      console.log(result);
+  
+      res.json({ success: true, updatedCount: result.modifiedCount });
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
     }
   };
