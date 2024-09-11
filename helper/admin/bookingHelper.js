@@ -1,60 +1,79 @@
 import mongoose from "mongoose";
-import { Cart } from "../../model/cartSchema.js";
 import { orderModel } from "../../model/orderSchema.js";
 
-export const fetchBookingDetails = async (adminId, userId) => {
+
+export const fetchBookingDetails = async (adminId) => {
   try {
-    if (!userId || !adminId) {
+    if (!adminId) {
       return {
         success: false,
         message: "Missing required fields",
       };
     }
 
-    // Fetch the user's cart items
-    const cart = await Cart.findOne({ userId }).populate("items.$.productId");
+    const adminObjectId = new mongoose.Types.ObjectId(adminId);
 
-    // Check if the cart exists and has items
-    if (!cart || cart.items.length === 0) {
+    const orders = await orderModel.aggregate([
+      { $match: { adminId: adminObjectId } },
+      {
+        $lookup: {
+          from: "users", // Collection name for users
+          localField: "userId",
+          foreignField: "_id",
+          as: "userDetails"
+        }
+      },
+      {
+        $unwind: "$userDetails"
+      },
+      {
+        $lookup: {
+          from: "shops", // Assuming a collection for products exists
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "productDetails"
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          adminId: 1,
+          userId: 1,
+          userDetails: {
+            userName: 1,
+            contact: 1,
+            email: 1
+          },
+          items: 1,
+          productDetails: {
+            name: 1,
+            price: 1,
+            image: 1
+          },
+          totalPrice: 1,
+          orderStatus: 1,
+          paymentStatus: 1,
+          orderDate: 1
+        }
+      }
+    ]);
+
+    if (orders.length === 0) {
       return {
         success: false,
-        message: "Cart is empty, cannot place an order.",
+        message: "No orders found for this admin.",
       };
     }
 
-  
-    const orderItems = cart.items.map((item) => {
-      return {
-        productId: item.productId, // Store the product ID
-        quantity: item.quantity,
-      };
-    });
-   
-    // Create new order
-    const newOrder = new orderModel({
-      adminId: new mongoose.Types.ObjectId(adminId),
-      userId: new mongoose.Types.ObjectId(userId),
-      items: orderItems,
-      totalPrice : cart.totalPrice,
-      orderStatus: "processing",
-      paymentStatus: "pending",
-    });
-
-    // Save the order to the database
-    const savedOrder = await newOrder.save();
-
-    // Clear the cart after placing the order
-    await Cart.findOneAndUpdate({ userId }, { items: [] }); // Clear cart after placing order
-
     return {
       success: true,
-      message: "Order placed successfully.",
-      orderDetails: savedOrder,
+      message: "Orders fetched successfully.",
+      orderDetails: orders,
     };
   } catch (error) {
     return {
       success: false,
-      message: "Error placing the order: " + error.message,
+      message: "Error fetching the orders: " + error.message,
     };
   }
 };

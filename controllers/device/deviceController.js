@@ -118,7 +118,7 @@ export const getCurrentNews = async (req, res, next) => {
     const { success, news, message } = await getNewsByAdminId(adminId);
 
     if (!success) {
-      return res.status(404).json({
+      return res.status(204).json({
         success: false,
         message,
       });
