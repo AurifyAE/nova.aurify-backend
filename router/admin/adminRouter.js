@@ -47,7 +47,7 @@ import { getUserData } from "../../helper/admin/adminHelper.js";
 import {
   getMessages,
   getUserAdmin,
-  storeMessage,
+  markAsRead
 } from "../../controllers/admin/messageController.js";
 import { deleteNotification, getNotification } from "../../controllers/admin/notificationController.js";
 import { updateAdminProfileController, updateLogo } from "../../controllers/admin/profileController.js";
@@ -125,8 +125,8 @@ router.get('/user-data', getUserData);
 
 //messages router
 router.get('/messages/:adminId/:userId',getMessages);
-router.post('/messages/:userId', storeMessage);
 router.get('/user/:userId/:adminId',getUserAdmin);
+router.post('/messages/markAsRead',markAsRead);
 
 
 

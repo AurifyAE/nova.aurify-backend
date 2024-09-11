@@ -20,10 +20,10 @@ export const updateUserData = async (id, email, fullName, mobile, location) => {
     }
   };
   
-  export const updateUserLogo = async (email, logoName) => {
+  export const updateUserLogo = async (userName, logoName) => {
     try {
       return await adminModel.findOneAndUpdate(
-        { email: email },
+        { userName: userName },
         { logo: logoName },
         { new: true }
       );
