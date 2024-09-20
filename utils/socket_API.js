@@ -2,6 +2,7 @@ import { io } from "../config/socket_io.js";
 import { UsersModel } from "../model/usersSchema.js";
 import adminModel from "../model/adminSchema.js";
 import ChatModel from "../model/chatSchema.js";
+import mongoose from "mongoose";
 
 export default function socketApi() {
     io.on('connection', (socket) => {
@@ -24,39 +25,49 @@ export default function socketApi() {
             socket.leave(room);
         });
 
-        socket.on('sendMessage', async ({ sender, receiver, content, room }) => {
+        socket.on('sendMessage', async ({ sender, receiver, message, room }) => {
             try {
                 if (!mongoose.Types.ObjectId.isValid(sender) || !mongoose.Types.ObjectId.isValid(receiver)) {
                     throw new Error('Invalid sender or receiver ID');
                 }
-
-                if (!content || typeof content !== 'string' || content.trim() === '') {
-                    throw new Error('Invalid message content');
+        
+                if (!message || typeof message !== 'string' || message.trim() === '') {
+                    throw new Error('Invalid message');
                 }
-
+        
+                // Find the existing chat document
                 let chat = await ChatModel.findOne({
                     $or: [
-                        { user: sender, 'conversation.sender': receiver },
-                        { user: receiver, 'conversation.sender': sender }
+                        { user: receiver, 'conversation.sender': sender },
+                        { user: sender, 'conversation.sender': receiver }
                     ]
                 });
-
+        
                 if (!chat) {
+                    // If chat doesn't exist, create a new one
                     chat = new ChatModel({
                         user: receiver,
-                        conversation: []
+                        conversation: [{
+                            sender,
+                            message: message,
+                            time: new Date(),
+                            read: false
+                        }]
+                    });
+                } else {
+                    // If chat exists, add the new message to the conversation
+                    chat.conversation.push({
+                        sender,
+                        message: message,
+                        time: new Date(),
+                        read: false
                     });
                 }
-
-                chat.conversation.push({
-                    sender,
-                    message: content,
-                    time: new Date()
-                });
-
+        
+                // Save the chat document
                 await chat.save();
-
-                io.to(room).emit('message', { sender, receiver, content, time: new Date() });
+                
+                io.to(room).emit('message', { sender, receiver, message, time: new Date(), read: false });
             } catch (error) {
                 console.error('Error sending message:', error);
                 socket.emit('error', { message: error.message || 'Failed to send message' });
