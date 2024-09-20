@@ -52,6 +52,7 @@ import {
 import { deleteNotification, getNotification } from "../../controllers/admin/notificationController.js";
 import { updateAdminProfileController, updateLogo } from "../../controllers/admin/profileController.js";
 import { addCustomSpread, deleteSpreadValueController, fetchSpreadValues } from "../../controllers/admin/spreadValuesController.js";
+import { uploadBG, getBackground } from "../../controllers/admin/previewController.js";
 
 const router = Router();
 
@@ -127,6 +128,9 @@ router.get('/user-data', getUserData);
 router.get('/messages/:adminId/:userId',getMessages);
 router.get('/user/:userId/:adminId',getUserAdmin);
 router.post('/messages/markAsRead',markAsRead);
+
+router.post('/upload/:userID',uploadBG);
+router.get('/backgrounds/:userId',getBackground);
 
 
 
