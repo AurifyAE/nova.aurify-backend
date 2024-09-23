@@ -3,7 +3,6 @@ import Media from '../../model/previewSchema.js';
 import mongoose from 'mongoose';
 
 export const uploadBG = async (req, res) => {
-    console.log('Starting file upload/update process');
   
     const upload = uploadSingle('image', true); // Use local storage
   
@@ -27,7 +26,6 @@ export const uploadBG = async (req, res) => {
   
       // Check if the user already has a media entry
       let existingMedia = await Media.findOne({ createdBy: userID });
-      console.log(existingMedia);
   
       if (existingMedia) {
         // Update existing media
@@ -40,7 +38,6 @@ export const uploadBG = async (req, res) => {
           filename: req.file.filename,
           fileUrl: `/uploads/${req.file.filename}`
         });
-        console.log('success');
       } else {
         // Create a new Media document
         const newMedia = new Media({
@@ -70,7 +67,6 @@ export const uploadBG = async (req, res) => {
   };
 export const getBackground = async (req, res, next) => {
     try {
-      console.log("Request params:", req.params);
       const { userId } = req.params;  // Extract userId from params
   
       if (!userId) {
@@ -83,7 +79,6 @@ export const getBackground = async (req, res, next) => {
       }
   
       const backgroundImage = await Media.findOne({ createdBy: userId });
-      console.log("Background image found:", backgroundImage);
   
       if (backgroundImage) {
         // Assuming you have a base URL for your media files

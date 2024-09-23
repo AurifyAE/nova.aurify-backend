@@ -33,6 +33,7 @@ import {
 } from "../../controllers/admin/spotRateController.js";
 import { adminLoginController } from "../../controllers/admin/adminController.js";
 import { getBanner } from "../../controllers/admin/bannerController.js";
+import { getSubscription, subscription } from "../../controllers/admin/subscriptionController.js";
 
 
 import {
@@ -131,6 +132,10 @@ router.post('/messages/markAsRead',markAsRead);
 
 router.post('/upload/:userID',uploadBG);
 router.get('/backgrounds/:userId',getBackground);
+
+//subscription router
+router.post('/subscriptions/:userId',subscription);
+router.get('/subscriptions/:userId',getSubscription);
 
 
 
