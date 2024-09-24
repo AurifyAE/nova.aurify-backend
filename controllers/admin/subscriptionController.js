@@ -6,7 +6,7 @@ export const subscription = async (req, res, next) => {
         const { userId } = req.params;
         const { type, value, time } = req.body;
     
-        if (!type || !value || isNaN(value) || value <= 0) {
+        if (!type || !value || isNaN(value) || value === 0) {
           return res.status(400).json({ message: 'Invalid subscription data' });
         }
     
