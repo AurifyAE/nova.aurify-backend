@@ -95,7 +95,7 @@ export const fetchAdminBankDetails = async (req, res, next) => {
    
     return res.status(200).json({
       success: true,
-      commodities: adminData,
+      bankInfo: adminData,
       message: "Fetch banking details successfully",
     });
   } catch (error) {
