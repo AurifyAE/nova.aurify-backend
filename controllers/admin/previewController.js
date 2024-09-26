@@ -93,7 +93,7 @@ export const getBackground = async (req, res, next) => {
           }
         });
       } else {
-        res.status(404).json({
+        res.status(204).json({
           success: false,
           message: "No background image found for this user"
         });
