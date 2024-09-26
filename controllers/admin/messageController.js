@@ -59,9 +59,7 @@ export const getUserAdmin = async (req, res) => {
   };
 
   export const markAsRead = async (req, res) => {
-    console.log(req.body);
     const { userId, adminId } = req.body;
-    console.log(`UserId: ${userId}, AdminId: ${adminId}`);
   
     try {
       const result = await ChatModel.updateMany(
@@ -72,7 +70,6 @@ export const getUserAdmin = async (req, res) => {
           multi: true
         }
       );
-      console.log(result);
   
       res.json({ success: true, updatedCount: result.modifiedCount });
     } catch (error) {
