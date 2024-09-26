@@ -6,6 +6,9 @@ import {
   getUserData
 } from "../../helper/admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
+import PremiumModel from "../../model/premiumSchema.js";
+import DiscountModel from "../../model/discountSchema.js";
+
 
 import adminModel from "../../model/adminSchema.js";
 import { verifyToken, generateToken } from "../../utils/jwt.js";
@@ -321,4 +324,104 @@ export const getAdminFeaturesController = async (req, res, next) => {
     console.error("Error fetching admin features and email:", error.message);
     next(error);
   }
+};
+
+
+
+export const premiumDiscounts = async (req, res, next) => {
+  try {
+      const { userId } = req.params;
+      const { type, value, time } = req.body;
+  
+      if (!type || !value || isNaN(value) || value === 0) {
+        return res.status(400).json({ message: 'Invalid data' });
+      }
+  
+      const timestamp = new Date(time).getTime();
+  
+      let premiumDiscounts;
+      if (type === 'Premium') {
+        premiumDiscounts = await PremiumModel.findOneAndUpdate(
+          { createdBy: userId },
+          { 
+            $push: { 
+              premium: { 
+                timestamp, 
+                value: Number(value) 
+              } 
+            } 
+          },
+          { new: true, upsert: true }
+        );
+      } else if (type === 'Discount') {
+        premiumDiscounts = await DiscountModel.findOneAndUpdate(
+          { createdBy: userId },
+          { 
+            $push: { 
+              discount: { 
+                timestamp, 
+                value: Number(value) 
+              } 
+            } 
+          },
+          { new: true, upsert: true }
+        );
+      } else {
+        return res.status(400).json({ message: 'Invalid type' });
+      }
+  
+      const newPremiumDiscounts = premiumDiscounts[type.toLowerCase()].slice(-1)[0];
+  
+      res.status(201).json({
+        message: 'added successfully',
+        premiumDiscounts: {
+          _id: newPremiumDiscounts._id,
+          type,
+          value: newPremiumDiscounts.value,
+          time: new Date(newPremiumDiscounts.timestamp).toLocaleString()
+        }
+      });
+    } catch (error) {
+      console.error('Error in adding', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+};
+
+export const getPremiumDiscounts = async (req, res, next) => {
+  try {
+      const { userId } = req.params;
+  
+      const premiums = await PremiumModel.findOne({ createdBy: userId });
+      const discounts = await DiscountModel.findOne({ createdBy: userId });
+  
+      let premiumDiscounts = [];
+      if (premiums) {
+        premiumDiscounts = premiumDiscounts.concat(
+          premiums.premium.map(sub => ({
+            _id: sub._id,
+            type: 'Premium',
+            value: sub.value,
+            time: new Date(sub.timestamp).toLocaleString()
+          }))
+        );
+      }
+      if (discounts) {
+        premiumDiscounts = premiumDiscounts.concat(
+          discounts.discount.map(sub => ({
+            _id: sub._id,
+            type: 'Discount',
+            value: sub.value,
+            time: new Date(sub.timestamp).toLocaleString()
+          }))
+        );
+      }
+  
+
+      premiumDiscounts.sort((a, b) => new Date(b.time) - new Date(a.time));
+  
+      res.json({ premiumDiscounts });
+    } catch (error) {
+      console.error('Error in fetching:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
 };
