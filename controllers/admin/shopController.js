@@ -24,8 +24,6 @@ import {
           400
         );
       }
-      console.log("Received request body:", req.body);
-      console.log("Received file:", req.file);
       const image = req.file ? req.file.location : null;
   
       if (!image) {
