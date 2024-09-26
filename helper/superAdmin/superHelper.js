@@ -1,5 +1,7 @@
 import adminModel from "../../model/adminSchema.js";
 import bcrypt from "bcrypt";
+import { decryptPassword, encryptPassword } from "../../utils/crypto.js";
+import DeviceModel from "../../model/deviceSchema.js";
 
 // Function to hash the password
 const hashPassword = async (password) => {
@@ -14,6 +16,7 @@ export const userCollectionSave = async (userData) => {
   try {
     const {
       userName,
+      companyName,
       logo,
       address,
       email,
@@ -21,12 +24,14 @@ export const userCollectionSave = async (userData) => {
       contact,
       whatsapp,
       userType,
+      screenCount,
       solutions = [],
       features = [],
       commodities = [],
       workCompletionDate,
       serviceStartDate,
     } = userData;
+
     // Check if the email already exists
     const existingAdmin = await adminModel.findOne({ email });
     if (existingAdmin) {
@@ -36,6 +41,7 @@ export const userCollectionSave = async (userData) => {
           "The email provided is already in use. Please use a different email.",
       };
     }
+
     // Calculate serviceEndDate by adding 365 days to serviceStartDate
     const serviceStartDateObj = new Date(serviceStartDate);
     const serviceEndDate = new Date(serviceStartDateObj);
@@ -44,28 +50,33 @@ export const userCollectionSave = async (userData) => {
     // Transform solutions and features into the correct format
     const formattedSolutions = solutions.map((solution) => ({
       type: solution,
-      enabled: true, // or false, depending on your logic
+      enabled: true,
     }));
 
     const formattedFeatures = features.map((feature) => ({
       name: feature,
-      enabled: true, // or true, depending on your logic
+      enabled: true,
     }));
 
     const formattedCommodities = commodities.map((commodity) => ({
       symbol: commodity,
     }));
 
-    const encrypt = await hashPassword(password);
+    // const encrypt = await hashPassword(password);
+    const { iv, encryptedData } = encryptPassword(password);
+
     const authCollection = new adminModel({
       userName,
+      companyName,
       logo,
       address,
       email,
-      password: encrypt,
+      password: encryptedData,
+      passwordAccessKey: iv,
       contact,
       whatsapp,
       userType,
+      screenLimit: screenCount,
       solutions: formattedSolutions,
       features: formattedFeatures,
       commodities: formattedCommodities,
@@ -80,73 +91,51 @@ export const userCollectionSave = async (userData) => {
     throw new Error("Error saving admin data");
   }
 };
+
 export const fetchAdminData = async () => {
   try {
-    return await adminModel.find({});
+    const admins = await adminModel.find({});
+    return admins.map((admin) => {
+      const decryptedPassword = decryptPassword(
+        admin.password,
+        admin.passwordAccessKey
+      ); // Assuming the `iv` field is stored in the admin schema
+      return {
+        ...admin.toObject(), // Convert Mongoose document to plain JavaScript object
+        password: decryptedPassword, // Replace encrypted password with the decrypted one
+      };
+    });
   } catch (error) {
     throw new Error("Error fetching admin data");
   }
 };
 export const collectionUpdate = async (adminId, userData) => {
   try {
-    const {
-      userName,
-      logo,
-      address,
-      email,
-      password,
-      contact,
-      whatsapp,
-      userType,
-      solutions,
-      features,
-      workCompletionDate,
-      serviceStartDate,
-    } = userData;
-
     const updateData = {};
 
-    // Populate updateData only with provided fields
-    if (userName) updateData.userName = userName;
-    if (logo) updateData.logo = logo;
-    if (address) updateData.address = address;
-    if (email) updateData.email = email;
-
-    // Hash password only if it's provided
-    if (password) updateData.password = await hashPassword(password);
-
-    if (contact) updateData.contact = contact;
-    if (whatsapp) updateData.whatsapp = whatsapp;
-    if (userType) updateData.userType = userType;
-
-    // Only map if solutions are provided
-    if (solutions) {
-      updateData.solutions = solutions.map((solution) => ({
-        type: solution,
-        enabled: true, // or false, depending on your logic
-      }));
+    // Iterate over the userData object and conditionally add fields to updateData
+    // Process each field dynamically
+    for (const key in userData) {
+      if (userData[key] !== undefined) {
+        // Check if the value is not undefined
+        if (key === "password") {
+          updateData.password = await hashPassword(userData[key]);
+        } else if (
+          key === "solutions" ||
+          key === "features" ||
+          key === "commodities"
+        ) {
+          // Handle array fields like solutions, features, and commodities
+          updateData[key] = userData[key].map((item) => ({
+            ...item, // Use spread to copy all properties from item
+            enabled: item.enabled !== undefined ? item.enabled : true,
+          }));
+        } else {
+          updateData[key] = userData[key];
+        }
+      }
     }
-
-    // Only map if features are provided
-    if (features) {
-      updateData.features = features.map((feature) => ({
-        name: feature,
-        enabled: true, // or false, depending on your logic
-      }));
-    }
-
-    if (workCompletionDate) updateData.workCompletionDate = workCompletionDate;
-
-    // Calculate serviceEndDate only if serviceStartDate is provided
-    if (serviceStartDate) {
-      const serviceStartDateObj = new Date(serviceStartDate);
-      const serviceEndDate = new Date(serviceStartDateObj);
-      serviceEndDate.setDate(serviceEndDate.getDate() + 365);
-      updateData.serviceStartDate = serviceStartDateObj;
-      updateData.serviceEndDate = serviceEndDate;
-    }
-
-    // Use the $set operator for efficient field updates
+    // Use $set to update only the provided fields
     const updatedAdmin = await adminModel.findByIdAndUpdate(
       adminId,
       { $set: updateData },
@@ -159,6 +148,85 @@ export const collectionUpdate = async (adminId, userData) => {
 
     return updatedAdmin;
   } catch (error) {
-    throw new Error("Error updating admin data");
+    throw new Error(`Error updating admin data: ${error.message}`);
+  }
+};
+
+export const fetchAdminDevice = async () => {
+  try {
+    return await adminModel.find({
+      features: { $elemMatch: { name: "TV View", enabled: true } },
+    });
+  } catch (error) {
+    throw new Error("Error fetching Admin Device data");
+  }
+};
+
+export const fetchDeviceDetails = async () => {
+  try {
+    return await DeviceModel.find({});
+  } catch (error) {
+    throw new Error("Error fetching Device data");
+  }
+};
+
+export const deviceStatusChange = async (adminId, deviceId) => {
+  try {
+    const deviceDoc = await DeviceModel.findOne({
+      adminId: adminId,
+      "devices._id": deviceId,
+    });
+
+    if (!deviceDoc) {
+      return { status: false, message: "Device not found" };
+    }
+
+    // Find the device within the devices array and toggle the isActive status
+    const device = deviceDoc.devices.id(deviceId);
+    const newStatus = !device.isActive;
+
+    await DeviceModel.findOneAndUpdate(
+      { adminId: adminId, "devices._id": deviceId },
+      { $set: { "devices.$.isActive": newStatus } },
+      { new: true }
+    );
+
+    return {
+      status: true,
+      message: `Device ${newStatus ? "unblocked" : "blocked"} successfully`,
+    };
+  } catch (error) {
+    throw new Error("Error updating device status:", error);
+  }
+};
+
+
+export const deleteDeviceMacAddress = async (adminId, deviceId) => {
+  try {
+    const deviceDoc = await DeviceModel.findOne({
+      adminId: adminId,
+      "devices._id": deviceId,
+    });
+
+    if (!deviceDoc) {
+      return { status: false, message: "Device not found" };
+    }
+
+    
+    const result = await DeviceModel.updateOne(
+      { adminId: adminId, 'devices._id': deviceId },
+      { $pull: { devices: { _id: deviceId } } } // Remove the device from the devices array
+    );
+
+    if (result.nModified === 0) {
+      return { status: false, message: 'Device not found or not deleted' };
+    }
+
+    return {
+      status: true,
+      message: 'Device deleted successfully',
+    };
+  } catch (error) {
+    throw new Error(`Error deleting device: ${error.message}`);
   }
 };

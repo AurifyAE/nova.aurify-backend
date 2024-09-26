@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import BannerModel from "../../model/bannerSchema.js";
 import NotificationModel from "../../model/notificationSchema.js";
+import FCMTokenModel from "../../model/fcmTokenSchema.js";
+import NotificationService from "../../utils/sendPushNotification.js";
+import adminModel from "../../model/adminSchema.js";
 export const addNewBanner = async (data) => {
   try {
     const { title, imageUrl, adminId } = data;
@@ -40,8 +43,52 @@ export const addNewBanner = async (data) => {
     }
     await notificationDoc.save();
 
+    // Fetch FCM tokens
+    let fcmTokenDoc = await FCMTokenModel.findOne({ createdBy: adminId });
+ 
+    if (fcmTokenDoc && fcmTokenDoc.FCMTokens.length > 0) {
+      const invalidTokens = [];
+
+      // Send push notifications to all tokens
+      for (const tokenObj of fcmTokenDoc.FCMTokens) {
+        try {
+          await NotificationService.sendNotification(
+            tokenObj.token,
+            "New Banner Added",
+            notificationMessage,
+            {
+              bannerTitle: title,
+              imageUrl: imageUrl,
+            }
+          );
+        } catch (error) {
+          console.error(
+            `Failed to send notification to token: ${tokenObj.token}`,
+            error
+          );
+          if (
+            error.errorInfo &&
+            error.errorInfo.code ===
+              "messaging/registration-token-not-registered"
+          ) {
+            invalidTokens.push(tokenObj.token);
+          }
+        }
+      }
+
+      // Remove invalid tokens if any were found
+      if (invalidTokens.length > 0) {
+        console.log(`Removing ${invalidTokens.length} invalid tokens`);
+        fcmTokenDoc.FCMTokens = fcmTokenDoc.FCMTokens.filter(
+          (tokenObj) => !invalidTokens.includes(tokenObj.token)
+        );
+        await fcmTokenDoc.save();
+      }
+    }
+
     return bannerDoc;
   } catch (error) {
+    console.error("Error adding banner and sending notification:", error);
     throw new Error("Error adding banner and sending notification");
   }
 };
@@ -84,5 +131,15 @@ export const fetchBannersDetails = async () => {
     return await BannerModel.find();
   } catch (error) {
     throw new Error("Error fetching Banner data");
+  }
+};
+
+export const fetchAdminBanners = async () => {
+  try {
+    return await adminModel.find({
+      features: { $elemMatch: { name: "Digital Marketing", enabled: true } },
+    });
+  } catch (error) {
+    throw new Error("Error fetching Admin Banner data");
   }
 };
