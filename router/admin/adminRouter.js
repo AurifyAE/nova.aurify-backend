@@ -139,11 +139,6 @@ router.post('/premiumdiscounts/:userId',premiumDiscounts);
 router.get('/premiumdiscounts/:userId',getPremiumDiscounts);
 
 
-//subscription router
-router.post('/subscriptions/:userId',subscription);
-router.get('/subscriptions/:userId',getSubscription);
-
-
 // Order management
 router.get('/booking/:adminId',fetchBookings)
 
