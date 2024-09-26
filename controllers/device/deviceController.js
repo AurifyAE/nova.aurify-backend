@@ -7,6 +7,8 @@ import {
 } from "../../helper/device/deviceHalper.js";
 import { serverModel } from "../../model/serverSchema.js";
 import adminModel from "../../model/adminSchema.js";
+import PremiumModel from "../../model/premiumSchema.js";
+import DiscountModel from "../../model/discountSchema.js";
 
 export const activateDeviceController = async (req, res) => {
   const session = await mongoose.startSession();
@@ -154,5 +156,55 @@ export const getCommodities = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const getPremiumDiscounts = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+
+    const premiums = await PremiumModel.findOne({ createdBy: adminId });
+    const discounts = await DiscountModel.findOne({ createdBy: adminId });
+
+    let premiumDiscounts = [];
+
+    if (premiums) {
+      premiumDiscounts = premiumDiscounts.concat(
+        premiums.premium.map(sub => ({
+          _id: sub._id,
+          type: 'Premium',
+          value: sub.value,
+          time: sub.timestamp,
+        }))
+      );
+    }
+
+    if (discounts) {
+      premiumDiscounts = premiumDiscounts.concat(
+        discounts.discount.map(sub => ({
+          _id: sub._id,
+          type: 'Discount',
+          value: sub.value,
+          time: sub.timestamp,
+        }))
+      );
+    }
+
+    premiumDiscounts.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    const lastAdded = premiumDiscounts.length > 0 ? premiumDiscounts[0] : null;
+
+    res.json({
+      lastAdded: lastAdded
+        ? {
+          ...lastAdded,
+          time: new Date(lastAdded.time).toLocaleString(),
+        }
+        : null,
+    });
+
+  } catch (error) {
+    console.error('Error in fetching:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
