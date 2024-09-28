@@ -1,6 +1,15 @@
 import { UsersModel } from '../../model/UsersSchema.js';
 import bcrypt from 'bcrypt';
 
+const hashPassword = async (password) => {
+  try {
+    const saltRounds = 10;
+    return await bcrypt.hash(password, saltRounds);
+  } catch (error) {
+    throw new Error("Error hashing password");
+  }
+};
+
 export const addUser = async (req, res) => {
     try {
       const { adminId } = req.params;
@@ -11,8 +20,7 @@ export const addUser = async (req, res) => {
       }
   
       // Hash password
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+      const hashedPassword = await hashPassword(userData.password);
   
       const existingAdmin = await UsersModel.findOne({ createdBy: adminId });
   
@@ -20,7 +28,7 @@ export const addUser = async (req, res) => {
         // Check if the contact already exists
         const contactExists = existingAdmin.users.some(user => user.contact === userData.contact);
         if (contactExists) {
-          return res.status(400).json({ success: false, message: 'User with this contact already exists' });
+          return res.status(409).json({ success: false, message: 'User with this contact already exists' });
         }
   
         // Add new user to existing document
