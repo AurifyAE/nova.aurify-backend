@@ -54,6 +54,8 @@ import { deleteNotification, getNotification } from "../../controllers/admin/not
 import { updateAdminProfileController, updateLogo } from "../../controllers/admin/profileController.js";
 import { addCustomSpread, deleteSpreadValueController, fetchSpreadValues } from "../../controllers/admin/spreadValuesController.js";
 import { uploadBG, getBackground } from "../../controllers/admin/previewController.js";
+import { addCategory, deleteCategory, editCategory, getCategories } from "../../controllers/admin/categoryController.js";
+import { addUser, deleteUser, editUser, getUsers } from "../../controllers/admin/userController.js";
 
 const router = Router();
 
@@ -137,7 +139,16 @@ router.get('/backgrounds/:userId',getBackground);
 router.post('/premiumdiscounts/:userId',premiumDiscounts);
 router.get('/premiumdiscounts/:userId',getPremiumDiscounts);
 
+//category routers
+router.post('/addCategory/:adminId', addCategory);
+router.put('/editCategory/:id/:adminId', editCategory);
+router.delete('/deleteCategory/:id/:adminId', deleteCategory);
+router.get('/getCategories/:adminId', getCategories);
 
-
+//user router
+router.post('/admin/:adminId/users', addUser);
+router.put('/admin/users/:userId/:adminId', editUser);
+router.delete('/admin/users/:userId/:adminId', deleteUser);
+router.get('/admin/:adminId/users', getUsers);
 
 export default router;
