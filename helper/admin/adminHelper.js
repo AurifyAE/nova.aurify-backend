@@ -1,11 +1,11 @@
-import adminModel from "../../model/adminSchema.js";
-import { SpreadValueModel } from "../../model/spreadValueSchema.js";
 import bcrypt from "bcrypt";
-import { UsersModel } from "../../model/usersSchema.js";
-import DeviceModel from '../../model/deviceSchema.js'
-import NotificationModel from "../../model/notificationSchema.js";
-import FCMTokenModel from "../../model/fcmTokenSchema.js";
 import mongoose from "mongoose";
+import { UsersModel } from "../../model/UsersSchema.js";
+import adminModel from "../../model/adminSchema.js";
+import DeviceModel from "../../model/deviceSchema.js";
+import FCMTokenModel from "../../model/fcmTokenSchema.js";
+import NotificationModel from "../../model/notificationSchema.js";
+import { SpreadValueModel } from "../../model/spreadValueSchema.js";
 // Function to hash the password
 const hashPassword = async (password) => {
   try {
@@ -65,7 +65,6 @@ export const updateUserLogo = async (userName, logoName) => {
   }
 };
 
-
 export const userCollectionSave = async (data, adminId) => {
   try {
     const { userName, contact, location, email, password } = data;
@@ -112,7 +111,6 @@ export const userCollectionSave = async (data, adminId) => {
   }
 };
 
-
 export const getCommodity = async (userName) => {
   try {
     return await adminModel.findOne({ userName });
@@ -150,7 +148,7 @@ export const fetchNotification = async (adminId) => {
 
 export const addFCMToken = async (userName, fcmToken) => {
   try {
-    if (!fcmToken || fcmToken.trim() === '') {
+    if (!fcmToken || fcmToken.trim() === "") {
       return { success: false, message: "Invalid FCM token." };
     }
     const admin = await adminModel.findOne({ userName });
@@ -293,14 +291,20 @@ export const fetchActiveDevice = async (adminId) => {
   try {
     const createdBy = new mongoose.Types.ObjectId(adminId);
     const deviceDoc = await DeviceModel.findOne({ adminId: createdBy });
-    
+
     // If no deviceDoc found, return activeDeviceCount as 0 without throwing an error
     if (!deviceDoc) {
-      return { success: true, message: "No device found", activeDeviceCount: 0 };
+      return {
+        success: true,
+        message: "No device found",
+        activeDeviceCount: 0,
+      };
     }
 
-    const activeDeviceCount = deviceDoc.devices.filter(device => device.isActive).length;
-    
+    const activeDeviceCount = deviceDoc.devices.filter(
+      (device) => device.isActive
+    ).length;
+
     return {
       success: true,
       activeDeviceCount: activeDeviceCount,

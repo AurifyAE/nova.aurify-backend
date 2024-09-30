@@ -1,13 +1,17 @@
-import mjml2html from 'mjml';
-import nodemailer from 'nodemailer';
-import adminModel from '../../model/adminSchema.js';
-import { UsersModel } from '../../model/usersSchema.js'; // Ensure you're importing correctly
+import mjml2html from "mjml";
+import nodemailer from "nodemailer";
+import adminModel from "../../model/adminSchema.js";
+import { UsersModel } from "../../model/UsersSchema.js"; // Ensure you're importing correctly
 
 export const sendContactEmail = async (req, res) => {
-  const { email, firstName, lastName, companyName, phoneNumber, message } = req.body;
+  const { email, firstName, lastName, companyName, phoneNumber, message } =
+    req.body;
   try {
     // Fetch user data from the database using email
-    const user = await UsersModel.findOne({ 'users.email': email }, { 'users.$': 1 });
+    const user = await UsersModel.findOne(
+      { "users.email": email },
+      { "users.$": 1 }
+    );
 
     const foundUser = user?.users?.[0] || {}; // Extract the user from the array
 
@@ -16,7 +20,7 @@ export const sendContactEmail = async (req, res) => {
     const finalPhoneNumber = phoneNumber || foundUser?.contact;
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      service: "gmail",
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -25,14 +29,16 @@ export const sendContactEmail = async (req, res) => {
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: 'aurifycontact@gmail.com', // Replace with your company's email
-      cc: email, //for admins to get email copy 
-      subject: 'New Contact Form Submission',
-      attachments: [{
-        filename: 'logo.png',
-        path: 'public/logo.png',
-        cid: 'Logo' //same cid value as in the html img src
-      }],
+      to: "aurifycontact@gmail.com", // Replace with your company's email
+      cc: email, //for admins to get email copy
+      subject: "New Contact Form Submission",
+      attachments: [
+        {
+          filename: "logo.png",
+          path: "public/logo.png",
+          cid: "Logo", //same cid value as in the html img src
+        },
+      ],
       html: mjml2html(
         `<mjml>
   <mj-head>
@@ -82,27 +88,27 @@ export const sendContactEmail = async (req, res) => {
     </mj-section>
   </mj-body>
 </mjml>`
-      ).html
+      ).html,
     };
 
     await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: 'Email sent successfully' });
+    res.status(200).json({ message: "Email sent successfully" });
   } catch (error) {
-    console.error('Error sending email:', error);
-    res.status(500).json({ message: 'Error sending email', error: error.message });
+    console.error("Error sending email:", error);
+    res
+      .status(500)
+      .json({ message: "Error sending email", error: error.message });
   }
 };
 
-
-
-//Additoinal features 
+//Additoinal features
 export const sendFeatureRequestEmail = async (req, res) => {
-  const {  email, feature,  } = req.body;
-  
+  const { email, feature } = req.body;
+
   try {
     const user = await adminModel.findOne({ email });
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      service: "gmail",
       auth: {
         user: process.env.EMAIL_USER || "aurifycontact@gmail.com",
         pass: process.env.EMAIL_PASSWORD || "hnrgcobxcinqbuae",
@@ -110,15 +116,17 @@ export const sendFeatureRequestEmail = async (req, res) => {
     });
 
     const mailOptions = {
-      from: email ,// Origin email will be constant 
-      to: 'aurifycontact@gmail.com', // Replace with your company's email
+      from: email, // Origin email will be constant
+      to: "aurifycontact@gmail.com", // Replace with your company's email
       cc: email, //for admins to get email copy
-      subject: 'New Feature Request',
-      attachments: [{
-        filename: 'logo.png',
-        path: 'public/logo.png',
-        cid: 'Logo' // same cid value as in the HTML img src
-      }],
+      subject: "New Feature Request",
+      attachments: [
+        {
+          filename: "logo.png",
+          path: "public/logo.png",
+          cid: "Logo", // same cid value as in the HTML img src
+        },
+      ],
       html: mjml2html(`
         <mjml>
           <mj-head>
@@ -168,16 +176,22 @@ export const sendFeatureRequestEmail = async (req, res) => {
             </mj-section>
           </mj-body>
         </mjml>
-      `).html
+      `).html,
     };
 
     await transporter.sendMail(mailOptions);
     res.status(200).json({
       success: true,
-      message: 'Feature request email sent successfully'
+      message: "Feature request email sent successfully",
     });
   } catch (error) {
-    console.error('Error in sendFeatureRequestEmail:', error);
-    res.status(500).json({ success: false, message: 'Error sending feature request email', error: error.message });
+    console.error("Error in sendFeatureRequestEmail:", error);
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Error sending feature request email",
+        error: error.message,
+      });
   }
 };
