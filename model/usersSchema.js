@@ -8,27 +8,21 @@ const UsersSchema = new mongoose.Schema({
   },
   users: [
     {
-      userName: {
+      name: {
         type: String,
         required: true,
       },
       contact: {
-        type: String,
+        type: Number,
         required: true,
       },
       location: {
         type: String,
         required: true,
       },
-      spread: {
-        type: Number,
-        default: 0,
-      },
-      spreadTitle: { type: String, required: true, default: "Rate" },
-      email: {
-        type: String,
-        required: true,
-        match: [/.+\@.+\..+/, "Please enter a valid email address"],
+      category: { 
+        type: String, 
+        required: true, 
       },
       password: {
         type: String,
@@ -42,6 +36,7 @@ const UsersSchema = new mongoose.Schema({
   ],
 });
 
-UsersSchema.index({ createdBy: 1, "users.email": 1 }, { unique: true });
-const UsersModel = mongoose.model("Users", UsersSchema);
+// Check if the model already exists before creating it
+const UsersModel = mongoose.models.Users || mongoose.model("Users", UsersSchema);
+
 export { UsersModel };
