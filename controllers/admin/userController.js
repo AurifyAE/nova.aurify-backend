@@ -1,4 +1,4 @@
-import { UsersModel } from '../../model/UsersSchema.js';
+import { UsersModel } from '../../model/usersSchema.js';
 import bcrypt from 'bcrypt';
 
 const hashPassword = async (password) => {
