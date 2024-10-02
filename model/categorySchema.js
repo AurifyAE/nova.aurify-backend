@@ -10,25 +10,16 @@ const CategorySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  sellPremium: {
-    type: Number,
+  commodities: {
+    type: [String],
+    enum: ["Gold", "Silver", "Copper", "Platinum"],
     required: true,
-  },
-  sellCharge: {
-    type: Number,
-    required: true,
-  },
-  spread: { 
-    type: Number, 
-    required: true, 
-  },
-  buyPremium: {
-    type: Number,
-    required: true,
-  },
-  buyCharge: {
-    type: Number,
-    required: true,
+    validate: {
+      validator: function (v) {
+        return v.length > 0;
+      },
+      message: "At least one commodity must be selected",
+    },
   },
 });
 

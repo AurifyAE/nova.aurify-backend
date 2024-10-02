@@ -110,7 +110,6 @@ router.delete(
 
 
 //user router
-router.get('/admin/:adminId/users', fetchUsersForAdmin);
 router.get('/admin/:adminId/device', fetchAdminDevice);
 router.post('/admin/:adminId/spread-values', addCustomSpread);
 router.get('/admin/:adminId/spread-values', fetchSpreadValues);
