@@ -109,6 +109,7 @@ export const fetchAdminData = async () => {
     throw new Error("Error fetching admin data");
   }
 };
+
 export const collectionUpdate = async (adminId, userData) => {
   try {
     const updateData = {};
