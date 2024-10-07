@@ -56,7 +56,7 @@ import { addCustomSpread, deleteSpreadValueController, fetchSpreadValues } from 
 import { uploadBG, getBackground } from "../../controllers/admin/previewController.js";
 import { addCategory, deleteCategory, editCategory, getCategories } from "../../controllers/admin/categoryController.js";
 import { addUser, deleteUser, editUser, getUsers } from "../../controllers/admin/userController.js";
-import { addUserCommodity, deleteUserCommodity, getUserCommodity, updateUserSpread } from "../../controllers/admin/UserSpotRateController.js";
+import { addUserCommodity, deleteUserCommodity, getUserCommodity, updateUserCommodity, updateUserSpread } from "../../controllers/admin/UserSpotRateController.js";
 
 const router = Router();
 
@@ -156,5 +156,6 @@ router.get('/spotrates/:adminId/:categoryId',getUserCommodity);
 router.post('/update-user-spread',updateUserSpread);
 router.post('/commodities/:adminId/:categoryId',addUserCommodity);
 router.delete('/commodities/:adminId/:categoryId/:commodityId',deleteUserCommodity);
+router.patch('/spotrate-commodity/:adminId/:categoryId/:commodityId', updateUserCommodity);
 
 export default router;

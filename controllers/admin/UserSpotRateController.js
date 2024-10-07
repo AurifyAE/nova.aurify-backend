@@ -8,13 +8,13 @@ export const getUserCommodity = async (req, res, next) => {
     const userSpotRate = await UserSpotRateModel.findOne({ createdBy: adminId });
     
     if (!userSpotRate) {
-      return res.status(404).json({ message: 'User spot rate not found' });
+      return res.status(204).json({ message: 'User spot rate not found' });
     }
 
     const category = userSpotRate.categories.find(cat => cat.categoryId === categoryId);
     
     if (!category) {
-      return res.status(404).json({ message: 'Category not found' });
+      return res.status(204).json({ message: 'Category not found' });
     }
 
     res.json(category);
@@ -69,15 +69,20 @@ export const addUserCommodity = async (req, res) => {
     if (!userSpotRate) {
       userSpotRate = new UserSpotRateModel({
         createdBy: adminId,
-        categories: [{ categoryId }]
+        categories: []
       });
     }
 
-    let category = userSpotRate.categories.find(cat => cat.categoryId === categoryId);
+    let category = userSpotRate.categories.find(cat => cat.categoryId.toString() === categoryId);
     
     if (!category) {
-      category = { categoryId };
+      category = { categoryId, commodities: [] };
       userSpotRate.categories.push(category);
+    }
+
+    // Ensure the commodities array exists
+    if (!category.commodities) {
+      category.commodities = [];
     }
 
     // Ensure all required fields are present
@@ -199,3 +204,52 @@ export const createCommodity = async (req, res, next) => {
   }
 };
 
+export const updateUserCommodity = async (req, res) => {
+  try {
+    const { adminId, categoryId, commodityId } = req.params;
+    const updatedCommodityData = req.body;
+
+    // Validate input
+    if (!mongoose.Types.ObjectId.isValid(adminId) || !mongoose.Types.ObjectId.isValid(commodityId)) {
+      return res.status(400).json({ message: 'Invalid adminId or commodityId' });
+    }
+
+    // Find the UserSpotRate document
+    const userSpotRate = await UserSpotRateModel.findOne({ createdBy: adminId });
+
+    if (!userSpotRate) {
+      return res.status(404).json({ message: 'User spot rate not found' });
+    }
+
+    // Find the category
+    const category = userSpotRate.categories.find(cat => cat.categoryId === categoryId);
+    
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    // Find the commodity
+    const commodityIndex = category.commodities.findIndex(c => c._id.toString() === commodityId);
+
+    if (commodityIndex === -1) {
+      return res.status(404).json({ message: 'Commodity not found' });
+    }
+
+    // Update the commodity
+    Object.assign(category.commodities[commodityIndex], updatedCommodityData);
+
+    // Save the changes
+    await userSpotRate.save();
+
+    res.json({ 
+      message: 'Commodity updated successfully', 
+      data: category.commodities[commodityIndex]
+    });
+  } catch (error) {
+    console.error('Error updating commodity:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message
+    });
+  }
+};
