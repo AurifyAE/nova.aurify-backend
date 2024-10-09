@@ -1,31 +1,26 @@
 import { Router } from "express";
 import {
+  saveBankDetailsController,
+  updateBankDetailsController,
   deleteBankDetailsController,
   getAdminDataController,
   getAdminFeaturesController,
-  saveBankDetailsController,
-  updateBankDetailsController,
 } from "../../controllers/admin/adminController.js";
 
 import {
   addManualNewsController,
-  deleteManualNewsController,
   getManualNewsController,
   updateManualNewsController,
+  deleteManualNewsController,
 } from "../../controllers/admin/newsController.js";
 
 import {
-  adminTokenVerificationApi,
-  fetchAdminDevice,
   fetchUsersForAdmin,
+  fetchAdminDevice,
+  adminTokenVerificationApi,
 } from "../../controllers/admin/adminController.js";
 
-import {
-  adminLoginController,
-  getPremiumDiscounts,
-  premiumDiscounts,
-} from "../../controllers/admin/adminController.js";
-import { getBanner } from "../../controllers/admin/bannerController.js";
+import { uploadSingle } from "../../middleware/multer.js";
 import { getServerController } from "../../controllers/admin/serverController.js";
 import {
   createCommodity,
@@ -36,22 +31,24 @@ import {
   updateCommodity,
   updateSpread,
 } from "../../controllers/admin/spotRateController.js";
-import { uploadSingle } from "../../middleware/multer.js";
+import { adminLoginController } from "../../controllers/admin/adminController.js";
+import { getBanner } from "../../controllers/admin/bannerController.js";
+import { getPremiumDiscounts, premiumDiscounts } from "../../controllers/admin/adminController.js";
+
 
 import {
-  addCategory,
-  deleteCategory,
-  editCategory,
-  getCategories,
-} from "../../controllers/admin/categoryController.js";
-import {
-  sendContactEmail,
-  sendFeatureRequestEmail,
-} from "../../controllers/admin/contactController.js";
+  createShopItem,
+  fetchShopItems,
+  editShopItem,
+  removeShopItem,
+} from "../../controllers/admin/shopController.js";
+import { validateContact, validateFeatureRequest } from "../../middleware/validators.js";
+import { sendContactEmail, sendFeatureRequestEmail } from "../../controllers/admin/contactController.js";
+import { getUserData } from "../../helper/admin/adminHelper.js";
 import {
   getMessages,
   getUserAdmin,
-  markAsRead,
+  markAsRead
 } from "../../controllers/admin/messageController.js";
 import { deleteNotification, getNotification } from "../../controllers/admin/notificationController.js";
 import { updateAdminProfileController, updateLogo } from "../../controllers/admin/profileController.js";
@@ -65,42 +62,39 @@ import { addUserCommodity, deleteUserCommodity, getUserCommodity, updateUserComm
 const router = Router();
 
 //admin router
-router.post("/login", adminLoginController);
-router.post("/verify-token", adminTokenVerificationApi);
-router.get("/data/:userName", getAdminDataController);
-router.put("/update-profile/:id", updateAdminProfileController);
-router.post("/update-logo", uploadSingle("logo"), updateLogo);
-router.get("/server-url", getServerController);
-router.post("/verify-token", adminTokenVerificationApi);
+router.post('/login',adminLoginController);
+router.post('/verify-token', adminTokenVerificationApi);
+router.get('/data/:userName', getAdminDataController);
+router.put('/update-profile/:id', updateAdminProfileController);
+router.post('/update-logo', uploadSingle('logo'), updateLogo);
+router.get('/server-url',getServerController);
+router.post('/verify-token',adminTokenVerificationApi)
 
 //spotrate routers
-router.post("/update-spread", updateSpread);
-router.get("/spotrates/:adminId", getSpotRate);
-router.get("/commodities/:userName", getCommodityController);
-router.post("/spotrate-commodity", createCommodity);
-router.patch("/spotrate-commodity/:adminId/:commodityId", updateCommodity);
-router.delete("/commodities/:adminId/:commodityId", deleteSpotRateCommodity);
-router.get("metalCommodities/:userName", getMetalCommodity);
+router.post('/update-spread', updateSpread);
+router.get('/spotrates/:adminId', getSpotRate);
+router.get('/commodities/:userName', getCommodityController);
+router.post('/spotrate-commodity', createCommodity);
+router.patch('/spotrate-commodity/:adminId/:commodityId', updateCommodity);
+router.delete('/commodities/:adminId/:commodityId', deleteSpotRateCommodity);
+router.get('metalCommodities/:userName', getMetalCommodity);
+
 
 //Notification router
-router.get("/notifications/:adminId", getNotification);
-router.delete("/notifications/:adminId/:notificationId", deleteNotification);
+router.get('/notifications/:adminId',getNotification);
+router.delete('/notifications/:adminId/:notificationId',deleteNotification);
 
 //bank details
-router.post("/save-bank-details", saveBankDetailsController);
-router.delete("/delete-bank-details", deleteBankDetailsController);
-router.put("/update-bank-details", updateBankDetailsController);
+router.post('/save-bank-details', saveBankDetailsController);
+router.delete('/delete-bank-details', deleteBankDetailsController);
+router.put('/update-bank-details', updateBankDetailsController);
 
 //features
-router.get("/features", getAdminFeaturesController);
-router.post(
-  "/request-feature",
-  validateFeatureRequest,
-  sendFeatureRequestEmail
-);
+router.get('/features', getAdminFeaturesController);
+router.post('/request-feature', validateFeatureRequest, sendFeatureRequestEmail);
 
 //banner
-router.get("/banners/:adminId", getBanner);
+router.get('/banners/:adminId',getBanner);
 router.get("/banners/:userId", getBanner);
 
 //news-routers
@@ -115,6 +109,7 @@ router.delete(
   deleteManualNewsController
 );
 
+
 //user router
 router.get('/admin/:adminId/device', fetchAdminDevice);
 router.post('/admin/:adminId/spread-values', addCustomSpread);
@@ -123,22 +118,23 @@ router.delete('/admin/spread-values/:spreadValueId/:userName', deleteSpreadValue
 
 
 //shop router
-router.post("/shop-items/:userName", uploadSingle("image"), createShopItem);
-router.get("/shop-items/:userName", fetchShopItems);
-router.patch("/shop-items/:id", uploadSingle("image"), editShopItem);
-router.delete("/shop-items/:id", removeShopItem);
+router.post('/shop-items/:userName', uploadSingle('image'), createShopItem);
+router.get('/shop-items/:userName', fetchShopItems);
+router.patch('/shop-items/:id', uploadSingle('image'), editShopItem);
+router.delete('/shop-items/:id', removeShopItem);
 
 //contact router
-router.post("/contact", validateContact, sendContactEmail);
-router.get("/user-data", getUserData);
+router.post('/contact', validateContact, sendContactEmail);
+router.get('/user-data', getUserData);
+
 
 //messages router
-router.get("/messages/:adminId/:userId", getMessages);
-router.get("/user/:userId/:adminId", getUserAdmin);
-router.post("/messages/markAsRead", markAsRead);
+router.get('/messages/:adminId/:userId',getMessages);
+router.get('/user/:userId/:adminId',getUserAdmin);
+router.post('/messages/markAsRead',markAsRead);
 
-router.post("/upload/:userID", uploadBG);
-router.get("/backgrounds/:userId", getBackground);
+router.post('/upload/:userID',uploadBG);
+router.get('/backgrounds/:userId',getBackground);
 
 //premium and discount router
 router.post('/premiumdiscounts/:userId',premiumDiscounts);
