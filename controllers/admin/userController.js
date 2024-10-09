@@ -1,4 +1,4 @@
-import { UsersModel } from '../../model/UsersSchema.js';
+import { UsersModel } from '../../model/usersSchema.js';
 import { encryptPassword, decryptPassword } from '../../utils/crypto.js'; 
 
 
