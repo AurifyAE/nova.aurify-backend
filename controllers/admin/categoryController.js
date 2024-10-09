@@ -2,12 +2,11 @@ import { CategoryModel } from "../../model/categorySchema.js";
 
 export const addCategory = async (req, res) => {
   try {
-    const { name, commodities } = req.body;
+    const { name } = req.body;
     const { adminId } = req.params;
 
     const newCategory = new CategoryModel({
       name,
-      commodities,
       createdBy: adminId,
     });
 
