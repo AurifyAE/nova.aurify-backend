@@ -3,7 +3,6 @@ import {
   getSportrate,
   requestPassInAdmin,
   updateUserPassword,
-  userCollectionSave,
   userUpdateSpread,
   userVerfication,
 } from "../../helper/user/userHelper.js";
@@ -12,32 +11,11 @@ import DiscountModel from "../../model/discountSchema.js";
 import PremiumModel from "../../model/premiumSchema.js";
 import { serverModel } from "../../model/serverSchema.js";
 
-export const registerUser = async (req, res, next) => {
-  try {
-    const { userName, contact, location, email, password } = req.body;
-    const { adminId } = req.params;
-    const data = {
-      userName,
-      contact,
-      location,
-      email,
-      password,
-    };
-
-    const response = await userCollectionSave(data, adminId);
-    res
-      .status(200)
-      .json({ message: response.message, success: response.success });
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const userLoginController = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { contact, password } = req.body;
     const { adminId } = req.params;
-    const response = await userVerfication(adminId, email, password);
+    const response = await userVerfication(adminId, contact, password);
     res
       .status(200)
       .json({ message: response.message, success: response.success });
@@ -48,9 +26,9 @@ export const userLoginController = async (req, res, next) => {
 
 export const forgotPassword = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { contact, password } = req.body;
     const { adminId } = req.params;
-    const response = await updateUserPassword(adminId, email, password);
+    const response = await updateUserPassword(adminId, contact, password);
     res
       .status(200)
       .json({ message: response.message, success: response.success });

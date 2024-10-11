@@ -1,136 +1,45 @@
 import adminModel from "../../model/adminSchema.js";
-import bcrypt from "bcrypt";
 import { UsersModel } from "../../model/usersSchema.js";
 import NotificationModel from "../../model/notificationSchema.js";
 import FCMTokenModel from "../../model/fcmTokenSchema.js";
 import NotificationService from "../../utils/sendPushNotification.js";
 import newsModel from "../../model/newsSchema.js";
 import { spotRateModel } from "../../model/spotRateSchema.js";
-// Function to hash the password
-const hashPassword = async (password) => {
+import {encryptPassword, decryptPassword } from "../../utils/crypto.js";
+
+
+export const updateUserPassword = async (adminId, contact, newPassword) => {
   try {
-    return await bcrypt.hash(password, 10);
-  } catch (error) {
-    throw new Error("Error hashing password");
-  }
-};
-
-export const userCollectionSave = async (data, adminId) => {
-  try {
-    const { userName, contact, location, email, password } = data;
-    const encrypt = await hashPassword(password);
-    const newUser = {
-      userName,
-      contact,
-      location,
-      email,
-      password: encrypt, // Store the hashed password
-    };
-    let usersDoc = await UsersModel.findOne({ createdBy: adminId });
-    const emailExists = usersDoc?.users.some((user) => user.email === email);
-
-    if (emailExists) {
-      return { success: false, message: "Email already exists for this Admin" };
-    }
-    if (!usersDoc) {
-      usersDoc = new UsersModel({ createdBy: adminId, users: [newUser] });
-    } else {
-      usersDoc.users.push(newUser);
-    }
-    await usersDoc.save();
-
-    const notificationMessage = `🎉 ${userName} has been added as a new user. Check your admin panel for details!`;
-
-    let notificationDoc = await NotificationModel.findOne({
-      createdBy: adminId,
-    });
-
-    if (!notificationDoc) {
-      notificationDoc = new NotificationModel({
-        createdBy: adminId,
-        notification: [{ message: notificationMessage }],
-      });
-    } else {
-      notificationDoc.notification.push({ message: notificationMessage });
-    }
-
-    await notificationDoc.save();
-
-    // Fetch FCM tokens
-    let fcmTokenDoc = await FCMTokenModel.findOne({ createdBy: adminId });
-
-    if (fcmTokenDoc && fcmTokenDoc.FCMTokens.length > 0) {
-      const invalidTokens = [];
-
-      // Send push notifications to all tokens
-      for (const tokenObj of fcmTokenDoc.FCMTokens) {
-        try {
-          await NotificationService.sendNotification(
-            tokenObj.token,
-            "New User Added",
-            notificationMessage,
-            {
-              userName: userName,
-              contact: contact,
-            }
-          );
-          console.log(
-            `Notification sent successfully to token: ${tokenObj.token}`
-          );
-        } catch (error) {
-          console.error(
-            `Failed to send notification to token: ${tokenObj.token}`,
-            error
-          );
-          if (
-            error.errorInfo &&
-            error.errorInfo.code ===
-              "messaging/registration-token-not-registered"
-          ) {
-            invalidTokens.push(tokenObj.token);
-          }
-        }
-      }
-
-      // Remove invalid tokens if any were found
-      if (invalidTokens.length > 0) {
-        console.log(`Removing ${invalidTokens.length} invalid tokens`);
-        fcmTokenDoc.FCMTokens = fcmTokenDoc.FCMTokens.filter(
-          (tokenObj) => !invalidTokens.includes(tokenObj.token)
-        );
-        await fcmTokenDoc.save();
-      }
-    }
-
-    return { success: true, message: "User added successfully" };
-  } catch (error) {
-    throw new Error("Error saving user data");
-  }
-};
-export const updateUserPassword = async (adminId, email, newPassword) => {
-  try {
-     // Check if the email exists in the database
-     const userDoc = await UsersModel.findOne(
-      { createdBy: adminId, "users.email": email },
+    // Check if the email exists in the database
+    const userDoc = await UsersModel.findOne(
+      { createdBy: adminId, "users.contact": contact },
       { "users.$": 1 }
     );
 
     if (!userDoc || userDoc.users.length === 0) {
-      return { success: false, message: "User with this email not found." };
+      return { success: false, message: "User with this contact not found." };
     }
-    
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const { iv, encryptedData } = encryptPassword(newPassword);
+    console.log(iv);
+    console.log(encryptedData);
 
     // Update the password for the specific user
     const updateResult = await UsersModel.updateOne(
-      { createdBy: adminId, "users.email": email },
+      { createdBy: adminId, "users.contact": contact },
       {
-        $set: { "users.$.password": hashedPassword },
+        $set: {
+          "users.$.password": encryptedData,
+          "users.$.passwordAccessKey": iv,
+        },
       }
     );
 
     if (updateResult.nModified === 0) {
-      return { success: false, message: "User not found or password unchanged." };
+      return {
+        success: false,
+        message: "User not found or password unchanged.",
+      };
     }
 
     return { success: true, message: "Password updated successfully." };
@@ -138,20 +47,23 @@ export const updateUserPassword = async (adminId, email, newPassword) => {
     throw new Error("Error during password update: " + error.message);
   }
 };
-export const userVerfication = async (adminId, email, password) => {
+
+export const userVerfication = async (adminId, contact, password) => {
   try {
     const usersDoc = await UsersModel.findOne({ createdBy: adminId });
     if (!usersDoc) {
       return { success: false, message: "Admin not found" };
     }
-    const user = usersDoc.users.find((user) => user.email === email);
+    const user = usersDoc.users.find((user) => user.contact === contact);
 
     if (!user) {
       return { success: false, message: "User not found" };
     }
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordMatch) {
+    const decryptedPassword = decryptPassword(
+      user.password,
+      user.passwordAccessKey
+    );
+    if (password !== decryptedPassword) {
       return { success: false, message: "Invalid password." };
     }
     return { success: true, message: "Login successful" };
