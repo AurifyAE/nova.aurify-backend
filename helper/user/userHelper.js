@@ -100,7 +100,7 @@ export const userVerification = async (adminId, contact, password) => {
     if (password !== decryptedPassword) {
       return { success: false, message: "Invalid password."  };
     }
-    return { success: true, message: "Login successful", userId: user._id  };
+    return { success: true, message: "Login successful", userId:user._id  };
   } catch (error) {
     throw new Error("Error during login: " + error.message);
   }

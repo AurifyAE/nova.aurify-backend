@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import {
   getNewsByAdminId,
   getSportrate,
@@ -18,59 +19,73 @@ export const userLoginController = async (req, res, next) => {
   try {
     const { contact, password } = req.body;
     const { adminId } = req.params;
-
     //  Verify user credentials
     const response = await userVerification(adminId, contact, password);
-
     if (response.success) {
       const userId = response.userId;
-      //  Fetch user data, particularly the category
-      const user = await UsersModel.findOne(
+      //  Fetch user data, including the category name
+      const user = await UsersModel.aggregate([
+        { $match: { "users._id": new mongoose.Types.ObjectId(userId) } },
+        { $unwind: "$users" },
+        { $match: { "users._id": new mongoose.Types.ObjectId(userId) } },
         {
-          "users._id": userId,
+          $lookup: {
+            from: "categories", // This should be the name of your categories collection
+            localField: "users.categoryId",
+            foreignField: "_id",
+            as: "categoryDetails",
+          },
         },
-        { "users.$": 1 } // Correct usage of positional operator to select the specific user
-      );
+        { $unwind: "$categoryDetails" },
+        {
+          $addFields: {
+            "users.categoryName": "$categoryDetails.name", // Add category name to users object
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            createdBy: 1,
+            users: 1,
+          },
+        },
+      ]);
 
       // Check if user is found
-      if (!user || user.users.length === 0) {
+      if (!user || user.length === 0) {
         return res
           .status(404)
           .json({ message: "User not found", success: false });
       }
 
-      // Access the user details from the retrieved user object
-      const userDetails = user.users[0];
-      // Assuming only one user can be found with this ID
-      const categoryId = userDetails.categoryId; // Fetch category from userDetails
+      const userDetails = user[0].users;
 
       //  Fetch user spot rate based on the user's category and adminId
       const userSpotRate = await UserSpotRateModel.findOne(
         {
-          createdBy: adminId, // Match the adminId
-          "categories.categoryId": categoryId, // Match the categoryId
+          createdBy: adminId,
+          "categories.categoryId": userDetails.categoryId,
         },
         {
-          "categories.$": 1, // Use projection to only fetch the matched category
+          "categories.$": 1,
         }
       );
-
       // Check if user spot rate is found
       if (!userSpotRate || !userSpotRate.categories.length) {
         return res
           .status(404)
           .json({ message: "User spot rate not found", success: false });
       }
-
       // Access the matched category details
-      const matchedCategory = userSpotRate.categories[0]; // Get the first matched category
+      const matchedCategory = userSpotRate.categories[0];
 
       //  Respond with the fetched data
       res.status(200).json({
         message: response.message,
         success: response.success,
         userId: response.userId,
-        userSpotRate: matchedCategory, // Include only the fetched spot rate for the matched category
+        userDetails: userDetails,
+        userSpotRate: matchedCategory,
       });
     } else {
       res.status(401).json({ message: "Login failed", success: false });
