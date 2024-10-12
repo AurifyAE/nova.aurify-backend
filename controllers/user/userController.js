@@ -4,26 +4,91 @@ import {
   requestPassInAdmin,
   updateUserPassword,
   userUpdateSpread,
-  userVerfication,
+  userVerification,
+  getAdminProfile,
 } from "../../helper/user/userHelper.js";
 import adminModel from "../../model/adminSchema.js";
 import DiscountModel from "../../model/discountSchema.js";
 import PremiumModel from "../../model/premiumSchema.js";
 import { serverModel } from "../../model/serverSchema.js";
+import { UserSpotRateModel } from "../../model/UserSpotRateSchema.js";
+import { UsersModel } from "../../model/usersSchema.js";
 
 export const userLoginController = async (req, res, next) => {
   try {
     const { contact, password } = req.body;
     const { adminId } = req.params;
-    const response = await userVerfication(adminId, contact, password);
-    res
-      .status(200)
-      .json({ message: response.message, success: response.success });
+
+    //  Verify user credentials
+    const response = await userVerification(adminId, contact, password);
+
+    if (response.success) {
+      const userId = response.userId;
+
+      //  Fetch user data, particularly the category
+      const user = await UsersModel.findOne(
+        {
+          "users._id": userId,
+        },
+        { "users.$": 1 } // Correct usage of positional operator to select the specific user
+      );
+
+      // Check if user is found
+      if (!user || user.users.length === 0) {
+        return res.status(404).json({ message: "User not found", success: false });
+      }
+
+      // Access the user details from the retrieved user object
+      const userDetails = user.users[0]; // Assuming only one user can be found with this ID
+      const categoryId = userDetails.category; // Fetch category from userDetails
+
+      //  Fetch user spot rate based on the user's category and adminId
+      const userSpotRate = await UserSpotRateModel.findOne({
+        createdBy: adminId, // Match the adminId
+        "categories.categoryId": categoryId, // Match the categoryId
+      }, {
+        "categories.$": 1 // Use projection to only fetch the matched category
+      });
+
+      // Check if user spot rate is found
+      if (!userSpotRate || !userSpotRate.categories.length) {
+        return res.status(404).json({ message: "User spot rate not found", success: false });
+      }
+
+      // Access the matched category details
+      const matchedCategory = userSpotRate.categories[0]; // Get the first matched category
+
+      //  Respond with the fetched data
+      res.status(200).json({
+        message: response.message,
+        success: response.success,
+        userId: response.userId,
+        userSpotRate: matchedCategory, // Include only the fetched spot rate for the matched category
+      });
+    } else {
+      res.status(401).json({ message: "Login failed", success: false });
+    }
   } catch (error) {
     next(error);
   }
 };
 
+
+export const getProfile = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+    const response = await getAdminProfile(adminId);
+    res
+      .status(200)
+      .json({
+        message: response.message,
+        success: response.success,
+        info: response.data,
+      });
+  } catch (error) {
+    next(error);
+  }
+};
 export const forgotPassword = async (req, res, next) => {
   try {
     const { contact, password } = req.body;
@@ -219,4 +284,3 @@ export const getPremiumDiscounts = async (req, res, next) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-

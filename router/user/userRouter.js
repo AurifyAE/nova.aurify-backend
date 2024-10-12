@@ -22,6 +22,7 @@ import {
   requestAdmin,
   updateSpread,
   userLoginController,
+  getProfile
 } from "../../controllers/user/userController.js";
 
 const router = Router();
@@ -42,7 +43,8 @@ router.patch("/cart/decrement/:adminId/:userId/:productId", decrementCartItem);
 router.delete("/cart/:adminId/:userId/:productId", deleteCartItem);
 router.patch("/wishlist/:adminId/:userId/:productId", addItemToWishlist);
 router.delete("/wishlist/:adminId/:userId/:productId", deleteWishlist);
-router.put("/forgot-password/:adminId/:userId", forgotPassword);
+router.put("/forgot-password/:adminId", forgotPassword);
+router.get('/get-profile/:adminId',getProfile)
 router.post('/booking/:adminId/:userId',saveBooking)
 router.get("/get-premium-discount/:adminId", getPremiumDiscounts); // New route for premium discounts
 

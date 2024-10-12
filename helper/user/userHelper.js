@@ -5,8 +5,7 @@ import FCMTokenModel from "../../model/fcmTokenSchema.js";
 import NotificationService from "../../utils/sendPushNotification.js";
 import newsModel from "../../model/newsSchema.js";
 import { spotRateModel } from "../../model/spotRateSchema.js";
-import {encryptPassword, decryptPassword } from "../../utils/crypto.js";
-
+import { encryptPassword, decryptPassword } from "../../utils/crypto.js";
 
 export const updateUserPassword = async (adminId, contact, newPassword) => {
   try {
@@ -21,8 +20,6 @@ export const updateUserPassword = async (adminId, contact, newPassword) => {
     }
 
     const { iv, encryptedData } = encryptPassword(newPassword);
-    console.log(iv);
-    console.log(encryptedData);
 
     // Update the password for the specific user
     const updateResult = await UsersModel.updateOne(
@@ -47,15 +44,52 @@ export const updateUserPassword = async (adminId, contact, newPassword) => {
     throw new Error("Error during password update: " + error.message);
   }
 };
+export const getAdminProfile = async (adminId) => {
+  try {
+    // Fetch admin details using the adminId
+    const adminDoc = await adminModel.findOne(
+      { _id: adminId }, // Find admin by their ID
+      {
+        _id: 1,
+        userName: 1,
+        companyName: 1,
+        address: 1,
+        email: 1,
+        contact: 1,
+        whatsapp: 1,
+      } // Select specific fields to return
+    );
 
-export const userVerfication = async (adminId, contact, password) => {
+    // Check if admin exists
+    if (!adminDoc) {
+      return { success: false, message: "Admin not found." };
+    }
+
+    // Convert contact and whatsapp to numbers
+    const adminData = adminDoc.toObject();
+
+    // Convert contact and whatsapp to numbers
+    adminData.contact = adminData.contact ? Number(adminData.contact) : null;
+    adminData.whatsapp = adminData.whatsapp ? Number(adminData.whatsapp) : null;
+    // Return admin details with converted contact and whatsapp fields
+    return {
+      success: true,
+      message: "Admin profile retrieved successfully.",
+      data: adminData,
+    };
+  } catch (error) {
+    throw new Error("Error during admin profile retrieval: " + error.message);
+  }
+};
+
+export const userVerification = async (adminId, contact, password) => {
   try {
     const usersDoc = await UsersModel.findOne({ createdBy: adminId });
     if (!usersDoc) {
       return { success: false, message: "Admin not found" };
     }
     const user = usersDoc.users.find((user) => user.contact === contact);
-
+    
     if (!user) {
       return { success: false, message: "User not found" };
     }
@@ -64,9 +98,9 @@ export const userVerfication = async (adminId, contact, password) => {
       user.passwordAccessKey
     );
     if (password !== decryptedPassword) {
-      return { success: false, message: "Invalid password." };
+      return { success: false, message: "Invalid password."  };
     }
-    return { success: true, message: "Login successful" };
+    return { success: true, message: "Login successful", userId: user._id  };
   } catch (error) {
     throw new Error("Error during login: " + error.message);
   }
