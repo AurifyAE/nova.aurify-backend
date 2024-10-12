@@ -15,13 +15,14 @@ const UsersSchema = new mongoose.Schema({
       contact: {
         type: Number,
         required: true,
+        unique: true, 
       },
       location: {
         type: String,
         required: true,
       },
-      category: { 
-        type: String, 
+      categoryId: { 
+        type: mongoose.Schema.Types.ObjectId, ref: 'Category',
         required: true, 
       },
       password: {
