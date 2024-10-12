@@ -1,47 +1,70 @@
 import { UsersModel } from '../../model/usersSchema.js';
 import { encryptPassword, decryptPassword } from '../../utils/crypto.js'; 
+import mongoose from 'mongoose';
 
 export const addUser = async (req, res) => {
   try {
     const { adminId } = req.params;
     const userData = req.body;
-    if (!userData.name || !userData.contact || !userData.location || !userData.category || !userData.password) {
+
+    if (!userData.name || !userData.contact || !userData.location || !userData.categoryId || !userData.password) {
       return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+
+    // Check if user with the same contact already exists
+    const existingUser = await UsersModel.findOne({
+      createdBy: adminId,
+      'users.contact': userData.contact
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'A user with this contact number already exists' });
     }
 
     // Encrypt password
     const { iv, encryptedData } = encryptPassword(userData.password);
 
-    const existingAdmin = await UsersModel.findOne({ createdBy: adminId });
-
     const newUserData = {
       ...userData,
       password: encryptedData,
-      passwordAccessKey: iv  // Store IV as passwordAccessKey
+      passwordAccessKey: iv
     };
 
-    if (existingAdmin) {
-      // Check if the contact already exists
-      const contactExists = existingAdmin.users.some(user => user.contact === userData.contact);
-      if (contactExists) {
-        return res.status(409).json({ success: false, message: 'User with this contact already exists' });
+    const result = await UsersModel.findOneAndUpdate(
+      { createdBy: adminId },
+      { $push: { users: newUserData } },
+      { new: true, upsert: true }
+    );
+
+    const addedUser = result.users[result.users.length - 1];
+
+    // Populate the category name
+    const populatedUser = await UsersModel.aggregate([
+      { $match: { 'users._id': addedUser._id } },
+      { $unwind: '$users' },
+      { $match: { 'users._id': addedUser._id } },
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'users.categoryId',
+          foreignField: '_id',
+          as: 'categoryInfo'
+        }
+      },
+      { $unwind: '$categoryInfo' },
+      {
+        $project: {
+          _id: '$users._id',
+          name: '$users.name',
+          contact: '$users.contact',
+          location: '$users.location',
+          categoryId: '$users.categoryId',
+          categoryName: '$categoryInfo.name'
+        }
       }
+    ]);
 
-      // Add new user to existing document
-      existingAdmin.users.push(newUserData);
-      await existingAdmin.save();
-    } else {
-      // Create new document with the first user
-      const newUsers = new UsersModel({
-        createdBy: adminId,
-        users: [newUserData]
-      });
-      await newUsers.save();
-    }
-
-    // Don't send back the encrypted password or IV
-    const { password, passwordAccessKey, ...userDataWithoutSensitiveInfo } = newUserData;
-    res.status(201).json({ success: true, message: 'User added successfully', user: userDataWithoutSensitiveInfo });
+    res.status(201).json({ success: true, message: 'User added successfully', user: populatedUser[0] });
   } catch (error) {
     console.error('Error adding user:', error);
     res.status(500).json({ success: false, message: 'Error adding user', error: error.message });
@@ -92,33 +115,57 @@ export const getUsers = async (req, res) => {
   try {
     const { adminId } = req.params;
 
-    const usersDoc = await UsersModel.findOne({ createdBy: adminId });
+    // Convert adminId to ObjectId
+    const objectIdAdminId = new mongoose.Types.ObjectId(adminId);
 
-    if (!usersDoc) {
-      return res.json({ success: true, users: [] });
-    }
+    const users = await UsersModel.aggregate([
+      { $match: { createdBy: objectIdAdminId } },
+      { $unwind: '$users' },
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'users.categoryId',
+          foreignField: '_id',
+          as: 'categoryInfo'
+        }
+      },
+      { $unwind: '$categoryInfo' },
+      {
+        $project: {
+          _id: '$users._id',
+          name: '$users.name',
+          contact: '$users.contact',
+          location: '$users.location',
+          categoryId: '$users.categoryId',
+          categoryName: '$categoryInfo.name',
+          encryptedPassword: '$users.password',
+          passwordAccessKey: '$users.passwordAccessKey'
+        }
+      }
+    ]);
 
-    // Decrypt passwords for each user
-    const usersWithDecryptedPasswords = usersDoc.users.map(user => {
-      const userObject = user.toObject();
+    // Decrypt passwords and remove sensitive information
+    const sanitizedUsers = users.map(user => {
       try {
-        // Check if both password and passwordAccessKey exist
-        if (userObject.password && userObject.passwordAccessKey) {
-          const decryptedPassword = decryptPassword(userObject.password, userObject.passwordAccessKey);
-          return { ...userObject, decryptedPassword };
+        if (user.encryptedPassword && user.passwordAccessKey) {
+          const decryptedPassword = decryptPassword(user.encryptedPassword, user.passwordAccessKey);
+          const { encryptedPassword, passwordAccessKey, ...sanitizedUser } = user;
+          return { ...sanitizedUser, decryptedPassword };
         } else {
-          return { ...userObject, decryptionFailed: true, reason: 'Missing password or passwordAccessKey' };
+          const { encryptedPassword, passwordAccessKey, ...sanitizedUser } = user;
+          return { ...sanitizedUser, decryptionFailed: true, reason: 'Missing password or passwordAccessKey' };
         }
       } catch (decryptionError) {
-        console.error(`Failed to decrypt password for user ${userObject._id}:`, decryptionError);
-        return { ...userObject, decryptionFailed: true, reason: decryptionError.message };
+        console.error(`Failed to decrypt password for user ${user._id}:`, decryptionError);
+        const { encryptedPassword, passwordAccessKey, ...sanitizedUser } = user;
+        return { ...sanitizedUser, decryptionFailed: true, reason: 'Decryption error' };
       }
     });
 
-    res.json({ success: true, users: usersWithDecryptedPasswords });
+    res.json({ success: true, users: sanitizedUsers });
   } catch (error) {
     console.error('Error in getUsers:', error);
-    res.status(400).json({ success: false, message: 'Error fetching users', error: error.message });
+    res.status(500).json({ success: false, message: 'Error fetching users', error: error.message });
   }
 };
 
