@@ -6,7 +6,6 @@ export const addUser = async (req, res) => {
   try {
     const { adminId } = req.params;
     const userData = req.body;
-
     if (!userData.name || !userData.contact || !userData.location || !userData.categoryId || !userData.password) {
       return res.status(400).json({ success: false, message: 'All fields are required' });
     }
