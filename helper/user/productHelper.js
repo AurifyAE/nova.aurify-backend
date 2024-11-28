@@ -2,16 +2,30 @@ import mongoose from "mongoose";
 import { Cart } from "../../model/cartSchema.js";
 import Product from "../../model/productSchema.js";
 import { Wishlist } from "../../model/wishlistSchema.js";
+import MainCategory from "../../model/mainCategoryModel.js";
+import SubCategory from "../../model/subCategoryModel.js";
 
-export const fetchProductDetails = async (adminId) => {
+export const fetchProductDetails = async (mainCategoryId) => {
   try {
+    if (!mainCategoryId) {
+      throw new Error("Main category ID is required");
+    }
+
+    const subCategories = await SubCategory.find(
+      { mainCategory: mainCategoryId },
+      "_id"
+    );
+
+    if (!subCategories || subCategories.length === 0) {
+      throw new Error("No subcategories found for the given main category");
+    }
+
+    const subCategoryIds = subCategories.map((sub) => sub._id);
+
     const result = await mongoose.model("Product").aggregate([
       {
         $match: {
-          $or: [
-            { addedBy: new mongoose.Types.ObjectId(adminId) },
-            { addedBy: null },
-          ],
+          subCategory: { $in: subCategoryIds },
         },
       },
       {
@@ -22,14 +36,12 @@ export const fetchProductDetails = async (adminId) => {
           as: "subCategoryDetails",
         },
       },
-
       {
         $unwind: {
           path: "$subCategoryDetails",
           preserveNullAndEmptyArrays: true,
         },
       },
-
       {
         $lookup: {
           from: "maincategories",
@@ -55,8 +67,14 @@ export const fetchProductDetails = async (adminId) => {
           stock: 1,
           tags: 1,
           sku: 1,
-          subCategoryDetails: 1,
-          mainCategoryDetails: 1,
+          subCategoryDetails: {
+            _id: "$subCategoryDetails._id",
+            name: "$subCategoryDetails.name",
+          },
+          mainCategoryDetails: {
+            _id: "$mainCategoryDetails._id",
+            name: "$mainCategoryDetails.name",
+          },
           createdAt: 1,
           updatedAt: 1,
         },
@@ -65,7 +83,10 @@ export const fetchProductDetails = async (adminId) => {
 
     return { success: true, result };
   } catch (error) {
-    throw new Error("Error fetching ProductDetails: " + error.message);
+    return {
+      success: false,
+      message: "Error fetching product details: " + error.message,
+    };
   }
 };
 
@@ -391,78 +412,78 @@ export const getUserWishlists = async (userId) => {
     const objectId = new mongoose.Types.ObjectId(userId);
 
     const wishlistDetails = await Wishlist.aggregate([
-        { $match: { userId: objectId } },
-        { $unwind: "$items" }, // Unwind the items array
-        {
-          $lookup: {
-            from: "products", // Collection name for the `Product` model
-            localField: "items.productId",
-            foreignField: "_id",
-            as: "productDetails",
-          },
+      { $match: { userId: objectId } },
+      { $unwind: "$items" }, // Unwind the items array
+      {
+        $lookup: {
+          from: "products", // Collection name for the `Product` model
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "productDetails",
         },
-        { $unwind: "$productDetails" }, // Unwind product details
-        {
-          $lookup: {
-            from: "subcategories", // Collection name for SubCategory model
-            localField: "productDetails.subCategory",
-            foreignField: "_id",
-            as: "productDetails.subCategoryDetails",
-          },
+      },
+      { $unwind: "$productDetails" }, // Unwind product details
+      {
+        $lookup: {
+          from: "subcategories", // Collection name for SubCategory model
+          localField: "productDetails.subCategory",
+          foreignField: "_id",
+          as: "productDetails.subCategoryDetails",
         },
-        {
-          $unwind: {
-            path: "$productDetails.subCategoryDetails",
-            preserveNullAndEmptyArrays: true,
-          },
+      },
+      {
+        $unwind: {
+          path: "$productDetails.subCategoryDetails",
+          preserveNullAndEmptyArrays: true,
         },
-        {
-          $lookup: {
-            from: "maincategories", // Collection name for MainCategory model
-            localField: "productDetails.subCategoryDetails.mainCategory",
-            foreignField: "_id",
-            as: "productDetails.mainCategoryDetails",
-          },
+      },
+      {
+        $lookup: {
+          from: "maincategories", // Collection name for MainCategory model
+          localField: "productDetails.subCategoryDetails.mainCategory",
+          foreignField: "_id",
+          as: "productDetails.mainCategoryDetails",
         },
-        {
-          $unwind: {
-            path: "$productDetails.mainCategoryDetails",
-            preserveNullAndEmptyArrays: true,
-          },
+      },
+      {
+        $unwind: {
+          path: "$productDetails.mainCategoryDetails",
+          preserveNullAndEmptyArrays: true,
         },
-        {
-          $group: {
-            _id: "$_id", // Cart ID
-            userId: { $first: "$userId" },
-            items: {
-              $push: {
-                productId: "$items.productId",
-                quantity: "$items.quantity",
-                productDetails: {
-                  title: "$productDetails.title",
-                  description: "$productDetails.description",
-                  images: "$productDetails.images",
-                  price: "$productDetails.price",
-                  purity: "$productDetails.purity",
-                  sku: "$productDetails.sku",
-                  weight: "$productDetails.weight",
-                  subCategory: "$productDetails.subCategoryDetails.name",
-                  mainCategory: "$productDetails.mainCategoryDetails.name",
-                },
+      },
+      {
+        $group: {
+          _id: "$_id", // Cart ID
+          userId: { $first: "$userId" },
+          items: {
+            $push: {
+              productId: "$items.productId",
+              quantity: "$items.quantity",
+              productDetails: {
+                title: "$productDetails.title",
+                description: "$productDetails.description",
+                images: "$productDetails.images",
+                price: "$productDetails.price",
+                purity: "$productDetails.purity",
+                sku: "$productDetails.sku",
+                weight: "$productDetails.weight",
+                subCategory: "$productDetails.subCategoryDetails.name",
+                mainCategory: "$productDetails.mainCategoryDetails.name",
               },
             },
-            updatedAt: { $first: "$updatedAt" },
           },
+          updatedAt: { $first: "$updatedAt" },
         },
-        {
-          $project: {
-            _id: 1,
-            userId: 1,
-            items: 1,
-            updatedAt: 1,
-          },
+      },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          items: 1,
+          updatedAt: 1,
         },
-      ]);
+      },
+    ]);
 
     return { success: true, data: wishlistDetails };
   } catch (error) {
@@ -470,5 +491,87 @@ export const getUserWishlists = async (userId) => {
       success: false,
       message: "Error fetching wishlist details: " + error.message,
     };
+  }
+};
+
+export const fetchProductHelper = async (adminId) => {
+  try {
+    const result = await mongoose.model("Product").aggregate([
+      {
+        $match: {
+          $or: [
+            { addedBy: new mongoose.Types.ObjectId(adminId) },
+            { addedBy: null },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: "subcategories",
+          localField: "subCategory",
+          foreignField: "_id",
+          as: "subCategoryDetails",
+        },
+      },
+
+      {
+        $unwind: {
+          path: "$subCategoryDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $lookup: {
+          from: "maincategories",
+          localField: "subCategoryDetails.mainCategory",
+          foreignField: "_id",
+          as: "mainCategoryDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$mainCategoryDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          title: 1,
+          description: 1,
+          images: 1,
+          price: 1,
+          weight: 1,
+          purity: 1,
+          stock: 1,
+          tags: 1,
+          sku: 1,
+          subCategoryDetails: 1,
+          mainCategoryDetails: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
+    ]);
+
+    return result;
+  } catch (error) {
+    if (error.isOperational) throw error;
+
+    throw createAppError(`Error Fetching product: ${error.message}`, 500);
+  }
+};
+
+export const getMainCategoriesHelper = async (adminId) => {
+  try {
+    const mainCategories = await MainCategory.find({
+      $or: [{ createdBy: adminId }, { createdBy: null }],
+    });
+    return mainCategories;
+  } catch (error) {
+    throw createAppError(
+      `Error fetching main categories: ${error.message}`,
+      500
+    ); // Internal server error
   }
 };

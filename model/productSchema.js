@@ -32,17 +32,17 @@ const productSchema = new mongoose.Schema(
     },
     stock: {
       type: Boolean,
-      enum: [true,false], // Stock status can either be 'active' or 'inactive'
-      default: true, // Default to 'active'
+      enum: [true,false], 
+      default: true, 
     },
     tags: {
       type: String,
-      default: "New Arrival", // Default tag for the product
+      default: null, 
     },
     sku: {
       type: String,
       required: [true, "SKU code is required"],
-      unique: true, // Ensure SKU is unique for each product
+      unique: true, 
       trim: true,
     },
     subCategory: {

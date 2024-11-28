@@ -9,6 +9,7 @@ import {
   getUserCart,
   getUserWishlist,
   incrementCartItem,
+  getMainCategories
 } from "../../controllers/user/productController.js";
 import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
@@ -35,7 +36,8 @@ router.get("/get-news/:adminId", getCurrentNews);
 router.get("/get-commodities/:adminId", getCommodities);
 router.get("/get-server", getServerDetails);
 
-router.get("/get-product/:adminId", getProductDetails);
+router.get("/main-categories/:adminId", getMainCategories);
+router.get("/get-product/:mainCateId", getProductDetails);
 router.get("/get-cart/:userId", getUserCart);
 router.get("/get-wishlist/:userId", getUserWishlist);
 

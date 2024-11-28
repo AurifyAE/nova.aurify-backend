@@ -2,7 +2,8 @@ import {
     createProductHelper,
     updateProductHelper,
     deleteProductHelper,
-    fetchProductHelper
+    fetchProductsByMainCategory,
+    fetchProductsBySubCategory,
   } from "../../helper/admin/productHelper.js";
   
   // Create a new product
@@ -58,8 +59,17 @@ import {
 
   export const fetchProductData = async (req, res, next) => {
     try {
-      const { adminId } = req.params;
-      const result = await fetchProductHelper(adminId);
+      const { mainCateId, subCateId } = req.query;
+      if (!mainCateId && !subCateId) {
+        throw new Error("Either mainCateId or subCateId is required");
+      }
+      let result;
+      if (subCateId) {
+        result = await fetchProductsBySubCategory(subCateId);
+      } else if (mainCateId) {
+        result = await fetchProductsByMainCategory(mainCateId);
+      }
+  
       res.status(200).json({ success: true, data: result });
     } catch (error) {
       next(error);

@@ -5,13 +5,15 @@ import {
   getUserCarts,
   updateWishlistCollection,
   getUserWishlists,
-  deleteWishlistItem
+  deleteWishlistItem,
+  fetchProductHelper,
+  getMainCategoriesHelper
 } from "../../helper/user/productHelper.js";
 
 export const getProductDetails = async (req, res, next) => {
   try {
-    const { adminId } = req.params;
-    const { result, success } = await fetchProductDetails(adminId);
+    const { mainCateId } = req.params;
+    const { result, success } = await fetchProductDetails(mainCateId);
     if (!success || !result) {
       return res.status(404).json({
         success: false,
@@ -225,6 +227,32 @@ export const getUserWishlist = async (req, res, next) => {
         message: message || "Failed to delete the item from the wishlist.",
       });
     }
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const fetchProductData = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+    const result = await fetchProductHelper(adminId);
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMainCategories = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+    const categories = await getMainCategoriesHelper(adminId);
+    const filteredCategories = categories.map((category) => ({
+      _id: category._id,
+      name: category.name,
+      description: category.description,
+      image: category.image,
+    }));
+    res.status(200).json({ success: true, data: filteredCategories });
   } catch (error) {
     next(error);
   }

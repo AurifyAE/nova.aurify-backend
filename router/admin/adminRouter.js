@@ -109,7 +109,7 @@ import {
   createProduct,
   deleteProduct,
   updateProduct,
-  fetchProductData
+  fetchProductData,
 } from "../../controllers/admin/productController.js";
 
 const router = Router();
@@ -237,7 +237,7 @@ router.post("/sub-category", createSubCategory);
 router.put("/sub-category/:subCategoryId", editSubCategory);
 router.delete("/sub-category/:subCategoryId", deleteSubCategory);
 
-router.get("/products/:adminId",fetchProductData)
+router.get("/get-product",fetchProductData);
 router.post("/products", uploadMultiple("image", 5), createProduct);
 router.put("/products/:id", uploadMultiple("image", 5), updateProduct);
 router.delete("/products/:id", deleteProduct);

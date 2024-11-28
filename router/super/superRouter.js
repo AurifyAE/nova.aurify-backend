@@ -74,7 +74,7 @@ router.put("/sub-category/:subCategoryId", editSubCategory);
 router.delete("/sub-category/:subCategoryId", deleteSubCategory);
 router.get("/main-categories", getMainCategories);
 
-router.get("/products",fetchProductData)
+router.get("/get-product/:mainCateId",fetchProductData);
 router.post("/products",uploadMultiple('image',5), createProduct);
 router.put("/products/:id",uploadMultiple('image',5), updateProduct);
 router.delete("/products/:id", deleteProduct);

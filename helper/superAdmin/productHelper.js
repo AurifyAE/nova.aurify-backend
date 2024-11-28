@@ -109,12 +109,27 @@ export const deleteProductHelper = async (productId) => {
   }
 };
 
-export const fetchProductHelper = async () => {
+export const fetchProductHelper = async (mainCategoryId) => {
   try {
+    if (!mainCategoryId) {
+      throw new Error("Main category ID is required");
+    }
+
+    const subCategories = await SubCategory.find(
+      { mainCategory: mainCategoryId },
+      "_id"
+    );
+
+    if (!subCategories || subCategories.length === 0) {
+      throw new Error("No subcategories found for the given main category");
+    }
+
+    const subCategoryIds = subCategories.map((sub) => sub._id);
+
     const result = await mongoose.model("Product").aggregate([
       {
         $match: {
-          addedBy: null,
+          subCategory: { $in: subCategoryIds },
         },
       },
       {
@@ -125,14 +140,12 @@ export const fetchProductHelper = async () => {
           as: "subCategoryDetails",
         },
       },
-
       {
         $unwind: {
           path: "$subCategoryDetails",
           preserveNullAndEmptyArrays: true,
         },
       },
-
       {
         $lookup: {
           from: "maincategories",
@@ -158,18 +171,28 @@ export const fetchProductHelper = async () => {
           stock: 1,
           tags: 1,
           sku: 1,
-          subCategoryDetails: 1,
-          mainCategoryDetails: 1,
+          subCategoryDetails: {
+            _id: "$subCategoryDetails._id",
+            name: "$subCategoryDetails.name",
+            description: "$subCategoryDetails.description",
+          },
+          mainCategoryDetails: {
+            _id: "$mainCategoryDetails._id",
+            name: "$mainCategoryDetails.name",
+            description: "$mainCategoryDetails.description",
+            image: "$mainCategoryDetails.image",
+          },
           createdAt: 1,
           updatedAt: 1,
         },
       },
     ]);
 
-    return result;
+    return { success: true, result };
   } catch (error) {
-    if (error.isOperational) throw error;
-
-    throw createAppError(`Error Fetching product: ${error.message}`, 500);
+    return {
+      success: false,
+      message: "Error fetching product details: " + error.message,
+    };
   }
 };
