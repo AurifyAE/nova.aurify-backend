@@ -1,35 +1,30 @@
-class AppError extends Error {
-  constructor(message, statusCode) {
-    super(message);
-    this.statusCode = statusCode || 500;
-    this.isOperational = true; // Mark this as an operational error (expected)
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
+// errorHandler.js
+
+// Helper to create custom errors with status codes
+export const createAppError = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.isOperational = true; // Indicates it's a known error
+  return error;
+};
 
 // Global error handler middleware
 export const errorHandler = (err, req, res, next) => {
-  let statusCode = err.statusCode || 500;
-  let message = err.message || "Internal Server Error";
+  const statusCode = err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
 
   console.error("Error Stack:", err.stack);
 
   if (!err.isOperational) {
     console.error("Unexpected Error:", err);
-    statusCode = 500;
-    message = "Something went wrong!";
+    // If the error isn't operational, log and send a generic message
+    res.status(500).json({ success: false, message: "Something went wrong!" });
   } else {
-    console.error("Operational Error:", err);
+    // If it's an operational error, send the message and status code
+    res.status(statusCode).json({
+      success: false,
+      message,
+      error: process.env.NODE_ENV === "development" ? err.stack : message,
+    });
   }
-
-  res.status(statusCode).json({
-    success: false,
-    message,
-    error: process.env.NODE_ENV === "development" ? err.stack : { message },
-  });
-};
-
-// Utility function to create and throw custom application errors
-export const createAppError = (message, statusCode) => {
-  return new AppError(message, statusCode);
 };

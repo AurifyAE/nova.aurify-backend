@@ -1,14 +1,69 @@
 import mongoose from "mongoose";
 import { Cart } from "../../model/cartSchema.js";
-import shopModel from "../../model/shopSchema.js";
+import Product from "../../model/productSchema.js";
 import { Wishlist } from "../../model/wishlistSchema.js";
+
 export const fetchProductDetails = async (adminId) => {
   try {
-    const productData = await shopModel.findOne({ createdBy: adminId });
-    if (!productData) {
-      return { success: false, productData: null };
-    }
-    return { success: true, productData };
+    const result = await mongoose.model("Product").aggregate([
+      {
+        $match: {
+          $or: [
+            { addedBy: new mongoose.Types.ObjectId(adminId) },
+            { addedBy: null },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: "subcategories",
+          localField: "subCategory",
+          foreignField: "_id",
+          as: "subCategoryDetails",
+        },
+      },
+
+      {
+        $unwind: {
+          path: "$subCategoryDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $lookup: {
+          from: "maincategories",
+          localField: "subCategoryDetails.mainCategory",
+          foreignField: "_id",
+          as: "mainCategoryDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$mainCategoryDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          title: 1,
+          description: 1,
+          images: 1,
+          price: 1,
+          weight: 1,
+          purity: 1,
+          stock: 1,
+          tags: 1,
+          sku: 1,
+          subCategoryDetails: 1,
+          mainCategoryDetails: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
+    ]);
+
+    return { success: true, result };
   } catch (error) {
     throw new Error("Error fetching ProductDetails: " + error.message);
   }
@@ -25,17 +80,13 @@ export const updateCartCollection = async (
       throw new Error("Missing required fields");
     }
 
-    const shop = await shopModel.findOne({
-      createdBy: adminId,
-      "shops._id": productId,
+    const shop = await Product.findOne({
+      _id: productId,
+      addedBy: adminId,
     });
+
     if (!shop) {
       throw new Error("Shop or product not found");
-    }
-
-    const product = shop.shops.id(productId);
-    if (!product) {
-      throw new Error("Product not found in the shop");
     }
 
     let cart = await Cart.findOne({ userId });
@@ -54,24 +105,30 @@ export const updateCartCollection = async (
         cart.items.splice(existingItemIndex, 1);
       } else {
         cart.items[existingItemIndex].totalPrice =
-          cart.items[existingItemIndex].quantity * product.rate;
+          cart.items[existingItemIndex].quantity * shop.price;
       }
     } else {
       if (quantityChange > 0) {
         cart.items.push({
           productId,
           quantity: quantityChange,
-          totalPrice: quantityChange * product.rate,
+          totalPrice: quantityChange * shop.price,
         });
       } else {
         throw new Error("Cannot decrement non-existing product in cart");
       }
     }
 
+    const productIds = cart.items.map((item) => item.productId);
+    const products = await Product.find({ _id: { $in: productIds } });
+
     cart.totalPrice = cart.items.reduce((total, item) => {
-      const cartProduct = shop.shops.id(item.productId);
-      return cartProduct ? total + item.quantity * cartProduct.rate : total;
+      const product = products.find(
+        (product) => product._id.toString() === item.productId.toString()
+      );
+      return product ? total + item.quantity * product.price : total;
     }, 0);
+
     cart.updatedAt = Date.now();
 
     await cart.save();
@@ -91,10 +148,11 @@ export const deleteCart = async (userId, productId, adminId) => {
     if (!cart) {
       throw new Error("Cart not found");
     }
-    const shop = await shopModel.findOne({
-      createdBy: adminId,
-      "shops._id": productId,
+    const shop = await Product.findOne({
+      _id: productId,
+      addedBy: adminId,
     });
+
     if (!shop) {
       throw new Error("Shop or product not found");
     }
@@ -105,10 +163,17 @@ export const deleteCart = async (userId, productId, adminId) => {
       throw new Error("Product not found in cart");
     }
     cart.items.splice(existingItemIndex, 1);
+
+    const productIds = cart.items.map((item) => item.productId);
+    const products = await Product.find({ _id: { $in: productIds } });
+
     cart.totalPrice = cart.items.reduce((total, item) => {
-      const cartProduct = shop.shops.id(item.productId);
-      return cartProduct ? total + item.quantity * cartProduct.rate : total;
+      const product = products.find(
+        (product) => product._id.toString() === item.productId.toString()
+      );
+      return product ? total + item.quantity * product.price : total;
     }, 0);
+
     cart.updatedAt = Date.now();
     await cart.save();
     return { success: true, data: cart };
@@ -130,16 +195,17 @@ export const deleteWishlistItem = async (userId, productId, adminId) => {
     if (!wishlist) {
       throw new Error("Wishlist not found");
     }
-    const shop = await shopModel.findOne({
-      createdBy: adminId,
-      "shops._id": productId,
+    const shop = await Product.findOne({
+      _id: productId,
+      addedBy: adminId,
     });
+
     if (!shop) {
       throw new Error("Shop or product not found");
     }
 
-     // Remove the product from the user's wishlist
-     const updatedWishlist = await Wishlist.findOneAndUpdate(
+    // Remove the product from the user's wishlist
+    const updatedWishlist = await Wishlist.findOneAndUpdate(
       { userId },
       { $pull: { items: { productId } } },
       { new: true }
@@ -167,47 +233,70 @@ export const getUserCarts = async (userId) => {
     const objectId = new mongoose.Types.ObjectId(userId);
     const cartInfo = await Cart.aggregate([
       { $match: { userId: objectId } },
-      { $unwind: "$items" },
+      { $unwind: "$items" }, // Unwind the items array
       {
         $lookup: {
-          from: "shops",
-          let: { productId: "$items.productId" },
-          pipeline: [
-            { $unwind: "$shops" },
-            {
-              $match: {
-                $expr: { $eq: ["$shops._id", "$$productId"] },
-              },
-            },
-          ],
-          as: "items.productDetails",
+          from: "products", // Collection name for the `Product` model
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "productDetails",
         },
       },
-      { $unwind: "$items.productDetails" },
+      { $unwind: "$productDetails" }, // Unwind product details
+      {
+        $lookup: {
+          from: "subcategories", // Collection name for SubCategory model
+          localField: "productDetails.subCategory",
+          foreignField: "_id",
+          as: "productDetails.subCategoryDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$productDetails.subCategoryDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "maincategories", // Collection name for MainCategory model
+          localField: "productDetails.subCategoryDetails.mainCategory",
+          foreignField: "_id",
+          as: "productDetails.mainCategoryDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$productDetails.mainCategoryDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
       {
         $group: {
-          _id: "$_id",
+          _id: "$_id", // Cart ID
           userId: { $first: "$userId" },
           items: {
             $push: {
               productId: "$items.productId",
               quantity: "$items.quantity",
-              productDetails: "$items.productDetails.shops",
+              productDetails: {
+                title: "$productDetails.title",
+                description: "$productDetails.description",
+                images: "$productDetails.images",
+                price: "$productDetails.price",
+                purity: "$productDetails.purity",
+                sku: "$productDetails.sku",
+                weight: "$productDetails.weight",
+                subCategory: "$productDetails.subCategoryDetails.name",
+                mainCategory: "$productDetails.mainCategoryDetails.name",
+              },
               itemTotal: {
-                $multiply: [
-                  "$items.quantity",
-                  "$items.productDetails.shops.rate",
-                ],
+                $multiply: ["$items.quantity", "$productDetails.price"],
               },
             },
           },
           totalPrice: {
-            $sum: {
-              $multiply: [
-                "$items.quantity",
-                "$items.productDetails.shops.rate",
-              ],
-            },
+            $sum: { $multiply: ["$items.quantity", "$productDetails.price"] },
           },
           updatedAt: { $first: "$updatedAt" },
         },
@@ -222,6 +311,7 @@ export const getUserCarts = async (userId) => {
         },
       },
     ]);
+
     return { success: true, data: cartInfo };
   } catch (error) {
     return {
@@ -243,18 +333,13 @@ export const updateWishlistCollection = async (
     }
 
     // Find the shop and product
-    const shop = await shopModel.findOne({
-      createdBy: adminId,
-      "shops._id": productId,
+    const shop = await Product.findOne({
+      _id: productId,
+      addedBy: adminId,
     });
 
     if (!shop) {
       throw new Error("Shop or product not found");
-    }
-
-    const product = shop.shops.id(productId);
-    if (!product) {
-      throw new Error("Product not found in the shop");
     }
 
     // Find or create the user's wishlist
@@ -306,53 +391,78 @@ export const getUserWishlists = async (userId) => {
     const objectId = new mongoose.Types.ObjectId(userId);
 
     const wishlistDetails = await Wishlist.aggregate([
-      { $match: { userId: objectId } },
-      { $unwind: "$items" },
-      {
-        $lookup: {
-          from: "shops",
-          let: { productId: "$items.productId" },
-          pipeline: [
-            { $unwind: "$shops" },
-            {
-              $match: {
-                $expr: { $eq: ["$shops._id", "$$productId"] },
-              },
-            },
-            {
-              $project: {
-                _id: 0,
-                name: "$shops.name",
-                rate: "$shops.rate",
-                type: "$shops.type",
-                weight: "$shops.weight",
-                image: "$shops.image",
-              },
-            },
-          ],
-          as: "items.productDetails",
-        },
-      },
-      { $unwind: "$items.productDetails" },
-      {
-        $group: {
-          _id: "$_id",
-          userId: { $first: "$userId" },
-          items: {
-            $push: {
-              productId: "$items.productId",
-              productDetails: "$items.productDetails",
-            },
+        { $match: { userId: objectId } },
+        { $unwind: "$items" }, // Unwind the items array
+        {
+          $lookup: {
+            from: "products", // Collection name for the `Product` model
+            localField: "items.productId",
+            foreignField: "_id",
+            as: "productDetails",
           },
         },
-      },
-      {
-        $project: {
-          _id: 0,
-          items: 1,
+        { $unwind: "$productDetails" }, // Unwind product details
+        {
+          $lookup: {
+            from: "subcategories", // Collection name for SubCategory model
+            localField: "productDetails.subCategory",
+            foreignField: "_id",
+            as: "productDetails.subCategoryDetails",
+          },
         },
-      },
-    ]);
+        {
+          $unwind: {
+            path: "$productDetails.subCategoryDetails",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: "maincategories", // Collection name for MainCategory model
+            localField: "productDetails.subCategoryDetails.mainCategory",
+            foreignField: "_id",
+            as: "productDetails.mainCategoryDetails",
+          },
+        },
+        {
+          $unwind: {
+            path: "$productDetails.mainCategoryDetails",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $group: {
+            _id: "$_id", // Cart ID
+            userId: { $first: "$userId" },
+            items: {
+              $push: {
+                productId: "$items.productId",
+                quantity: "$items.quantity",
+                productDetails: {
+                  title: "$productDetails.title",
+                  description: "$productDetails.description",
+                  images: "$productDetails.images",
+                  price: "$productDetails.price",
+                  purity: "$productDetails.purity",
+                  sku: "$productDetails.sku",
+                  weight: "$productDetails.weight",
+                  subCategory: "$productDetails.subCategoryDetails.name",
+                  mainCategory: "$productDetails.mainCategoryDetails.name",
+                },
+              },
+            },
+            updatedAt: { $first: "$updatedAt" },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            userId: 1,
+            items: 1,
+            updatedAt: 1,
+          },
+        },
+      ]);
 
     return { success: true, data: wishlistDetails };
   } catch (error) {

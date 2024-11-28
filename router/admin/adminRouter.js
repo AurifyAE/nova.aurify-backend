@@ -20,7 +20,7 @@ import {
   adminTokenVerificationApi,
 } from "../../controllers/admin/adminController.js";
 
-import { uploadSingle } from "../../middleware/multer.js";
+import { uploadMultiple, uploadSingle } from "../../middleware/multer.js";
 import { getServerController } from "../../controllers/admin/serverController.js";
 import {
   createCommodity,
@@ -33,68 +33,124 @@ import {
 } from "../../controllers/admin/spotRateController.js";
 import { adminLoginController } from "../../controllers/admin/adminController.js";
 import { getBanner } from "../../controllers/admin/bannerController.js";
-import { getPremiumDiscounts, premiumDiscounts } from "../../controllers/admin/adminController.js";
-
-
 import {
-  createShopItem,
-  fetchShopItems,
-  editShopItem,
-  removeShopItem,
-} from "../../controllers/admin/shopController.js";
-import { validateContact, validateFeatureRequest } from "../../middleware/validators.js";
-import { sendContactEmail, sendFeatureRequestEmail } from "../../controllers/admin/contactController.js";
+  getPremiumDiscounts,
+  premiumDiscounts,
+} from "../../controllers/admin/adminController.js";
+
+// import {
+//   createShopItem,
+//   fetchShopItems,
+//   editShopItem,
+//   removeShopItem,
+// } from "../../controllers/admin/shopController.js";
+import {
+  validateContact,
+  validateFeatureRequest,
+} from "../../middleware/validators.js";
+import {
+  sendContactEmail,
+  sendFeatureRequestEmail,
+} from "../../controllers/admin/contactController.js";
 import { getUserData } from "../../helper/admin/adminHelper.js";
 import {
   getMessages,
   getUserAdmin,
-  markAsRead
+  markAsRead,
 } from "../../controllers/admin/messageController.js";
-import { deleteNotification, getNotification } from "../../controllers/admin/notificationController.js";
-import { updateAdminProfileController, updateLogo } from "../../controllers/admin/profileController.js";
-import { addCustomSpread, deleteSpreadValueController, fetchSpreadValues } from "../../controllers/admin/spreadValuesController.js";
+import {
+  deleteNotification,
+  getNotification,
+} from "../../controllers/admin/notificationController.js";
+import {
+  updateAdminProfileController,
+  updateLogo,
+} from "../../controllers/admin/profileController.js";
+import {
+  addCustomSpread,
+  deleteSpreadValueController,
+  fetchSpreadValues,
+} from "../../controllers/admin/spreadValuesController.js";
 import { fetchBookings } from "../../controllers/admin/bookingController.js";
-import { uploadBG, getBackground } from "../../controllers/admin/previewController.js";
-import { addCategory, deleteCategory, editCategory, getCategories } from "../../controllers/admin/categoryController.js";
-import { addUser, deleteUser, editUser, getUsers } from "../../controllers/admin/userController.js";
-import { addUserCommodity, deleteUserCommodity, getUserCommodity, updateUserCommodity, updateUserSpread } from "../../controllers/admin/UserSpotRateController.js";
+import {
+  uploadBG,
+  getBackground,
+} from "../../controllers/admin/previewController.js";
+import {
+  addCategory,
+  deleteCategory,
+  editCategory,
+  getCategories,
+} from "../../controllers/admin/categoryController.js";
+import {
+  addUser,
+  deleteUser,
+  editUser,
+  getUsers,
+} from "../../controllers/admin/userController.js";
+import {
+  addUserCommodity,
+  deleteUserCommodity,
+  getUserCommodity,
+  updateUserCommodity,
+  updateUserSpread,
+} from "../../controllers/admin/UserSpotRateController.js";
+import {
+  createMainCategory,
+  createSubCategory,
+  deleteMainCategory,
+  deleteSubCategory,
+  editMainCategory,
+  editSubCategory,
+  getMainCategories,
+
+} from "../../controllers/admin/shopCategoryController.js";
+import {
+  createProduct,
+  deleteProduct,
+  updateProduct,
+  fetchProductData
+} from "../../controllers/admin/productController.js";
 
 const router = Router();
 
 //admin router
-router.post('/login',adminLoginController);
-router.post('/verify-token', adminTokenVerificationApi);
-router.get('/data/:userName', getAdminDataController);
-router.put('/update-profile/:id', updateAdminProfileController);
-router.post('/update-logo', uploadSingle('logo'), updateLogo);
-router.get('/server-url',getServerController);
-router.post('/verify-token',adminTokenVerificationApi)
+router.post("/login", adminLoginController);
+router.post("/verify-token", adminTokenVerificationApi);
+router.get("/data/:userName", getAdminDataController);
+router.put("/update-profile/:id", updateAdminProfileController);
+router.post("/update-logo", uploadSingle("logo"), updateLogo);
+router.get("/server-url", getServerController);
+router.post("/verify-token", adminTokenVerificationApi);
 
 //spotrate routers
-router.post('/update-spread', updateSpread);
-router.get('/spotrates/:adminId', getSpotRate);
-router.get('/commodities/:userName', getCommodityController);
-router.post('/spotrate-commodity', createCommodity);
-router.patch('/spotrate-commodity/:adminId/:commodityId', updateCommodity);
-router.delete('/commodities/:adminId/:commodityId', deleteSpotRateCommodity);
-router.get('metalCommodities/:userName', getMetalCommodity);
-
+router.post("/update-spread", updateSpread);
+router.get("/spotrates/:adminId", getSpotRate);
+router.get("/commodities/:userName", getCommodityController);
+router.post("/spotrate-commodity", createCommodity);
+router.patch("/spotrate-commodity/:adminId/:commodityId", updateCommodity);
+router.delete("/commodities/:adminId/:commodityId", deleteSpotRateCommodity);
+router.get("metalCommodities/:userName", getMetalCommodity);
 
 //Notification router
-router.get('/notifications/:adminId',getNotification);
-router.delete('/notifications/:adminId/:notificationId',deleteNotification);
+router.get("/notifications/:adminId", getNotification);
+router.delete("/notifications/:adminId/:notificationId", deleteNotification);
 
 //bank details
-router.post('/save-bank-details', saveBankDetailsController);
-router.delete('/delete-bank-details', deleteBankDetailsController);
-router.put('/update-bank-details', updateBankDetailsController);
+router.post("/save-bank-details", saveBankDetailsController);
+router.delete("/delete-bank-details", deleteBankDetailsController);
+router.put("/update-bank-details", updateBankDetailsController);
 
 //features
-router.get('/features', getAdminFeaturesController);
-router.post('/request-feature', validateFeatureRequest, sendFeatureRequestEmail);
+router.get("/features", getAdminFeaturesController);
+router.post(
+  "/request-feature",
+  validateFeatureRequest,
+  sendFeatureRequestEmail
+);
 
 //banner
-router.get('/banners/:adminId',getBanner);
+router.get("/banners/:adminId", getBanner);
 router.get("/banners/:userId", getBanner);
 
 //news-routers
@@ -109,57 +165,81 @@ router.delete(
   deleteManualNewsController
 );
 
-
 //user router
-router.get('/admin/:adminId/device', fetchAdminDevice);
-router.post('/admin/:adminId/spread-values', addCustomSpread);
-router.get('/admin/:adminId/spread-values', fetchSpreadValues);
-router.delete('/admin/spread-values/:spreadValueId/:userName', deleteSpreadValueController);
-
+router.get("/admin/:adminId/device", fetchAdminDevice);
+router.post("/admin/:adminId/spread-values", addCustomSpread);
+router.get("/admin/:adminId/spread-values", fetchSpreadValues);
+router.delete(
+  "/admin/spread-values/:spreadValueId/:userName",
+  deleteSpreadValueController
+);
 
 //shop router
-router.post('/shop-items/:userName', uploadSingle('image'), createShopItem);
-router.get('/shop-items/:userName', fetchShopItems);
-router.patch('/shop-items/:id', uploadSingle('image'), editShopItem);
-router.delete('/shop-items/:id', removeShopItem);
+// router.post('/shop-items/:userName', uploadSingle('image'), createShopItem);
+// router.get('/shop-items/:userName', fetchShopItems);
+// router.patch('/shop-items/:id', uploadSingle('image'), editShopItem);
+// router.delete('/shop-items/:id', removeShopItem);
 
 //contact router
-router.post('/contact', validateContact, sendContactEmail);
-router.get('/user-data', getUserData);
-
+router.post("/contact", validateContact, sendContactEmail);
+router.get("/user-data", getUserData);
 
 //messages router
-router.get('/messages/:adminId/:userId',getMessages);
-router.get('/user/:userId/:adminId',getUserAdmin);
-router.post('/messages/markAsRead',markAsRead);
+router.get("/messages/:adminId/:userId", getMessages);
+router.get("/user/:userId/:adminId", getUserAdmin);
+router.post("/messages/markAsRead", markAsRead);
 
-router.post('/upload/:userID',uploadBG);
-router.get('/backgrounds/:userId',getBackground);
+router.post("/upload/:userID", uploadBG);
+router.get("/backgrounds/:userId", getBackground);
 
 //premium and discount router
-router.post('/premiumdiscounts/:userId',premiumDiscounts);
-router.get('/premiumdiscounts/:userId',getPremiumDiscounts);
+router.post("/premiumdiscounts/:userId", premiumDiscounts);
+router.get("/premiumdiscounts/:userId", getPremiumDiscounts);
 
 //category routers
-router.post('/addCategory/:adminId', addCategory);
-router.put('/editCategory/:id/:adminId', editCategory);
-router.delete('/deleteCategory/:id/:adminId', deleteCategory);
-router.get('/getCategories/:adminId', getCategories);
+router.post("/addCategory/:adminId", addCategory);
+router.put("/editCategory/:id/:adminId", editCategory);
+router.delete("/deleteCategory/:id/:adminId", deleteCategory);
+router.get("/getCategories/:adminId", getCategories);
 
 // Order management
-router.get('/booking/:adminId',fetchBookings)
+router.get("/booking/:adminId", fetchBookings);
 
 //user router
-router.post('/admin/:adminId/users', addUser);
-router.put('/admin/users/:userId/:adminId', editUser);
-router.delete('/admin/users/:userId/:adminId', deleteUser);
-router.get('/admin/:adminId/users', getUsers);
+router.post("/admin/:adminId/users", addUser);
+router.put("/admin/users/:userId/:adminId", editUser);
+router.delete("/admin/users/:userId/:adminId", deleteUser);
+router.get("/admin/:adminId/users", getUsers);
 
 //user spotrate router
-router.get('/spotrates/:adminId/:categoryId',getUserCommodity);
-router.post('/update-user-spread',updateUserSpread);
-router.post('/commodities/:adminId/:categoryId',addUserCommodity);
-router.delete('/commodities/:adminId/:categoryId/:commodityId',deleteUserCommodity);
-router.patch('/spotrate-commodity/:adminId/:categoryId/:commodityId', updateUserCommodity);
+router.get("/spotrates/:adminId/:categoryId", getUserCommodity);
+router.post("/update-user-spread", updateUserSpread);
+router.post("/commodities/:adminId/:categoryId", addUserCommodity);
+router.delete(
+  "/commodities/:adminId/:categoryId/:commodityId",
+  deleteUserCommodity
+);
+router.patch(
+  "/spotrate-commodity/:adminId/:categoryId/:commodityId",
+  updateUserCommodity
+);
+
+router.post("/main-category", uploadSingle("image"), createMainCategory);
+router.put(
+  "/main-category/:categoryId",
+  uploadSingle("image"),
+  editMainCategory
+);
+router.delete("/main-category/:categoryId", deleteMainCategory);
+router.get("/main-categories/:adminId", getMainCategories);
+
+router.post("/sub-category", createSubCategory);
+router.put("/sub-category/:subCategoryId", editSubCategory);
+router.delete("/sub-category/:subCategoryId", deleteSubCategory);
+
+router.get("/products/:adminId",fetchProductData)
+router.post("/products", uploadMultiple("image", 5), createProduct);
+router.put("/products/:id", uploadMultiple("image", 5), updateProduct);
+router.delete("/products/:id", deleteProduct);
 
 export default router;

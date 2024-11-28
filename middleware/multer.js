@@ -54,7 +54,7 @@ const localStorage = multer.diskStorage({
 
 // File filter function
 const fileFilter = (req, file, cb) => {
-  const fileTypes = ['jpeg', 'jpg', 'png', 'gif'];
+  const fileTypes = ['jpeg', 'jpg', 'png', 'gif','webp'];
   const extname = file.originalname.split('.').pop().toLowerCase();
   const mimeType = file.mimetype.split('/').pop().toLowerCase();
 

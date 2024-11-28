@@ -11,8 +11,8 @@ import {
 export const getProductDetails = async (req, res, next) => {
   try {
     const { adminId } = req.params;
-    const { productData, success } = await fetchProductDetails(adminId);
-    if (!success || !productData) {
+    const { result, success } = await fetchProductDetails(adminId);
+    if (!success || !result) {
       return res.status(404).json({
         success: false,
         message: "Products data not found",
@@ -20,7 +20,7 @@ export const getProductDetails = async (req, res, next) => {
     }
     return res.status(200).json({
       success: true,
-      info: productData.shops,
+      info: result,
       message: "Fetching products successfully",
     });
   } catch (error) {
