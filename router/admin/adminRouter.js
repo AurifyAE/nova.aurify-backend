@@ -103,7 +103,7 @@ import {
   editMainCategory,
   editSubCategory,
   getMainCategories,
-
+  getSubCategories
 } from "../../controllers/admin/shopCategoryController.js";
 import {
   createProduct,
@@ -233,6 +233,7 @@ router.put(
 router.delete("/main-category/:categoryId", deleteMainCategory);
 router.get("/main-categories/:adminId", getMainCategories);
 
+router.get("/sub-categories/:MaincategoryId", getSubCategories);
 router.post("/sub-category", createSubCategory);
 router.put("/sub-category/:subCategoryId", editSubCategory);
 router.delete("/sub-category/:subCategoryId", deleteSubCategory);

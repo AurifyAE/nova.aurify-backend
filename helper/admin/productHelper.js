@@ -12,6 +12,7 @@ export const createProductHelper = async (productData) => {
       price,
       subCategory,
       addedBy,
+      addedByUser,
       weight,
       purity,
       sku,
@@ -36,10 +37,11 @@ export const createProductHelper = async (productData) => {
       images: images || [], // Default empty array if no images are uploaded
       price,
       subCategory,
-      addedBy,
+      addedBy: addedBy || null, 
+      addedByUser: addedByUser || null, 
       weight,
       purity,
-      stock, // Default stock status
+      stock:true, // Default stock status
       sku,
       tags: tags || "New Arrival", // Default tag if not provided
     });

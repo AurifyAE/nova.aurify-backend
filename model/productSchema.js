@@ -55,6 +55,11 @@ const productSchema = new mongoose.Schema(
       ref: "Admin",
       default: null,
     },
+    addedByUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Users",
+      default: null,
+    },
   },
   { timestamps: true }
 );

@@ -5,13 +5,24 @@ import {
     fetchProductsByMainCategory,
     fetchProductsBySubCategory,
   } from "../../helper/admin/productHelper.js";
+import { createAppError } from "../../utils/errorHandler.js";
   
   // Create a new product
   export const createProduct = async (req, res, next) => {
     try {
+      const { adminId, userId } = req.query;
+      if (!adminId && !userId) {
+        throw createAppError("Either adminId or userId is required", 400);
+      }
       const productData = req.body;
       const imageLocations = req.files.map((file) => file.location); // Assuming `req.file.location` provides the image URL
       productData.images = imageLocations;
+      if (adminId) {
+        productData.addedBy = adminId; 
+      }
+      if (userId) {
+        productData.addedByUser = userId; 
+      }
       const product = await createProductHelper(productData);
       res.status(201).json({ success: true, data: product });
     } catch (error) {

@@ -5,7 +5,7 @@ import { createAppError } from "../../utils/errorHandler.js";
 
 const createMainCategoryHelper = async (categoryData) => {
   try {
-    const { name, description, image, createdBy } = categoryData;
+    const { name, description, image, createdBy,createdByUserId } = categoryData;
     
     const existingCategory = await MainCategory.findOne({ name });
     if (existingCategory) {
@@ -17,6 +17,7 @@ const createMainCategoryHelper = async (categoryData) => {
       description,
       image,
       createdBy,
+      createdByUserId
     });
 
     await mainCategory.save();
@@ -77,11 +78,10 @@ const deleteMainCategoryHelper = async (categoryId) => {
 
 const createSubCategoryHelper = async (subCategoryData) => {
   try {
-    const { name, description, mainCategoryId, createdBy } = subCategoryData;
-    
-    console.log(createdBy)
+    const { name, description, mainCategoryId, createdBy,createdByUserId } = subCategoryData;
+  
     const mainCategory = await MainCategory.findById(mainCategoryId);
-
+    
     if (!mainCategory) {
       throw createAppError("Main Category not found", 404); // 404 not found
     }
@@ -101,7 +101,8 @@ const createSubCategoryHelper = async (subCategoryData) => {
       name,
       description,
       mainCategory: mainCategoryId,
-      createdBy 
+      createdBy : createdBy,
+      createdByUserId:createdByUserId 
     });
 
     await subCategory.save();
@@ -167,6 +168,19 @@ const getMainCategoriesHelper = async (adminId) => {
   }
 };
 
+const getSubCategoriesHelper = async (MaincategoryId) => {
+  try {
+    const mainCategories = await SubCategory.find({mainCategory:MaincategoryId})
+    return mainCategories;
+  } catch (error) {
+    throw createAppError(
+      `Error fetching main categories: ${error.message}`,
+      500
+    ); // Internal server error
+  }
+};
+
+
 export {
   createMainCategoryHelper,
   editMainCategoryHelper,
@@ -175,4 +189,5 @@ export {
   editSubCategoryHelper,
   deleteSubCategoryHelper,
   getMainCategoriesHelper,
+  getSubCategoriesHelper
 };

@@ -22,6 +22,11 @@ const subCategorySchema = new mongoose.Schema(
       ref: "Admin", 
       default : null
     },
+    createdByUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Users",
+      default: null,
+    },
   },
   { timestamps: true }
 );

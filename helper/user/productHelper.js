@@ -562,16 +562,27 @@ export const fetchProductHelper = async (adminId) => {
   }
 };
 
-export const getMainCategoriesHelper = async (adminId) => {
+export const getMainCategoriesHelper = async (adminId, userId) => {
   try {
-    const mainCategories = await MainCategory.find({
-      $or: [{ createdBy: adminId }, { createdBy: null }],
-    });
+    let query;
+    if (userId) {
+      query = {
+        createdByUserId: userId,
+      };
+    } else {
+      query = {
+        $and: [
+          { $or: [{ createdBy: adminId }, { createdBy: null }] },
+          { createdByUserId: null },
+        ],
+      };
+    }
+    const mainCategories = await MainCategory.find(query).lean();
     return mainCategories;
   } catch (error) {
     throw createAppError(
       `Error fetching main categories: ${error.message}`,
-      500
-    ); // Internal server error
+      500 // Internal server error
+    );
   }
 };

@@ -245,7 +245,8 @@ export const fetchProductData = async (req, res, next) => {
 export const getMainCategories = async (req, res, next) => {
   try {
     const { adminId } = req.params;
-    const categories = await getMainCategoriesHelper(adminId);
+    const { userId } = req.query; 
+    const categories = await getMainCategoriesHelper(adminId,userId || null);
     const filteredCategories = categories.map((category) => ({
       _id: category._id,
       name: category.name,

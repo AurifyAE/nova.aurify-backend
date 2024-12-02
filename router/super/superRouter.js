@@ -61,7 +61,7 @@ router.delete("/banners/:bannerId/:adminId", deleteBanner);
 router.put("/banners/:bannerId", uploadSingle("image"), editBannerDetails);
 router.get("/get-banners", fetchBanners);
 
-
+router.get("/main-categories", getMainCategories);
 router.post("/main-category", uploadSingle("image"), createMainCategory);
 router.put(
   "/main-category/:categoryId",
@@ -69,10 +69,12 @@ router.put(
   editMainCategory
 );
 router.delete("/main-category/:categoryId", deleteMainCategory);
+
 router.post("/sub-category", createSubCategory);
 router.put("/sub-category/:subCategoryId", editSubCategory);
 router.delete("/sub-category/:subCategoryId", deleteSubCategory);
-router.get("/main-categories", getMainCategories);
+// router.get("/sub-categories",getSubCategories)
+
 
 router.get("/get-product/:mainCateId",fetchProductData);
 router.post("/products",uploadMultiple('image',5), createProduct);
