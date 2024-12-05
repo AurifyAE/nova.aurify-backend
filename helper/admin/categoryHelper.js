@@ -112,6 +112,23 @@ const createSubCategoryHelper = async (subCategoryData) => {
   }
 };
 
+const getSubCategoriesHelper = async (mainCategoryId) => {
+  try {
+    const filter = mainCategoryId ? { mainCategory: mainCategoryId } : {};
+
+    // Fetch subcategories with their associated main category details
+    const subCategories = await SubCategory.find(filter)
+      .populate("mainCategory", "name") // Populate mainCategory with its name
+      .populate("createdBy", "name email") // Populate createdBy (if needed)
+      .sort({ createdAt: -1 }); // Sort by the most recently created
+
+    return subCategories;
+  } catch (error) {
+    throw createAppError(`Error fetching subcategories: ${error.message}`, 500); // Internal server error
+  }
+};
+
+
 
 const editSubCategoryHelper = async (subCategoryId, subCategoryData) => {
   try {
@@ -166,6 +183,18 @@ const getMainCategoriesHelper = async (adminId) => {
     ); // Internal server error
   }
 };
+const getAllMainCategoriesHelper = async () => {
+  try {
+    const mainCategories = await MainCategory.find();
+    return mainCategories;
+  } catch (error) {
+    throw createAppError(
+      `Error fetching main categories: ${error.message}`,
+      500
+    ); // Internal server error
+  }
+};
+
 
 export {
   createMainCategoryHelper,
@@ -175,4 +204,6 @@ export {
   editSubCategoryHelper,
   deleteSubCategoryHelper,
   getMainCategoriesHelper,
+  getAllMainCategoriesHelper,
+  getSubCategoriesHelper
 };

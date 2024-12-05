@@ -109,90 +109,109 @@ export const deleteProductHelper = async (productId) => {
   }
 };
 
-export const fetchProductHelper = async (mainCategoryId) => {
+
+// export const fetchProductHelper = async (mainCategoryId) => {
+//   try {
+//     if (!mainCategoryId) {
+//       throw new Error("Main category ID is required");
+//     }
+
+//     const subCategories = await SubCategory.find(
+//       { mainCategory: mainCategoryId },
+//       "_id"
+//     );
+
+//     if (!subCategories || subCategories.length === 0) {
+//       throw new Error("No subcategories found for the given main category");
+//     }
+
+//     const subCategoryIds = subCategories.map((sub) => sub._id);
+
+//     const result = await mongoose.model("Product").aggregate([
+//       {
+//         $match: {
+//           subCategory: { $in: subCategoryIds },
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: "subcategories",
+//           localField: "subCategory",
+//           foreignField: "_id",
+//           as: "subCategoryDetails",
+//         },
+//       },
+//       {
+//         $unwind: {
+//           path: "$subCategoryDetails",
+//           preserveNullAndEmptyArrays: true,
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: "maincategories",
+//           localField: "subCategoryDetails.mainCategory",
+//           foreignField: "_id",
+//           as: "mainCategoryDetails",
+//         },
+//       },
+//       {
+//         $unwind: {
+//           path: "$mainCategoryDetails",
+//           preserveNullAndEmptyArrays: true,
+//         },
+//       },
+//       {
+//         $project: {
+//           title: 1,
+//           description: 1,
+//           images: 1,
+//           price: 1,
+//           weight: 1,
+//           purity: 1,
+//           stock: 1,
+//           tags: 1,
+//           sku: 1,
+//           subCategoryDetails: {
+//             _id: "$subCategoryDetails._id",
+//             name: "$subCategoryDetails.name",
+//             description: "$subCategoryDetails.description",
+//           },
+//           mainCategoryDetails: {
+//             _id: "$mainCategoryDetails._id",
+//             name: "$mainCategoryDetails.name",
+//             description: "$mainCategoryDetails.description",
+//             image: "$mainCategoryDetails.image",
+//           },
+//           createdAt: 1,
+//           updatedAt: 1,
+//         },
+//       },
+//     ]);
+
+//     return { success: true, result };
+//   } catch (error) {
+//     return {
+//       success: false,
+//       message: "Error fetching product details: " + error.message,
+//     };
+//   }
+// };
+
+
+export const fetchProductHelper = async () => {
   try {
-    if (!mainCategoryId) {
-      throw new Error("Main category ID is required");
+    // Fetch all products from the database
+    const products = await Product.find();
+
+    if (!products || products.length === 0) {
+      throw createAppError("No products found", 404);
     }
 
-    const subCategories = await SubCategory.find(
-      { mainCategory: mainCategoryId },
-      "_id"
-    );
-
-    if (!subCategories || subCategories.length === 0) {
-      throw new Error("No subcategories found for the given main category");
-    }
-
-    const subCategoryIds = subCategories.map((sub) => sub._id);
-
-    const result = await mongoose.model("Product").aggregate([
-      {
-        $match: {
-          subCategory: { $in: subCategoryIds },
-        },
-      },
-      {
-        $lookup: {
-          from: "subcategories",
-          localField: "subCategory",
-          foreignField: "_id",
-          as: "subCategoryDetails",
-        },
-      },
-      {
-        $unwind: {
-          path: "$subCategoryDetails",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $lookup: {
-          from: "maincategories",
-          localField: "subCategoryDetails.mainCategory",
-          foreignField: "_id",
-          as: "mainCategoryDetails",
-        },
-      },
-      {
-        $unwind: {
-          path: "$mainCategoryDetails",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $project: {
-          title: 1,
-          description: 1,
-          images: 1,
-          price: 1,
-          weight: 1,
-          purity: 1,
-          stock: 1,
-          tags: 1,
-          sku: 1,
-          subCategoryDetails: {
-            _id: "$subCategoryDetails._id",
-            name: "$subCategoryDetails.name",
-            description: "$subCategoryDetails.description",
-          },
-          mainCategoryDetails: {
-            _id: "$mainCategoryDetails._id",
-            name: "$mainCategoryDetails.name",
-            description: "$mainCategoryDetails.description",
-            image: "$mainCategoryDetails.image",
-          },
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      },
-    ]);
-
-    return { success: true, result };
+    return products; // Return all products
   } catch (error) {
-    return {
-      success: false,
-      message: "Error fetching product details: " + error.message,
-    };
+    if (error.isOperational) throw error;
+
+    throw createAppError(`Error fetching products: ${error.message}`, 500);
   }
 };

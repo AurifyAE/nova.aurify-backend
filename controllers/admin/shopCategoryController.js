@@ -5,7 +5,9 @@ import {
     createSubCategoryHelper,
     editSubCategoryHelper,
     deleteSubCategoryHelper,
-    getMainCategoriesHelper
+    getMainCategoriesHelper,
+    getAllMainCategoriesHelper,
+    getSubCategoriesHelper
   } from "../../helper/admin/categoryHelper.js"
   
   // Add Main Category
@@ -84,6 +86,19 @@ import {
       next(error);
     }
   };
+
+  // get subcategory
+
+  export const getSubCategories = async (req, res, next) => {
+    try {
+      const { mainCategoryId } = req.query; // Optional query param to filter by main category
+      const subCategories = await getSubCategoriesHelper(mainCategoryId);
+      res.status(200).json({ success: true, data: subCategories });
+    } catch (error) {
+      next(error);
+    }
+  };
+  
   
   // Get all Main Categories with Sub Categories
   export const getMainCategories = async (req, res, next) => {
@@ -101,3 +116,19 @@ import {
       next(error);
     }
   };
+
+  export const getAllMainCategories = async (req, res, next) => {
+    try {
+      const categories = await getAllMainCategoriesHelper();
+      const filteredCategories = categories.map((category) => ({
+        _id: category._id,
+        name: category.name,
+        description: category.description,
+        image: category.image,
+      }));
+      res.status(200).json({ success: true, data: filteredCategories });
+    } catch (error) {
+      next(error);
+    }
+  };
+  

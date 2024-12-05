@@ -3,7 +3,7 @@ import { updateUserData, updateUserLogo } from "../../helper/admin/profileHelper
 export const updateAdminProfileController = async (req, res, next) => {
     try {
       const { id } = req.params; // Get ID from URL parameters
-      const { email, fullName, mobile, location } = req.body; // Get updated data from request body
+      const { email, fullName, mobile, location,whatsapp } = req.body; // Get updated data from request body
   
       if (!id) {
         throw createAppError("ID parameter is required.", 400);
@@ -14,7 +14,8 @@ export const updateAdminProfileController = async (req, res, next) => {
         email,
         fullName,
         mobile,
-        location
+        location,
+        whatsapp
       );
       // Find the admin by ID and update the fields
   

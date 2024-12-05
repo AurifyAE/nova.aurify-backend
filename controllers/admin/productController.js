@@ -44,7 +44,6 @@ import {
     }
   };
   
-  
   // Delete product (soft delete)
   export const deleteProduct = async (req, res, next) => {
     try {
@@ -55,7 +54,6 @@ import {
       next(error);
     }
   };
-
 
   export const fetchProductData = async (req, res, next) => {
     try {

@@ -1,6 +1,6 @@
 import adminModel from '../../model/adminSchema.js';
 
-export const updateUserData = async (id, email, fullName, mobile, location) => {
+export const updateUserData = async (id, email, fullName, mobile, location, whatsapp) => {
     try {
       return await adminModel
         .findByIdAndUpdate(
@@ -10,6 +10,7 @@ export const updateUserData = async (id, email, fullName, mobile, location) => {
             userName: fullName,
             contact: mobile,
             address: location,
+            whatsapp: whatsapp
           },
           { new: true, runValidators: true }
         )

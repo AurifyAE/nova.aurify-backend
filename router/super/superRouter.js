@@ -31,6 +31,7 @@ import {
   editMainCategory,
   editSubCategory,
   getMainCategories,
+  getSubCategories,
 } from "../../controllers/super/categoryController.js";
 import {
   createProduct,
@@ -73,8 +74,11 @@ router.post("/sub-category", createSubCategory);
 router.put("/sub-category/:subCategoryId", editSubCategory);
 router.delete("/sub-category/:subCategoryId", deleteSubCategory);
 router.get("/main-categories", getMainCategories);
+router.get("/sub-categories", getSubCategories);
 
-router.get("/get-product/:mainCateId",fetchProductData);
+// router.get("/get-product/:mainCateId",fetchProductData);
+router.get("/get-product",fetchProductData);
+
 router.post("/products",uploadMultiple('image',5), createProduct);
 router.put("/products/:id",uploadMultiple('image',5), updateProduct);
 router.delete("/products/:id", deleteProduct);

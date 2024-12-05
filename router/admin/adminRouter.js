@@ -100,9 +100,11 @@ import {
   createSubCategory,
   deleteMainCategory,
   deleteSubCategory,
+  getSubCategories,
   editMainCategory,
   editSubCategory,
   getMainCategories,
+  getAllMainCategories,
 
 } from "../../controllers/admin/shopCategoryController.js";
 import {
@@ -225,17 +227,15 @@ router.patch(
 );
 
 router.post("/main-category", uploadSingle("image"), createMainCategory);
-router.put(
-  "/main-category/:categoryId",
-  uploadSingle("image"),
-  editMainCategory
-);
+router.put("/main-category/:categoryId",uploadSingle("image"),editMainCategory);
 router.delete("/main-category/:categoryId", deleteMainCategory);
 router.get("/main-categories/:adminId", getMainCategories);
+router.get("/main-categories", getAllMainCategories);
 
 router.post("/sub-category", createSubCategory);
 router.put("/sub-category/:subCategoryId", editSubCategory);
 router.delete("/sub-category/:subCategoryId", deleteSubCategory);
+router.get("/sub-categories", getSubCategories);
 
 router.get("/get-product",fetchProductData);
 router.post("/products", uploadMultiple("image", 5), createProduct);
