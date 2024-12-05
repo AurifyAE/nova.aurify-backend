@@ -9,7 +9,8 @@ import {
   getUserCart,
   getUserWishlist,
   incrementCartItem,
-  getMainCategories
+  getMainCategories,
+  fixedProductPrice
 } from "../../controllers/user/productController.js";
 import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
@@ -52,7 +53,10 @@ router.delete("/wishlist/:adminId/:userId/:productId", deleteWishlist);
 
 router.put("/forgot-password/:adminId", forgotPassword);
 router.get('/get-profile/:adminId',getProfile)
+
 router.post('/booking/:adminId/:userId',saveBooking)
+router.put('/products/fix-prices',fixedProductPrice)
+
 router.get("/get-premium-discount/:adminId", getPremiumDiscounts); // New route for premium discounts
 
 export default router;

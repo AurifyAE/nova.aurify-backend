@@ -4,6 +4,7 @@ import Product from "../../model/productSchema.js";
 import { Wishlist } from "../../model/wishlistSchema.js";
 import MainCategory from "../../model/mainCategoryModel.js";
 import SubCategory from "../../model/subCategoryModel.js";
+import {createAppError} from '../../utils/errorHandler.js'
 
 export const fetchProductDetails = async (mainCategoryId) => {
   try {
@@ -103,7 +104,7 @@ export const updateCartCollection = async (
       throw new Error("Missing required fields");
     }
 
-    const shop = await Product.findOne({_id: productId});
+    const shop = await Product.findOne({ _id: productId });
 
     if (!shop) {
       throw new Error("Shop or product not found");
@@ -590,3 +591,31 @@ export const getMainCategoriesHelper = async (adminId, userId) => {
     );
   }
 };
+
+export const fixedProductFixHelper = async (bookingData) => {
+  try {
+    if (!Array.isArray(bookingData) || bookingData.length === 0) {
+      throw new Error("Invalid or empty booking data.");
+    }
+
+    const updatePromises = bookingData.map((item) => {
+      const { productId, fixedPrice } = item;
+
+      if (fixedPrice <= 0) {
+        throw new Error(`Invalid fixed price for productId: ${productId}`);
+      }
+
+      return Product.findByIdAndUpdate(
+        productId,
+        { price: fixedPrice },
+        { new: true }
+      );
+    });
+
+    const updatedProducts = await Promise.all(updatePromises);
+    return updatedProducts;
+  } catch (error) {
+    throw createAppError(`Error fixing product prices: ${error.message}`, 500);
+  }
+};
+ 

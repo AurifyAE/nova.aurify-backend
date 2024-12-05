@@ -7,7 +7,8 @@ import {
   getUserWishlists,
   deleteWishlistItem,
   fetchProductHelper,
-  getMainCategoriesHelper
+  getMainCategoriesHelper,
+  fixedProductFixHelper,
 } from "../../helper/user/productHelper.js";
 
 export const getProductDetails = async (req, res, next) => {
@@ -210,7 +211,6 @@ export const addItemToWishlist = async (req, res, next) => {
   }
 };
 
-
 export const getUserWishlist = async (req, res, next) => {
   try {
     const { userId } = req.params;
@@ -245,8 +245,8 @@ export const fetchProductData = async (req, res, next) => {
 export const getMainCategories = async (req, res, next) => {
   try {
     const { adminId } = req.params;
-    const { userId } = req.query; 
-    const categories = await getMainCategoriesHelper(adminId,userId || null);
+    const { userId } = req.query;
+    const categories = await getMainCategoriesHelper(adminId, userId || null);
     const filteredCategories = categories.map((category) => ({
       _id: category._id,
       name: category.name,
@@ -254,6 +254,22 @@ export const getMainCategories = async (req, res, next) => {
       image: category.image,
     }));
     res.status(200).json({ success: true, data: filteredCategories });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const fixedProductPrice = async (req, res, next) => {
+  try {
+    const { bookingData } = req.body;
+    if (!bookingData) {
+      return res.status(400).json({ message: "Booking data is required." });
+    }
+    const updatedProducts = await fixedProductFixHelper(bookingData);
+    res.status(200).json({
+      message: "Prices fixed successfully",
+      updatedProducts,
+    });
   } catch (error) {
     next(error);
   }
