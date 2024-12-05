@@ -17,6 +17,7 @@ export const createProductHelper = async (productData) => {
       purity,
       sku,
       tags,
+      type,
     } = productData;
 
     // Validate if the subcategory exists
@@ -37,13 +38,14 @@ export const createProductHelper = async (productData) => {
       images: images || [], // Default empty array if no images are uploaded
       price,
       subCategory,
-      addedBy: addedBy || null, 
-      addedByUser: addedByUser || null, 
+      addedBy: addedBy || null,
+      addedByUser: addedByUser || null,
       weight,
       purity,
-      stock:true, // Default stock status
+      stock: true, // Default stock status
       sku,
-      tags: tags || "New Arrival", // Default tag if not provided
+      tags: tags || "New Arrival",
+      type: type || "GOLD", // Default tag if not provided
     });
 
     await product.save();

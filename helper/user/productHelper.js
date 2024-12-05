@@ -66,6 +66,7 @@ export const fetchProductDetails = async (mainCategoryId) => {
           purity: 1,
           stock: 1,
           tags: 1,
+          type: 1,
           sku: 1,
           subCategoryDetails: {
             _id: "$subCategoryDetails._id",
@@ -74,6 +75,7 @@ export const fetchProductDetails = async (mainCategoryId) => {
           mainCategoryDetails: {
             _id: "$mainCategoryDetails._id",
             name: "$mainCategoryDetails.name",
+            image: "$mainCategoryDetails.image",
           },
           createdAt: 1,
           updatedAt: 1,
@@ -101,10 +103,7 @@ export const updateCartCollection = async (
       throw new Error("Missing required fields");
     }
 
-    const shop = await Product.findOne({
-      _id: productId,
-      addedBy: adminId,
-    });
+    const shop = await Product.findOne({_id: productId});
 
     if (!shop) {
       throw new Error("Shop or product not found");
@@ -307,6 +306,8 @@ export const getUserCarts = async (userId) => {
                 price: "$productDetails.price",
                 purity: "$productDetails.purity",
                 sku: "$productDetails.sku",
+                type: "$productDetails.type",
+                tags: "$productDetails.tags",
                 weight: "$productDetails.weight",
                 subCategory: "$productDetails.subCategoryDetails.name",
                 mainCategory: "$productDetails.mainCategoryDetails.name",
@@ -465,6 +466,8 @@ export const getUserWishlists = async (userId) => {
                 images: "$productDetails.images",
                 price: "$productDetails.price",
                 purity: "$productDetails.purity",
+                type: "$productDetails.type",
+                tags: "$productDetails.tags",
                 sku: "$productDetails.sku",
                 weight: "$productDetails.weight",
                 subCategory: "$productDetails.subCategoryDetails.name",
@@ -545,6 +548,7 @@ export const fetchProductHelper = async (adminId) => {
           purity: 1,
           stock: 1,
           tags: 1,
+          type: 1,
           sku: 1,
           subCategoryDetails: 1,
           mainCategoryDetails: 1,

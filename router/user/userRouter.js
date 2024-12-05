@@ -27,6 +27,7 @@ import {
 } from "../../controllers/user/userController.js";
 
 const router = Router();
+
 router.post("/login/:adminId", userLoginController);
 router.patch("/update-spread/:adminId/:userId", updateSpread);
 router.post("/request-admin/:adminId", requestAdmin);
