@@ -11,7 +11,7 @@ import {
   fixedProductFixHelper,
   fetchBestSellerProduct,
   fetchTopRatedProduct,
-  fetchgetNewArrivalroduct
+  fetchNewArrivalProduct
 } from "../../helper/user/productHelper.js";
 
 export const getProductDetails = async (req, res, next) => {
@@ -62,7 +62,7 @@ export const getBestSeller = async (req, res, next) => {
 };
 export const getNewArrival = async (req, res, next) => {
   try {
-    const { result, success, message } = await fetchgetNewArrivalroduct();
+    const { result, success, message } = await fetchNewArrivalProduct();
     if (!success) {
       return res.status(404).json({
         success: false,

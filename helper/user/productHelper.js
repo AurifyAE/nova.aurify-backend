@@ -4,11 +4,13 @@ import Product from "../../model/productSchema.js";
 import { Wishlist } from "../../model/wishlistSchema.js";
 import MainCategory from "../../model/mainCategoryModel.js";
 import SubCategory from "../../model/subCategoryModel.js";
-import {createAppError} from '../../utils/errorHandler.js'
+import { createAppError } from "../../utils/errorHandler.js";
 
 export const fetchBestSellerProduct = async () => {
   try {
-    const result = await Product.find({ tags: "Best Seller" });
+    const result = await Product.find({ tags: "Best Seller" })
+      .sort({ createdAt: -1 })
+      .limit(3);
 
     if (result.length === 0) {
       return {
@@ -28,9 +30,12 @@ export const fetchBestSellerProduct = async () => {
     };
   }
 };
-export const fetchgetNewArrivalroduct = async () => {
+
+export const fetchNewArrivalProduct = async () => {
   try {
-    const result = await Product.find({ tags: "New Arrival" });
+    const result = await Product.find({ tags: "New Arrival" })
+      .sort({ createdAt: -1 })
+      .limit(3);
 
     if (result.length === 0) {
       return {
@@ -50,9 +55,12 @@ export const fetchgetNewArrivalroduct = async () => {
     };
   }
 };
+
 export const fetchTopRatedProduct = async () => {
   try {
-    const result = await Product.find({ tags: "Top Rated" });
+    const result = await Product.find({ tags: "Top Rated" })
+      .sort({ createdAt: -1 })
+      .limit(3);
 
     if (result.length === 0) {
       return {
@@ -685,4 +693,3 @@ export const fixedProductFixHelper = async (bookingData) => {
     throw createAppError(`Error fixing product prices: ${error.message}`, 500);
   }
 };
- 
