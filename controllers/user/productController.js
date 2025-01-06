@@ -11,7 +11,8 @@ import {
   fixedProductFixHelper,
   fetchBestSellerProduct,
   fetchTopRatedProduct,
-  fetchNewArrivalProduct
+  fetchNewArrivalProduct,
+  fetchAllProduct
 } from "../../helper/user/productHelper.js";
 
 export const getProductDetails = async (req, res, next) => {
@@ -60,6 +61,43 @@ export const getBestSeller = async (req, res, next) => {
     next(error)
   }
 };
+export const getViewAll = async (req, res, next) => {
+  try {
+    const { page = 1, tags, mainCategory } = req.query;
+
+    const filters = {
+      tags,
+      mainCategory,
+    };
+
+    const { result, success, message, totalCount, totalPages } = await fetchAllProduct(
+      parseInt(page, 10),
+      filters
+    );
+
+    if (!success) {
+      return res.status(404).json({
+        success: false,
+        message: message || "Products data not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      info: result,
+      pagination: {
+        totalCount,
+        totalPages,
+        currentPage: parseInt(page, 10),
+      },
+      message: "Fetching products successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 export const getNewArrival = async (req, res, next) => {
   try {
     const { result, success, message } = await fetchNewArrivalProduct();

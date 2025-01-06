@@ -31,6 +31,77 @@ export const fetchBestSellerProduct = async () => {
   }
 };
 
+export const fetchAllProduct = async (page = 1, filters = {}, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+
+    const matchStage = {};
+    if (filters.tags) matchStage.tags = filters.tags;
+    if (filters.mainCategory)
+      matchStage["mainCategoryDetails._id"] = new mongoose.Types.ObjectId(
+        filters.mainCategory
+      );
+
+    const pipeline = [
+      {
+        $lookup: {
+          from: "subcategories",
+          localField: "subCategory",
+          foreignField: "_id",
+          as: "subCategoryDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$subCategoryDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "maincategories",
+          localField: "subCategoryDetails.mainCategory",
+          foreignField: "_id",
+          as: "mainCategoryDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$mainCategoryDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $match: matchStage, // Apply filters, including mainCategory
+      },
+      {
+        $facet: {
+          metadata: [{ $count: "totalCount" }], // Total count
+          data: [{ $skip: skip }, { $limit: limit }],
+        },
+      },
+    ];
+
+    const result = await mongoose.model("Product").aggregate(pipeline);
+
+    const totalCount = result[0]?.metadata[0]?.totalCount || 0;
+    const products = result[0]?.data || [];
+
+    return {
+      success: true,
+      result: products,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+    };
+  } catch (error) {
+    console.error("Error fetching products:", error.message);
+    return {
+      success: false,
+      message: "Error fetching product details: " + error.message,
+    };
+  }
+};
+
 export const fetchNewArrivalProduct = async () => {
   try {
     const result = await Product.find({ tags: "New Arrival" })

@@ -13,7 +13,8 @@ import {
   fixedProductPrice,
   getBestSeller,
   getTopRated,
-  getNewArrival
+  getNewArrival,
+  getViewAll
 } from "../../controllers/user/productController.js";
 import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
@@ -46,6 +47,7 @@ router.get("/get-product/:mainCateId", getProductDetails);
 router.get("/best-seller", getBestSeller);
 router.get("/top-rated", getTopRated);
 router.get("/new-arrival", getNewArrival)
+router.get("/view-all", getViewAll)
 router.get("/get-cart/:userId", getUserCart);
 router.get("/get-wishlist/:userId", getUserWishlist);
 
