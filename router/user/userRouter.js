@@ -10,7 +10,10 @@ import {
   getUserWishlist,
   incrementCartItem,
   getMainCategories,
-  fixedProductPrice
+  fixedProductPrice,
+  getBestSeller,
+  getTopRated,
+  getNewArrival
 } from "../../controllers/user/productController.js";
 import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
@@ -40,6 +43,9 @@ router.get("/get-server", getServerDetails);
 
 router.get("/main-categories/:adminId", getMainCategories);
 router.get("/get-product/:mainCateId", getProductDetails);
+router.get("/best-seller", getBestSeller);
+router.get("/top-rated", getTopRated);
+router.get("/new-arrival", getNewArrival)
 router.get("/get-cart/:userId", getUserCart);
 router.get("/get-wishlist/:userId", getUserWishlist);
 

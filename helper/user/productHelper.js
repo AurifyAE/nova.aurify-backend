@@ -6,6 +6,73 @@ import MainCategory from "../../model/mainCategoryModel.js";
 import SubCategory from "../../model/subCategoryModel.js";
 import {createAppError} from '../../utils/errorHandler.js'
 
+export const fetchBestSellerProduct = async () => {
+  try {
+    const result = await Product.find({ tags: "Best Seller" });
+
+    if (result.length === 0) {
+      return {
+        success: false,
+        message: "No 'Best Seller' products found.",
+      };
+    }
+
+    return {
+      success: true,
+      result,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error fetching product details: " + error.message,
+    };
+  }
+};
+export const fetchgetNewArrivalroduct = async () => {
+  try {
+    const result = await Product.find({ tags: "New Arrival" });
+
+    if (result.length === 0) {
+      return {
+        success: false,
+        message: "No 'New Arrival' products found.",
+      };
+    }
+
+    return {
+      success: true,
+      result,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error fetching product details: " + error.message,
+    };
+  }
+};
+export const fetchTopRatedProduct = async () => {
+  try {
+    const result = await Product.find({ tags: "Top Rated" });
+
+    if (result.length === 0) {
+      return {
+        success: false,
+        message: "No 'Top Rated' products found.",
+      };
+    }
+
+    return {
+      success: true,
+      result,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error fetching product details: " + error.message,
+    };
+  }
+};
+
 export const fetchProductDetails = async (mainCategoryId) => {
   try {
     if (!mainCategoryId) {

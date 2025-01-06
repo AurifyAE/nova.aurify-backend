@@ -9,6 +9,9 @@ import {
   fetchProductHelper,
   getMainCategoriesHelper,
   fixedProductFixHelper,
+  fetchBestSellerProduct,
+  fetchTopRatedProduct,
+  fetchgetNewArrivalroduct
 } from "../../helper/user/productHelper.js";
 
 export const getProductDetails = async (req, res, next) => {
@@ -31,6 +34,85 @@ export const getProductDetails = async (req, res, next) => {
   }
 };
 
+export const getBestSeller = async (req, res, next) => {
+  try {
+    const { result, success, message } = await fetchBestSellerProduct();
+    if (!success) {
+      return res.status(404).json({
+        success: false,
+        message: message || "Products data not found", 
+      });
+    }
+    if (result.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No 'Best Seller' products found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      info: result,
+      message: "Fetching products successfully",
+    });
+
+  } catch (error) {
+    next(error)
+  }
+};
+export const getNewArrival = async (req, res, next) => {
+  try {
+    const { result, success, message } = await fetchgetNewArrivalroduct();
+    if (!success) {
+      return res.status(404).json({
+        success: false,
+        message: message || "Products data not found", 
+      });
+    }
+    if (result.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No 'New Arrival' products found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      info: result,
+      message: "Fetching products successfully",
+    });
+
+  } catch (error) {
+    next(error)
+  }
+};
+
+export const getTopRated = async (req, res, next) => {
+  try {
+    const { result, success, message } = await fetchTopRatedProduct();
+    if (!success) {
+      return res.status(404).json({
+        success: false,
+        message: message || "Products data not found", 
+      });
+    }
+    if (result.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No 'Top Rated' products found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      info: result,
+      message: "Fetching products successfully",
+    });
+
+  } catch (error) {
+    next(error)
+  }
+};
 export const addItemToCart = async (req, res, next) => {
   try {
     const { userId, adminId, productId } = req.params;
