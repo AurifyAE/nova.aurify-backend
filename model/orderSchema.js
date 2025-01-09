@@ -45,6 +45,14 @@ const orderSchema = new mongoose.Schema({
     type: String,
     default: "pending",
   },
+  paymentMethod: {
+    type: String,
+    required: true,
+  },
+  deliveryDate: {
+    type: Date,
+    default: Date.now(),
+  },
   orderDate: {
     type: Date,
     default: Date.now(),

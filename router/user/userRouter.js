@@ -28,7 +28,8 @@ import {
   requestAdmin,
   updateSpread,
   userLoginController,
-  getProfile
+  getProfile,
+  getBanner
 } from "../../controllers/user/userController.js";
 
 const router = Router();
@@ -50,6 +51,7 @@ router.get("/new-arrival", getNewArrival)
 router.get("/view-all", getViewAll)
 router.get("/get-cart/:userId", getUserCart);
 router.get("/get-wishlist/:userId", getUserWishlist);
+router.get("/get-banner/:adminId", getBanner);
 
 router.post("/cart/:adminId/:userId/:productId", addItemToCart);
 router.patch("/cart/increment/:adminId/:userId/:productId", incrementCartItem);

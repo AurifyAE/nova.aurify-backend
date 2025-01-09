@@ -7,6 +7,7 @@ import {
   userUpdateSpread,
   userVerification,
   getAdminProfile,
+  getBannerDetails
 } from "../../helper/user/userHelper.js";
 import adminModel from "../../model/adminSchema.js";
 import DiscountModel from "../../model/discountSchema.js";
@@ -301,5 +302,28 @@ export const getPremiumDiscounts = async (req, res, next) => {
   } catch (error) {
     console.error("Error in fetching:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+export const getBanner = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+    const { success, banners, message } = await getBannerDetails(adminId);
+
+    if (!success) {
+      return res.status(204).json({
+        success: false,
+        message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      banners,
+      message: "Banner fetching successfully",
+    });
+  } catch (error) {
+    next(error);
   }
 };

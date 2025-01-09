@@ -5,6 +5,7 @@ import FCMTokenModel from "../../model/fcmTokenSchema.js";
 import NotificationService from "../../utils/sendPushNotification.js";
 import newsModel from "../../model/newsSchema.js";
 import { spotRateModel } from "../../model/spotRateSchema.js";
+import {EcommerceBannerModel} from '../../model/EcommerceBannerSchema.js'
 import { encryptPassword, decryptPassword } from "../../utils/crypto.js";
 
 export const updateUserPassword = async (adminId, contact, newPassword) => {
@@ -211,6 +212,36 @@ export const getNewsByAdminId = async (adminId) => {
       success: false,
       news: null,
       message: "Error fetching news: " + error.message,
+    };
+  }
+};
+
+
+export const getBannerDetails = async (adminId) => {
+  try {
+  
+    const bannerDocument = await EcommerceBannerModel.findOne({ createdBy: adminId });
+
+    if (!bannerDocument) {
+      return {
+        success: false,
+        banners: [],
+        message: "No banners found for this admin",
+      };
+    }
+
+    const images = bannerDocument.banner.flatMap((item) => item.imageUrl);
+
+    return {
+      success: true,
+      banners: images,
+      message: "Banners fetched successfully",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      banners: [],
+      message: "Error fetching banners: " + error.message,
     };
   }
 };

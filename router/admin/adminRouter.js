@@ -32,7 +32,12 @@ import {
   updateSpread,
 } from "../../controllers/admin/spotRateController.js";
 import { adminLoginController } from "../../controllers/admin/adminController.js";
-import { getBanner } from "../../controllers/admin/bannerController.js";
+import {
+  addEcomBanner,
+  deleteBanner,
+  getBanner,
+  updateBanner,
+} from "../../controllers/admin/bannerController.js";
 import {
   getPremiumDiscounts,
   premiumDiscounts,
@@ -103,7 +108,7 @@ import {
   editMainCategory,
   editSubCategory,
   getMainCategories,
-  getSubCategories
+  getSubCategories,
 } from "../../controllers/admin/shopCategoryController.js";
 import {
   createProduct,
@@ -149,7 +154,7 @@ router.post(
   sendFeatureRequestEmail
 );
 
-//banner
+//Marketing banner
 router.get("/banners/:adminId", getBanner);
 router.get("/banners/:userId", getBanner);
 
@@ -238,9 +243,14 @@ router.post("/sub-category", createSubCategory);
 router.put("/sub-category/:subCategoryId", editSubCategory);
 router.delete("/sub-category/:subCategoryId", deleteSubCategory);
 
-router.get("/get-product",fetchProductData);
+router.get("/get-product", fetchProductData);
 router.post("/products", uploadMultiple("image", 5), createProduct);
 router.put("/products/:id", uploadMultiple("image", 5), updateProduct);
 router.delete("/products/:id", deleteProduct);
+
+//banner
+router.post("/addBanner", uploadMultiple("image", 5), addEcomBanner);
+router.put("/banner/:id", uploadMultiple("image", 5), updateBanner);
+router.delete("/banner/:id/:adminId", deleteBanner);
 
 export default router;
