@@ -18,8 +18,8 @@ const port = process.env.PORT || 4444;
 
 
 app.use(express.static('public'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' })); // Increase JSON payload limit
+app.use(express.urlencoded({ limit: '50mb', extended: true })); // Increase URL-encoded payload limit
 
 // Custom middleware to check for secret key
 const checkSecretKey = (req, res, next) => {

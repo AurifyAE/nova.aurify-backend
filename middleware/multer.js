@@ -68,13 +68,13 @@ const fileFilter = (req, file, cb) => {
 // Create multer upload instances for S3 and local storage
 const s3Upload = multer({
   storage: s3Storage,
-  limits: { fileSize: 30 * 1024 * 1024 }, // 30MB file size limit
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB file size limit
   fileFilter: fileFilter
 });
 
 const localUpload = multer({
   storage: localStorage,
-  limits: { fileSize: 30 * 1024 * 1024 }, // 30MB file size limit
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB file size limit
   fileFilter: fileFilter
 });
 
