@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { getMetals } from "../../helper/admin/spotRateHelper.js";
 import { spotRateModel } from "../../model/spotRateSchema.js";
 import { createAppError } from "../../utils/errorHandler.js";
+import { getCommodity } from "../../helper/admin/adminHelper.js";
 
 
 export const updateCommodity = async (req, res, next) => {
@@ -41,8 +42,6 @@ export const updateCommodity = async (req, res, next) => {
 };
 
 
-  
-
   export const deleteSpotRateCommodity = async (req, res, next) => {
     try {
       const { adminId, commodityId } = req.params;
@@ -65,7 +64,6 @@ export const updateCommodity = async (req, res, next) => {
   };
   
   
-
   export const updateSpread = async (req, res) => {
     const { adminId, metal, type, value } = req.body;
   

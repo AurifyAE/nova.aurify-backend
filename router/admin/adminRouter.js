@@ -104,7 +104,9 @@ import {
   editMainCategory,
   editSubCategory,
   getMainCategories,
+  getAllSubCategories,
   getAllMainCategories,
+  getUserMainCategories,
 
 } from "../../controllers/admin/shopCategoryController.js";
 import {
@@ -112,6 +114,8 @@ import {
   deleteProduct,
   updateProduct,
   fetchProductData,
+  fetchAllProductData,
+
 } from "../../controllers/admin/productController.js";
 
 const router = Router();
@@ -235,11 +239,18 @@ router.get("/main-categories", getAllMainCategories);
 router.post("/sub-category", createSubCategory);
 router.put("/sub-category/:subCategoryId", editSubCategory);
 router.delete("/sub-category/:subCategoryId", deleteSubCategory);
-router.get("/sub-categories", getSubCategories);
+router.get("/sub-categories", getAllSubCategories);
 
 router.get("/get-product",fetchProductData);
 router.post("/products", uploadMultiple("image", 5), createProduct);
 router.put("/products/:id", uploadMultiple("image", 5), updateProduct);
 router.delete("/products/:id", deleteProduct);
+
+router.get("/get-allproduct", fetchAllProductData);
+
+// user main category
+router.get("/get-user-maincategory/:userId",getUserMainCategories);
+
+
 
 export default router;

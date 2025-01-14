@@ -4,6 +4,9 @@ import {
     deleteProductHelper,
     fetchProductsByMainCategory,
     fetchProductsBySubCategory,
+    fetchAllProductHelper,
+
+   
   } from "../../helper/admin/productHelper.js";
   
   // Create a new product
@@ -73,4 +76,13 @@ import {
       next(error);
     }
   };
+
   
+  export const fetchAllProductData = async (req, res, next) => {
+    try {
+      const result = await fetchAllProductHelper();
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  };

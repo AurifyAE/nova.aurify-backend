@@ -57,6 +57,7 @@ const editMainCategoryHelper = async (categoryId, categoryData, file) => {
   }
 };
 
+
 const deleteMainCategoryHelper = async (categoryId) => {
   try {
     const mainCategory = await MainCategory.findById(categoryId);
@@ -72,7 +73,6 @@ const deleteMainCategoryHelper = async (categoryId) => {
     throw createAppError(`Error deleting main category: ${error.message}`, 500);
   }
 };
-
 
 
 const createSubCategoryHelper = async (subCategoryData) => {
@@ -96,7 +96,6 @@ const createSubCategoryHelper = async (subCategoryData) => {
         400
       ); // 400 bad request
     }
-
     const subCategory = new SubCategory({
       name,
       description,
@@ -112,23 +111,26 @@ const createSubCategoryHelper = async (subCategoryData) => {
   }
 };
 
-const getSubCategoriesHelper = async (mainCategoryId) => {
+const getAllSubCategoriesHelper = async (mainCategoryId) => {
   try {
     const filter = mainCategoryId ? { mainCategory: mainCategoryId } : {};
 
-    // Fetch subcategories with their associated main category details
-    const subCategories = await SubCategory.find(filter)
-      .populate("mainCategory", "name") // Populate mainCategory with its name
-      .populate("createdBy", "name email") // Populate createdBy (if needed)
-      .sort({ createdAt: -1 }); // Sort by the most recently created
+//     // Fetch subcategories with their associated main category details
+//     const subCategories = await SubCategory.find(filter)
+//       .populate("mainCategory", "name") // Populate mainCategory with its name
+//       .populate("createdBy", "name email") // Populate createdBy (if needed)
+//       .sort({ createdAt: -1 }); // Sort by the most recently created
 
-    return subCategories;
+//     return subCategories;
+//   } catch (error) {
+//     throw createAppError(`Error fetching subcategories: ${error.message}`, 500); // Internal server error
+//   }
+// };
+
   } catch (error) {
     throw createAppError(`Error fetching subcategories: ${error.message}`, 500); // Internal server error
   }
 };
-
-
 
 const editSubCategoryHelper = async (subCategoryId, subCategoryData) => {
   try {
@@ -183,9 +185,23 @@ const getMainCategoriesHelper = async (adminId) => {
     ); // Internal server error
   }
 };
+
 const getAllMainCategoriesHelper = async () => {
   try {
     const mainCategories = await MainCategory.find();
+    return mainCategories;
+  } catch (error) {
+    throw createAppError(
+      `Error fetching main categories: ${error.message}`,
+      500
+    ); // Internal server error
+  }
+};
+
+
+const getSubCategoriesHelper = async (MaincategoryId) => {
+  try {
+    const mainCategories = await SubCategory.find({mainCategory:MaincategoryId})
     return mainCategories;
   } catch (error) {
     throw createAppError(
@@ -205,5 +221,7 @@ export {
   deleteSubCategoryHelper,
   getMainCategoriesHelper,
   getAllMainCategoriesHelper,
-  getSubCategoriesHelper
+  getSubCategoriesHelper,
+  getAllSubCategoriesHelper,
+  getUserMainCategoriesHelper
 };
