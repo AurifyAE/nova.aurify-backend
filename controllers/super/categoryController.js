@@ -6,6 +6,7 @@ import {
   editSubCategoryHelper,
   deleteSubCategoryHelper,
   getMainCategoriesHelper,
+  getSubCategoriesHelper
 } from "../../helper/superAdmin/categoryHelper.js";
 
 // Add Main Category
@@ -102,5 +103,18 @@ export const getMainCategories = async (req, res, next) => {
     res.status(200).json({ success: true, data: filteredCategories });
   } catch (error) {
     next(error);
+  }
+};
+
+
+// get subcategory
+export const getSubCategories = async (req, res, next) => {
+  try {
+    const subCategories = await getSubCategoriesHelper();
+
+    // Respond with the retrieved subcategories
+    res.status(200).json({ success: true, data: subCategories });
+  } catch (error) {
+    next(error); // Forward errors to the error-handling middleware
   }
 };

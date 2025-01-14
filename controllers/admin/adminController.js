@@ -17,6 +17,7 @@ import { decryptPassword } from "../../utils/crypto.js";
 
 export const adminLoginController = async (req, res, next) => {
   try {
+    console.log("first")
     const { userName, password, fcmToken, rememberMe } = req.body;
     const authLogin = await adminVerfication(userName);
     if (authLogin) {
@@ -29,13 +30,15 @@ export const adminLoginController = async (req, res, next) => {
       }
       await addFCMToken(userName,fcmToken)
       const expiresIn = rememberMe ? "30d" : "3d";
-
+      const adminId = authLogin._id
+      console.log(adminId)
       const token = generateToken({ adminId: authLogin._id }, expiresIn);
-    
+       
       res.status(200).json({
         success: true,
         message: "Authentication successful.",
         token,
+        adminId: adminId
       });
     } else {
       throw createAppError("User not found.", 204);

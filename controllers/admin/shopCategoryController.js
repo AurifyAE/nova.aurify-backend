@@ -6,7 +6,10 @@ import {
     editSubCategoryHelper,
     deleteSubCategoryHelper,
     getMainCategoriesHelper,
-    getSubCategoriesHelper
+    getAllMainCategoriesHelper,
+    getSubCategoriesHelper,
+    getAllSubCategoriesHelper,
+    // getUserMainCategoriesHelper
   } from "../../helper/admin/categoryHelper.js"
   
   // Add Main Category
@@ -85,6 +88,40 @@ import {
       next(error);
     }
   };
+
+  // get subcategory
+
+  // export const getSubCategories = async (req, res, next) => {
+  //   try {
+  //     const { mainCategoryId } = req.query; // Optional query param to filter by main category
+  //     const subCategories = await getSubCategoriesHelper(mainCategoryId);
+  //     res.status(200).json({ success: true, data: subCategories });
+  //   } catch (error) {
+  //     next(error);
+  //   }
+  // };
+
+  export const getSubCategories = async (req, res, next) => {
+    try {
+      const { MaincategoryId } = req.params;
+      console.log("Received MaincategoryId:", MaincategoryId); // Debug
+      const subCategories = await getSubCategoriesHelper(MaincategoryId);
+      res.status(200).json({ success: true, data: subCategories });
+    } catch (error) {
+      next(error);
+    }
+  };
+  
+
+  export const getAllSubCategories = async (req, res, next) => {
+    try {
+      const subCategories = await getAllSubCategoriesHelper();
+      res.status(200).json({ success: true, data: subCategories });
+    } catch (error) {
+      next(error);
+    }
+  };
+  
   
   // Get all Main Categories with Sub Categories
   export const getMainCategories = async (req, res, next) => {
@@ -103,18 +140,34 @@ import {
     }
   };
 
-
-  export const getSubCategories = async (req, res, next) => {
+  export const getAllMainCategories = async (req, res, next) => {
     try {
-      const { MaincategoryId } = req.params;
-      const categories = await getSubCategoriesHelper(MaincategoryId);
+      const categories = await getAllMainCategoriesHelper();
       const filteredCategories = categories.map((category) => ({
         _id: category._id,
         name: category.name,
         description: category.description,
+        image: category.image,
       }));
       res.status(200).json({ success: true, data: filteredCategories });
     } catch (error) {
       next(error);
     }
   };
+
+  export const getUserMainCategories = async (req, res, next) => {
+    try {
+      const { userId } = req.params; // Updated parameter name
+      const categories = await getUserMainCategoriesHelper(userId);
+      const filteredCategories = categories.map((category) => ({
+        _id: category._id,
+        name: category.name,
+        description: category.description,
+        image: category.image,
+      }));
+      res.status(200).json({ success: true, data: filteredCategories });
+    } catch (error) {
+      next(error);
+    }
+  };
+  

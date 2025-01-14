@@ -277,3 +277,24 @@ export const fetchProductsBySubCategory = async (subCategoryId) => {
     };
   }
 };
+
+export const fetchAllProductHelper = async () => {
+  try {
+    // Fetch all products from the database
+    const products = await Product.find();
+
+    if (!products || products.length === 0) {
+      throw createAppError("No products found", 404);
+    }
+
+    return products; // Return all products
+  } catch (error) {
+    if (error.isOperational) throw error;
+
+    throw createAppError(`Error fetching products: ${error.message}`, 500);
+  }
+};
+
+
+
+

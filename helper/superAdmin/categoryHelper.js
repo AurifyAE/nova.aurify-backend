@@ -155,6 +155,26 @@ const getMainCategoriesHelper = async () => {
   }
 };
 
+// get subcategory
+const getSubCategoriesHelper = async () => {
+  try {
+    // Fetch subcategories and populate their mainCategory field
+    const subCategories = await SubCategory.find().populate("mainCategory", "name");
+
+    // Optionally format the result
+    return subCategories.map((subCategory) => ({
+      _id: subCategory._id,
+      name: subCategory.name,
+      description: subCategory.description,
+      mainCategory: subCategory.mainCategory ? subCategory.mainCategory.name : null,
+      image: subCategory.image,
+    }));
+  } catch (error) {
+    throw new Error(`Error fetching subcategories: ${error.message}`);
+  }
+};
+
+
 export {
   createMainCategoryHelper,
   editMainCategoryHelper,
@@ -162,5 +182,7 @@ export {
   createSubCategoryHelper,
   editSubCategoryHelper,
   deleteSubCategoryHelper,
-  getMainCategoriesHelper
+  getMainCategoriesHelper,
+  getSubCategoriesHelper
+ 
 };

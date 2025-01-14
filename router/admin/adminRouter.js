@@ -109,12 +109,18 @@ import {
   editSubCategory,
   getMainCategories,
   getSubCategories,
+  getAllSubCategories,
+  getAllMainCategories,
+  getUserMainCategories,
+
 } from "../../controllers/admin/shopCategoryController.js";
 import {
   createProduct,
   deleteProduct,
   updateProduct,
   fetchProductData,
+  fetchAllProductData,
+
 } from "../../controllers/admin/productController.js";
 
 const router = Router();
@@ -230,18 +236,16 @@ router.patch(
 );
 
 router.post("/main-category", uploadSingle("image"), createMainCategory);
-router.put(
-  "/main-category/:categoryId",
-  uploadSingle("image"),
-  editMainCategory
-);
+router.put("/main-category/:categoryId",uploadSingle("image"),editMainCategory);
 router.delete("/main-category/:categoryId", deleteMainCategory);
 router.get("/main-categories/:adminId", getMainCategories);
+router.get("/main-categories", getAllMainCategories);
 
 router.get("/sub-categories/:MaincategoryId", getSubCategories);
 router.post("/sub-category", createSubCategory);
 router.put("/sub-category/:subCategoryId", editSubCategory);
 router.delete("/sub-category/:subCategoryId", deleteSubCategory);
+router.get("/sub-categories", getAllSubCategories);
 
 router.get("/get-product", fetchProductData);
 router.post("/products", uploadMultiple("image", 5), createProduct);
@@ -252,5 +256,11 @@ router.delete("/products/:id", deleteProduct);
 router.post("/addBanner", uploadMultiple("image", 5), addEcomBanner);
 router.put("/banner/:id", uploadMultiple("image", 5), updateBanner);
 router.delete("/banner/:id/:adminId", deleteBanner);
+router.get("/get-allproduct", fetchAllProductData);
+
+// user main category
+router.get("/get-user-maincategory/:userId",getUserMainCategories);
+
+
 
 export default router;

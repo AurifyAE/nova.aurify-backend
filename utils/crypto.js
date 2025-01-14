@@ -4,6 +4,7 @@ import crypto from "crypto";
 const algorithm = "aes-256-cbc";
 const secretKey = Buffer.from(process.env.ENCRYPTION_KEY, "base64");
 
+
 // Function to encrypt the password
 export const encryptPassword = (password) => {
   const iv = crypto.randomBytes(16);

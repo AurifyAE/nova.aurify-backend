@@ -4,6 +4,9 @@ import {
     deleteProductHelper,
     fetchProductsByMainCategory,
     fetchProductsBySubCategory,
+    fetchAllProductHelper,
+
+   
   } from "../../helper/admin/productHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
   
@@ -55,7 +58,6 @@ import { createAppError } from "../../utils/errorHandler.js";
     }
   };
   
-  
   // Delete product (soft delete)
   export const deleteProduct = async (req, res, next) => {
     try {
@@ -66,7 +68,6 @@ import { createAppError } from "../../utils/errorHandler.js";
       next(error);
     }
   };
-
 
   export const fetchProductData = async (req, res, next) => {
     try {
@@ -86,4 +87,13 @@ import { createAppError } from "../../utils/errorHandler.js";
       next(error);
     }
   };
+
   
+  export const fetchAllProductData = async (req, res, next) => {
+    try {
+      const result = await fetchAllProductHelper();
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  };
