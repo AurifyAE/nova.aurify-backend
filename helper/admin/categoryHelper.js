@@ -112,26 +112,24 @@ const createSubCategoryHelper = async (subCategoryData) => {
   }
 };
 
-const getAllSubCategoriesHelper = async (mainCategoryId) => {
+const getAllSubCategoriesHelper = async (adminId) => {
   try {
-    const filter = mainCategoryId ? { mainCategory: mainCategoryId } : {};
-
-//     // Fetch subcategories with their associated main category details
-//     const subCategories = await SubCategory.find(filter)
-//       .populate("mainCategory", "name") // Populate mainCategory with its name
-//       .populate("createdBy", "name email") // Populate createdBy (if needed)
-//       .sort({ createdAt: -1 }); // Sort by the most recently created
-
-//     return subCategories;
-//   } catch (error) {
-//     throw createAppError(`Error fetching subcategories: ${error.message}`, 500); // Internal server error
-//   }
-// };
-
+    const SubCategories = await SubCategory.find({
+      $or: [
+        { createdBy: adminId },
+        { createdBy: null },
+      ],
+    }).populate({
+      path: 'mainCategory', // Path to populate
+      select: 'name', // Only fetch the name field from the MainCategory collection
+    });
+    return SubCategories;
   } catch (error) {
     throw createAppError(`Error fetching subcategories: ${error.message}`, 500); // Internal server error
   }
 };
+
+
 
 const editSubCategoryHelper = async (subCategoryId, subCategoryData) => {
   try {

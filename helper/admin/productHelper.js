@@ -14,6 +14,7 @@ export const createProductHelper = async (productData) => {
       addedBy,
       addedByUser,
       weight,
+      makingCharge,
       purity,
       sku,
       tags,
@@ -41,6 +42,7 @@ export const createProductHelper = async (productData) => {
       addedBy: addedBy || null,
       addedByUser: addedByUser || null,
       weight,
+      makingCharge,
       purity,
       stock: true, // Default stock status
       sku,
@@ -61,6 +63,7 @@ export const createProductHelper = async (productData) => {
 
 // Update a product
 export const updateProductHelper = async (productId, updateData) => {
+  
   try {
     // Check if SKU exists (unique constraint)
     if (updateData.sku) {
@@ -102,8 +105,7 @@ export const deleteProductHelper = async (productId) => {
     if (!product) {
       throw createAppError("Product not found", 404);
     }
-
-    product.stock = false; // Mark the product as deleted (soft delete)
+    product.stock = !product.stock;
     await product.save();
     return { message: "Product marked as deleted successfully" };
   } catch (error) {
@@ -278,10 +280,10 @@ export const fetchProductsBySubCategory = async (subCategoryId) => {
   }
 };
 
-export const fetchAllProductHelper = async () => {
+export const fetchAllProductHelper = async (adminId) => {
   try {
     // Fetch all products from the database
-    const products = await Product.find();
+    const products = await Product.find({addedBy:adminId});
 
     if (!products || products.length === 0) {
       throw createAppError("No products found", 404);

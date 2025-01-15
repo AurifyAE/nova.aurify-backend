@@ -115,7 +115,8 @@ import {
 
   export const getAllSubCategories = async (req, res, next) => {
     try {
-      const subCategories = await getAllSubCategoriesHelper();
+      const adminId = req.params.adminId
+      const subCategories = await getAllSubCategoriesHelper(adminId);
       res.status(200).json({ success: true, data: subCategories });
     } catch (error) {
       next(error);

@@ -38,7 +38,6 @@ import { createAppError } from "../../utils/errorHandler.js";
     try {
       const { id } = req.params;
       const updateData = req.body;
-  
       // Handle uploaded files (e.g., image uploads)
       if (req.files?.length > 0) {
         const imageLocations = req.files.map((file) => file.location); // Assuming file.location contains the URL
@@ -91,7 +90,8 @@ import { createAppError } from "../../utils/errorHandler.js";
   
   export const fetchAllProductData = async (req, res, next) => {
     try {
-      const result = await fetchAllProductHelper();
+      const adminId = req.params.adminId
+      const result = await fetchAllProductHelper(adminId);
       res.status(200).json({ success: true, data: result });
     } catch (error) {
       next(error);

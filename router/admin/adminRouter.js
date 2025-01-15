@@ -37,6 +37,7 @@ import {
   deleteBanner,
   getBanner,
   updateBanner,
+  fetchEcomBanner
 } from "../../controllers/admin/bannerController.js";
 import {
   getPremiumDiscounts,
@@ -245,18 +246,18 @@ router.get("/sub-categories/:MaincategoryId", getSubCategories);
 router.post("/sub-category", createSubCategory);
 router.put("/sub-category/:subCategoryId", editSubCategory);
 router.delete("/sub-category/:subCategoryId", deleteSubCategory);
-router.get("/sub-categories", getAllSubCategories);
+router.get("/get-sub-categories/:adminId", getAllSubCategories);
 
 router.get("/get-product", fetchProductData);
 router.post("/products", uploadMultiple("image", 5), createProduct);
 router.put("/products/:id", uploadMultiple("image", 5), updateProduct);
 router.delete("/products/:id", deleteProduct);
-
+router.get("/get-all-product/:adminId", fetchAllProductData);
 //banner
 router.post("/addBanner", uploadMultiple("image", 5), addEcomBanner);
 router.put("/banner/:id", uploadMultiple("image", 5), updateBanner);
 router.delete("/banner/:id/:adminId", deleteBanner);
-router.get("/get-allproduct", fetchAllProductData);
+router.get("/banner/:adminId", fetchEcomBanner);
 
 // user main category
 router.get("/get-user-maincategory/:userId",getUserMainCategories);
