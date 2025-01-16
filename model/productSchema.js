@@ -9,6 +9,7 @@ const productSchema = new mongoose.Schema(
     },
     description: {
       type: String,
+      default: null,
       required: [true, "Product description is required"],
     },
     images: {

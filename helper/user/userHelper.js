@@ -6,6 +6,7 @@ import NotificationService from "../../utils/sendPushNotification.js";
 import newsModel from "../../model/newsSchema.js";
 import { spotRateModel } from "../../model/spotRateSchema.js";
 import {EcommerceBannerModel} from '../../model/EcommerceBannerSchema.js'
+import {VideoBannerModel} from '../../model/videoBannerSchema.js'
 import { encryptPassword, decryptPassword } from "../../utils/crypto.js";
 
 export const updateUserPassword = async (adminId, contact, newPassword) => {
@@ -242,6 +243,37 @@ export const getBannerDetails = async (adminId) => {
       success: false,
       banners: [],
       message: "Error fetching banners: " + error.message,
+    };
+  }
+};
+
+export const getVideoBannerDetails = async (adminId) => {
+  try {
+    const bannerDocument = await VideoBannerModel.findOne({ createdBy: adminId });
+
+    if (!bannerDocument) {
+      return {
+        success: false,
+        banners: [],
+        message: "No VideoBanner found for this admin",
+      };
+    }
+
+    // Flatten the videos array and extract only the location links
+    const locations = bannerDocument.banner
+      .flatMap((item) => item.videos) // Extract all videos arrays and flatten them
+      .map((video) => video.location); // Extract only the location property
+
+    return {
+      success: true,
+      banners: locations,
+      message: "VideoBanner fetched successfully",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      banners: [],
+      message: "Error fetching VideoBanner: " + error.message,
     };
   }
 };

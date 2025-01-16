@@ -21,13 +21,11 @@ const orderSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Admin",
     required: true,
-    unique: true,
   },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Users",
     required: true,
-    unique: true,
   },
   items: [orderItemSchema],
   totalPrice: {

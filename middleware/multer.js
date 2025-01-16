@@ -5,6 +5,7 @@ import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
 import dotenv from "dotenv";
+import ffmpeg from 'fluent-ffmpeg';
 dotenv.config();
 
 // Initialize the S3 client
@@ -16,23 +17,65 @@ const s3 = new S3Client({
   },
 });
 
-// Sharp processing and converting image to WebP format before uploading
-const sharpProcess = async (buffer) => {
+// Process image using Sharp
+const processImage = async (buffer) => {
   return sharp(buffer)
-    .resize({ width: 800 }) // Resize the image (adjust size as needed)
-    .toFormat('webp', { quality: 50 }) // Convert to WebP with quality of 50
+    .resize({ width: 800 })
+    .toFormat('webp', { quality: 50 })
     .toBuffer();
 };
 
-// Multer-S3 configuration
+// Process video using ffmpeg
+const processVideo = (inputPath, outputPath) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .videoCodec('libx264')
+      .size('?x720') // 720p height, maintain aspect ratio
+      .videoBitrate('1000k')
+      .fps(30)
+      .on('end', () => resolve())
+      .on('error', (err) => reject(err))
+      .save(outputPath);
+  });
+};
+
+// Determine file type and extension
+const getFileTypeAndExt = (file) => {
+  const mimeType = file.mimetype.split('/')[0];
+  const extension = file.originalname.split('.').pop().toLowerCase();
+  return { mimeType, extension };
+};
+
+// File filter function
+const fileFilter = (req, file, cb) => {
+  const allowedImageTypes = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
+  const allowedVideoTypes = ['mp4', 'mov', 'avi', 'mkv'];
+  const { mimeType, extension } = getFileTypeAndExt(file);
+
+  if ((mimeType === 'image' && allowedImageTypes.includes(extension)) ||
+      (mimeType === 'video' && allowedVideoTypes.includes(extension))) {
+    return cb(null, true);
+  }
+  cb(new Error('Error: Only images (jpeg, jpg, png, gif, webp) and videos (mp4, mov, avi, mkv) are allowed!'));
+};
+
+// Generate output filename
+const generateOutputFilename = (file) => {
+  const { mimeType } = getFileTypeAndExt(file);
+  const timestamp = Date.now().toString();
+  const basename = file.originalname.split('.')[0];
+  return `${timestamp}-${basename}${mimeType === 'image' ? '.webp' : '.mp4'}`;
+};
+
+// S3 storage configuration
 const s3Storage = multerS3({
   s3: s3,
   bucket: process.env.AWS_S3_BUCKET,
-  metadata: function (req, file, cb) {
+  metadata: (req, file, cb) => {
     cb(null, { fieldName: file.fieldname });
   },
-  key: function (req, file, cb) {
-    cb(null, `${Date.now().toString()}-${file.originalname.split('.')[0]}.webp`);
+  key: (req, file, cb) => {
+    cb(null, generateOutputFilename(file));
   },
   contentType: multerS3.AUTO_CONTENT_TYPE,
 });
@@ -44,55 +87,53 @@ if (!fs.existsSync(localStorageDir)) {
 }
 
 const localStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: (req, file, cb) => {
     cb(null, localStorageDir);
   },
-  filename: function (req, file, cb) {
-    cb(null, `${Date.now().toString()}-${file.originalname.split('.')[0]}.webp`);
+  filename: (req, file, cb) => {
+    cb(null, generateOutputFilename(file));
   }
 });
 
-// File filter function
-const fileFilter = (req, file, cb) => {
-  const fileTypes = ['jpeg', 'jpg', 'png', 'gif','webp'];
-  const extname = file.originalname.split('.').pop().toLowerCase();
-  const mimeType = file.mimetype.split('/').pop().toLowerCase();
-
-  if (fileTypes.includes(extname) && fileTypes.includes(mimeType)) {
-    return cb(null, true);
-  } else {
-    cb(new Error('Error: Only images are allowed (jpeg, jpg, png, gif)!'));
-  }
-};
-
-// Create multer upload instances for S3 and local storage
+// Create multer upload instances
 const s3Upload = multer({
   storage: s3Storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB file size limit
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB file size limit for videos
   fileFilter: fileFilter
 });
 
 const localUpload = multer({
   storage: localStorage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB file size limit
+  limits: { fileSize: 500 * 1024 * 1024 },
   fileFilter: fileFilter
 });
 
-// Single file upload middleware with option for local or S3 storage
+// Process file based on type
+const processFile = async (file) => {
+  const { mimeType } = getFileTypeAndExt(file);
+  
+  if (mimeType === 'image') {
+    const buffer = await fs.promises.readFile(file.path);
+    const processedBuffer = await processImage(buffer);
+    await fs.promises.writeFile(file.path, processedBuffer);
+  } else if (mimeType === 'video') {
+    const tempPath = `${file.path}.temp`;
+    await fs.promises.rename(file.path, tempPath);
+    await processVideo(tempPath, file.path);
+    await fs.promises.unlink(tempPath);
+  }
+};
+
+// Single file upload middleware
 export const uploadSingle = (fieldName, useLocalStorage = false) => {
   if (useLocalStorage) {
     return (req, res, next) => {
       localUpload.single(fieldName)(req, res, async (err) => {
-        if (err) {
-          return next(err);
-        }
-        if (!req.file) {
-          return next();
-        }
+        if (err) return next(err);
+        if (!req.file) return next();
+        
         try {
-          const buffer = await fs.promises.readFile(req.file.path);
-          const processedBuffer = await sharpProcess(buffer);
-          await fs.promises.writeFile(req.file.path, processedBuffer);
+          await processFile(req.file);
           next();
         } catch (error) {
           next(error);
@@ -104,22 +145,17 @@ export const uploadSingle = (fieldName, useLocalStorage = false) => {
   }
 };
 
-// Multiple file upload middleware with option for local or S3 storage
+// Multiple file upload middleware
 export const uploadMultiple = (fieldName, maxCount, useLocalStorage = false) => {
   if (useLocalStorage) {
     return (req, res, next) => {
       localUpload.array(fieldName, maxCount)(req, res, async (err) => {
-        if (err) {
-          return next(err);
-        }
-        if (!req.files || req.files.length === 0) {
-          return next();
-        }
+        if (err) return next(err);
+        if (!req.files || req.files.length === 0) return next();
+        
         try {
           for (const file of req.files) {
-            const buffer = await fs.promises.readFile(file.path);
-            const processedBuffer = await sharpProcess(buffer);
-            await fs.promises.writeFile(file.path, processedBuffer);
+            await processFile(file);
           }
           next();
         } catch (error) {

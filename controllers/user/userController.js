@@ -7,7 +7,8 @@ import {
   userUpdateSpread,
   userVerification,
   getAdminProfile,
-  getBannerDetails
+  getBannerDetails,
+  getVideoBannerDetails
 } from "../../helper/user/userHelper.js";
 import adminModel from "../../model/adminSchema.js";
 import DiscountModel from "../../model/discountSchema.js";
@@ -322,6 +323,28 @@ export const getBanner = async (req, res, next) => {
       success: true,
       banners,
       message: "Banner fetching successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getVideoBanner = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+    const { success, banners, message } = await getVideoBannerDetails(adminId);
+
+    if (!success) {
+      return res.status(204).json({
+        success: false,
+        message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      banners,
+      message: "VideoBanner fetching successfully",
     });
   } catch (error) {
     next(error);

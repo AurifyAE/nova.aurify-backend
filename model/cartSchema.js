@@ -18,7 +18,6 @@ const cartSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Users",
     required: true,
-    unique: true,
   },
   totalPrice: {type:Number,default:0},
   items: [cartItemSchema],

@@ -13,6 +13,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
     }
     // Fetch the user's cart items
     const cart = await Cart.findOne({ userId }).populate("items.productId");
+  
     // Check if the cart exists and has items
     if (!cart || cart.items.length === 0) {
       return {
@@ -26,6 +27,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
       quantity: item.quantity,
       addedAt: new Date(),
     }));
+
     // Check if an existing order exists for the user
     const existingOrder = await orderModel.findOne({ userId, adminId });
     if (existingOrder) {

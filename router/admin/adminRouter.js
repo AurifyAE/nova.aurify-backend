@@ -37,7 +37,10 @@ import {
   deleteBanner,
   getBanner,
   updateBanner,
-  fetchEcomBanner
+  fetchEcomBanner,
+  addVideoBanner,
+  fetchVideoBanner,
+  deleteVideoBanner
 } from "../../controllers/admin/bannerController.js";
 import {
   getPremiumDiscounts,
@@ -262,6 +265,9 @@ router.get("/banner/:adminId", fetchEcomBanner);
 // user main category
 router.get("/get-user-maincategory/:userId",getUserMainCategories);
 
-
-
+// video banner
+router.post("/video-banner/create/:adminId", uploadMultiple("video", 5), addVideoBanner);
+router.post("/video-banner/create/:adminId", uploadSingle("video"), addVideoBanner);
+router.get("/videoBanners/:adminId",fetchVideoBanner);
+router.delete("/videoBanner/:bannerId/:adminId",deleteVideoBanner);
 export default router;
