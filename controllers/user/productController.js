@@ -64,10 +64,11 @@ export const getBestSeller = async (req, res, next) => {
 export const getViewAll = async (req, res, next) => {
   try {
     const { page = 1, tags, mainCategory } = req.query;
-
+    const adminId = req.params.adminId
     const filters = {
       tags,
       mainCategory,
+      adminId
     };
 
     const { result, success, message, totalCount, totalPages } = await fetchAllProduct(

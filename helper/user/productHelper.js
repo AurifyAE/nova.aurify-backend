@@ -33,8 +33,8 @@ export const fetchBestSellerProduct = async () => {
 
 export const fetchAllProduct = async (page = 1, filters = {}, limit = 10) => {
   try {
-    const skip = (page - 1) * limit;
 
+    const skip = (page - 1) * limit;
     const matchStage = {};
     if (filters.tags) matchStage.tags = filters.tags;
     if (filters.mainCategory)
@@ -42,6 +42,8 @@ export const fetchAllProduct = async (page = 1, filters = {}, limit = 10) => {
         filters.mainCategory
       );
 
+    // Add the match for adminId if provided
+    if (filters.adminId) matchStage.addedBy = new mongoose.Types.ObjectId(filters.adminId);
     const pipeline = [
       {
         $lookup: {
@@ -72,7 +74,7 @@ export const fetchAllProduct = async (page = 1, filters = {}, limit = 10) => {
         },
       },
       {
-        $match: matchStage, // Apply filters, including mainCategory
+        $match: matchStage, // Apply filters, including adminId match
       },
       {
         $facet: {
@@ -101,6 +103,7 @@ export const fetchAllProduct = async (page = 1, filters = {}, limit = 10) => {
     };
   }
 };
+
 
 export const fetchNewArrivalProduct = async () => {
   try {

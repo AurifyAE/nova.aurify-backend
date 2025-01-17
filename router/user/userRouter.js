@@ -49,7 +49,7 @@ router.get("/get-product/:mainCateId", getProductDetails);
 router.get("/best-seller", getBestSeller);
 router.get("/top-rated", getTopRated);
 router.get("/new-arrival", getNewArrival)
-router.get("/view-all", getViewAll)
+router.get("/view-all/:adminId", getViewAll)
 router.get("/get-cart/:userId", getUserCart);
 router.get("/get-wishlist/:userId", getUserWishlist);
 router.get("/get-banner/:adminId", getBanner);

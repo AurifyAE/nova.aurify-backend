@@ -3,7 +3,6 @@ import { Cart } from "../../model/cartSchema.js";
 import { orderModel } from "../../model/orderSchema.js";
 
 export const orderPlace = async (adminId, userId, bookingData) => {
- 
   try {
     if (!userId || !adminId) {
       return {
