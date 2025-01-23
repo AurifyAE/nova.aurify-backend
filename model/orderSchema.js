@@ -15,6 +15,10 @@ const orderItemSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  itemStatus: {
+    type: String,
+    default: "Approval Pending"
+  }
 });
 
 const orderSchema = new mongoose.Schema(
@@ -48,8 +52,7 @@ const orderSchema = new mongoose.Schema(
     },
     orderStatus: {
       type: String,
-      enum: ["processing", "shipped", "delivered", "cancelled"],
-      default: "processing",
+      default: "Processing",
     },
     paymentStatus: {
       type: String,

@@ -8,7 +8,8 @@ import {
   userVerification,
   getAdminProfile,
   getBannerDetails,
-  getVideoBannerDetails
+  getVideoBannerDetails,
+  addFCMToken
 } from "../../helper/user/userHelper.js";
 import adminModel from "../../model/adminSchema.js";
 import DiscountModel from "../../model/discountSchema.js";
@@ -19,20 +20,22 @@ import { UsersModel } from "../../model/usersSchema.js";
 
 export const userLoginController = async (req, res, next) => {
   try {
-    const { contact, password } = req.body;
+    const { contact, password, token } = req.body;
     const { adminId } = req.params;
-    //  Verify user credentials
+
+    // Verify user credentials
     const response = await userVerification(adminId, contact, password);
+    
     if (response.success) {
       const userId = response.userId;
-      //  Fetch user data, including the category name
+
+      // Fetch user data, including the category name
       const user = await UsersModel.aggregate([
-        { $match: { "users._id": new mongoose.Types.ObjectId(userId) } },
         { $unwind: "$users" },
-        { $match: { "users._id": new mongoose.Types.ObjectId(userId) } },
+        { $match: { "users.contact": contact } }, // Match user by contact
         {
           $lookup: {
-            from: "categories", // This should be the name of your categories collection
+            from: "categories",
             localField: "users.categoryId",
             foreignField: "_id",
             as: "categoryDetails",
@@ -41,7 +44,7 @@ export const userLoginController = async (req, res, next) => {
         { $unwind: "$categoryDetails" },
         {
           $addFields: {
-            "users.categoryName": "$categoryDetails.name", // Add category name to users object
+            "users.categoryName": "$categoryDetails.name",
           },
         },
         {
@@ -53,35 +56,31 @@ export const userLoginController = async (req, res, next) => {
         },
       ]);
 
-      // Check if user is found
       if (!user || user.length === 0) {
-        return res
-          .status(404)
-          .json({ message: "User not found", success: false });
+        return res.status(404).json({ message: "User not found", success: false });
       }
 
       const userDetails = user[0].users;
 
-      //  Fetch user spot rate based on the user's category and adminId
+      // Call FCM token function after successful login
+      await addFCMToken(userDetails._id, token);
+
+      // Fetch user spot rate based on category and adminId
       const userSpotRate = await UserSpotRateModel.findOne(
         {
           createdBy: adminId,
           "categories.categoryId": userDetails.categoryId,
         },
-        {
-          "categories.$": 1,
-        }
+        { "categories.$": 1 }
       );
-      // Check if user spot rate is found
+
       if (!userSpotRate || !userSpotRate.categories.length) {
-        return res
-          .status(404)
-          .json({ message: "User spot rate not found", success: false });
+        return res.status(404).json({ message: "User spot rate not found", success: false });
       }
-      // Access the matched category details
+
       const matchedCategory = userSpotRate.categories[0];
 
-      //  Respond with the fetched data
+      // Respond with user data
       res.status(200).json({
         message: response.message,
         success: response.success,
@@ -90,12 +89,13 @@ export const userLoginController = async (req, res, next) => {
         userSpotRate: matchedCategory,
       });
     } else {
-      res.status(401).json({ message: "Login failed", success: false });
+      res.status(401).json({ message: response.message, success: response.success, });
     }
   } catch (error) {
     next(error);
   }
 };
+
 
 export const getProfile = async (req, res, next) => {
   try {

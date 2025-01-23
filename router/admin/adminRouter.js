@@ -40,7 +40,7 @@ import {
   fetchEcomBanner,
   addVideoBanner,
   fetchVideoBanner,
-  deleteVideoBanner
+  deleteVideoBanner,
 } from "../../controllers/admin/bannerController.js";
 import {
   getPremiumDiscounts,
@@ -80,7 +80,11 @@ import {
   deleteSpreadValueController,
   fetchSpreadValues,
 } from "../../controllers/admin/spreadValuesController.js";
-import { fetchBookings } from "../../controllers/admin/bookingController.js";
+import {
+  fetchBookings,
+  updateOrder,
+  updateOrderQuantity,
+} from "../../controllers/admin/bookingController.js";
 import {
   uploadBG,
   getBackground,
@@ -116,7 +120,6 @@ import {
   getAllSubCategories,
   getAllMainCategories,
   getUserMainCategories,
-
 } from "../../controllers/admin/shopCategoryController.js";
 import {
   createProduct,
@@ -124,7 +127,6 @@ import {
   updateProduct,
   fetchProductData,
   fetchAllProductData,
-
 } from "../../controllers/admin/productController.js";
 
 const router = Router();
@@ -217,9 +219,6 @@ router.put("/editCategory/:id/:adminId", editCategory);
 router.delete("/deleteCategory/:id/:adminId", deleteCategory);
 router.get("/getCategories/:adminId", getCategories);
 
-// Order management
-router.get("/booking/:adminId", fetchBookings);
-
 //user router
 router.post("/admin/:adminId/users", addUser);
 router.put("/admin/users/:userId/:adminId", editUser);
@@ -240,7 +239,11 @@ router.patch(
 );
 
 router.post("/main-category", uploadSingle("image"), createMainCategory);
-router.put("/main-category/:categoryId",uploadSingle("image"),editMainCategory);
+router.put(
+  "/main-category/:categoryId",
+  uploadSingle("image"),
+  editMainCategory
+);
 router.delete("/main-category/:categoryId", deleteMainCategory);
 router.get("/main-categories/:adminId", getMainCategories);
 router.get("/main-categories", getAllMainCategories);
@@ -263,11 +266,24 @@ router.delete("/banner/:id/:adminId", deleteBanner);
 router.get("/banner/:adminId", fetchEcomBanner);
 
 // user main category
-router.get("/get-user-maincategory/:userId",getUserMainCategories);
+router.get("/get-user-maincategory/:userId", getUserMainCategories);
 
 // video banner
-router.post("/video-banner/create/:adminId", uploadMultiple("video", 5), addVideoBanner);
-router.post("/video-banner/create/:adminId", uploadSingle("video"), addVideoBanner);
-router.get("/videoBanners/:adminId",fetchVideoBanner);
-router.delete("/videoBanner/:bannerId/:adminId",deleteVideoBanner);
+router.post(
+  "/video-banner/create/:adminId",
+  uploadMultiple("video", 5),
+  addVideoBanner
+);
+router.post(
+  "/video-banner/create/:adminId",
+  uploadSingle("video"),
+  addVideoBanner
+);
+router.get("/videoBanners/:adminId", fetchVideoBanner);
+router.delete("/videoBanner/:bannerId/:adminId", deleteVideoBanner);
+
+// Order management
+router.get("/booking/:adminId", fetchBookings);
+router.put("/update-order/:orderId", updateOrder);
+router.put("/update-order-quantity/:orderId", updateOrderQuantity);
 export default router;

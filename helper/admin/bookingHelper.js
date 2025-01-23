@@ -1,99 +1,260 @@
 import mongoose from "mongoose";
 import { orderModel } from "../../model/orderSchema.js";
 
+export const updateOrderDetails = async (orderId, orderStatus) => {
+  try {
+    // Find the order by ID and update the orderStatus
+    const updatedOrder = await orderModel.findByIdAndUpdate(
+      { _id: orderId },
+      { orderStatus },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedOrder) {
+      return {
+        success: false,
+        message: "Order not found",
+      };
+    }
+
+    return {
+      success: true,
+      message: "Order status updated successfully",
+      data: updatedOrder,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error updating order: " + error.message,
+    };
+  }
+};
+
+export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
+  try {
+    const { itemStatus, itemId, quantity } = orderDetails;
+
+    // Find the order by ID
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return {
+        success: false,
+        message: "Order not found",
+      };
+    }
+
+    // Find the item inside the order's items array
+    const itemIndex = order.items.findIndex(
+      (item) => item._id.toString() === itemId
+    );
+
+    if (itemIndex === -1) {
+      return {
+        success: false,
+        message: "Item not found in the order",
+      };
+    }
+
+    // Update the specific item's quantity and status
+    order.items[itemIndex].quantity = quantity;
+    order.items[itemIndex].itemStatus = itemStatus;
+
+    // Check if all items are "Approved"
+    const allApproved = order.items.every((item) => item.itemStatus === "Approved");
+
+    // Check if any item has "User Approval Pending"
+    const anyUserApprovalPending = order.items.some(
+      (item) => item.itemStatus === "User Approval Pending"
+    );
+
+    // Update orderStatus based on items' statuses
+    if (allApproved) {
+      order.orderStatus = "Success";
+    } else if (anyUserApprovalPending) {
+      order.orderStatus = "User Approval Pending";
+    } else {
+      order.orderStatus = "Processing"; // Default status if conditions aren't met
+    }
+
+    // Save the updated order
+    await order.save();
+
+    return {
+      success: true,
+      message: "Order updated successfully",
+      data: order,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error updating order: " + error.message,
+    };
+  }
+};
+
+
+
 export const fetchBookingDetails = async (adminId) => {
   try {
+    // Input validation
     if (!adminId) {
       return {
         success: false,
-        message: "Missing required fields",
+        message: "Missing admin ID",
       };
     }
 
     const adminObjectId = new mongoose.Types.ObjectId(adminId);
 
-    const orders = await orderModel.aggregate([
-      { $match: { adminId: adminObjectId } },
+    // Define the base pipeline stages
+    const pipeline = [
+      // Match orders for the specific admin
+      {
+        $match: {
+          adminId: adminObjectId,
+        },
+      },
+
+      // Lookup user details
       {
         $lookup: {
-          from: "users", // Collection name for users
-          let: { userId: "$userId" }, // Pass the `userId` from the order document
+          from: "users",
+          let: { userId: "$userId" },
           pipeline: [
             {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ["$createdBy", adminObjectId] }, // Match adminId
-                    {
-                      $in: ["$$userId", "$users._id"], // Check if userId matches any `users._id`
-                    },
+                    { $eq: ["$createdBy", adminObjectId] },
+                    { $in: ["$$userId", "$users._id"] },
                   ],
                 },
               },
             },
             {
               $project: {
-                users: {
-                  $filter: {
-                    input: "$users",
-                    as: "user",
-                    cond: { $eq: ["$$user._id", "$$userId"] }, // Filter for the matching user
+                user: {
+                  $first: {
+                    $filter: {
+                      input: "$users",
+                      as: "user",
+                      cond: { $eq: ["$$user._id", "$$userId"] },
+                    },
                   },
                 },
               },
             },
           ],
-          as: "userDetails", // Output the user details
+          as: "userDetails",
         },
       },
-      {
-        $unwind: {
-          path: "$userDetails",
-          preserveNullAndEmptyArrays: true, // Allow orders without matching user details
-        },
-      },
-      {
-        $unwind: {
-          path: "$userDetails.users",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
+
+      // Lookup product details for all items in the order
       {
         $lookup: {
-          from: "products", // Assuming a collection for products exists
-          localField: "items.productId",
-          foreignField: "_id",
+          from: "products",
+          let: { orderItems: "$items" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$_id", "$$orderItems.productId"],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                price: 1,
+                images: 1,
+                sku: 1,
+                type: 1,
+                weight: 1,
+                purity: 1,
+                makingCharge: 1,
+              },
+            },
+          ],
           as: "productDetails",
         },
       },
+
+      // Final shape of the data
       {
         $project: {
           _id: 1,
-          adminId: 1,
-          userId: 1,
-          "userDetails.users.name": 1,
-          "userDetails.users.contact": 1,
-          "userDetails.users.location": 1,
-          productDetails: {
-            title: 1,
-            price: 1,
-            images: 1,
-            sku: 1,
-            type: 1,
-            weight: 1,
-            purity: 1,
-            makingCharge: 1,
-          },
+          orderNumber: 1,
+          orderDate: 1,
+          deliveryDate: 1,
           totalPrice: 1,
-          transactionId: 1,
           orderStatus: 1,
           paymentStatus: 1,
           paymentMethod: 1,
-          deliveryDate: 1,
-          orderDate: 1,
+          transactionId: 1,
+
+          // Customer information
+          customer: {
+            $let: {
+              vars: {
+                userInfo: { $arrayElemAt: ["$userDetails", 0] },
+              },
+              in: {
+                id: "$userId",
+                name: "$$userInfo.user.name",
+                contact: "$$userInfo.user.contact",
+                location: "$$userInfo.user.location",
+              },
+            },
+          },
+
+          // Products in the order
+          items: {
+            $map: {
+              input: "$items",
+              as: "orderItem",
+              in: {
+                _id:"$$orderItem._id",
+                itemStatus:"$$orderItem.itemStatus",
+                quantity: "$$orderItem.quantity",
+                product: {
+                  $let: {
+                    vars: {
+                      productInfo: {
+                        $first: {
+                          $filter: {
+                            input: "$productDetails",
+                            as: "p",
+                            cond: { $eq: ["$$p._id", "$$orderItem.productId"] },
+                          },
+                        },
+                      },
+                    },
+                    in: {
+                      id: "$$productInfo._id",
+                      title: "$$productInfo.title",
+                      sku: "$$productInfo.sku",
+                      price: "$$productInfo.price",
+                      type: "$$productInfo.type",
+                      weight: "$$productInfo.weight",
+                      purity: "$$productInfo.purity",
+                      makingCharge: "$$productInfo.makingCharge",
+                      images: "$$productInfo.images",
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
-    ]);
+
+      // Sort by order date descending
+      { $sort: { orderDate: -1 } },
+    ];
+
+    const orders = await orderModel.aggregate(pipeline);
 
     if (orders.length === 0) {
       return {
@@ -110,7 +271,7 @@ export const fetchBookingDetails = async (adminId) => {
   } catch (error) {
     return {
       success: false,
-      message: "Error fetching the orders: " + error.message,
+      message: "Error fetching orders: " + error.message,
     };
   }
 };

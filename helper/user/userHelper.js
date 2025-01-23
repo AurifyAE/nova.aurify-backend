@@ -2,11 +2,12 @@ import adminModel from "../../model/adminSchema.js";
 import { UsersModel } from "../../model/usersSchema.js";
 import NotificationModel from "../../model/notificationSchema.js";
 import FCMTokenModel from "../../model/fcmTokenSchema.js";
+import UserFCMTokenModel from "../../model/userFCMToken.js";
 import NotificationService from "../../utils/sendPushNotification.js";
 import newsModel from "../../model/newsSchema.js";
 import { spotRateModel } from "../../model/spotRateSchema.js";
-import {EcommerceBannerModel} from '../../model/EcommerceBannerSchema.js'
-import {VideoBannerModel} from '../../model/videoBannerSchema.js'
+import { EcommerceBannerModel } from "../../model/EcommerceBannerSchema.js";
+import { VideoBannerModel } from "../../model/videoBannerSchema.js";
 import { encryptPassword, decryptPassword } from "../../utils/crypto.js";
 
 export const updateUserPassword = async (adminId, contact, newPassword) => {
@@ -84,27 +85,66 @@ export const getAdminProfile = async (adminId) => {
   }
 };
 
-export const userVerification = async (adminId, contact, password) => {
+export const userVerification = async (adminId, contact, password, token) => {
   try {
     const usersDoc = await UsersModel.findOne({ createdBy: adminId });
     if (!usersDoc) {
       return { success: false, message: "Admin not found" };
     }
     const user = usersDoc.users.find((user) => user.contact === contact);
-    
+
     if (!user) {
-      return { success: false, message: "User not found" };
+      return { success: false, message: "Invalid contact number. Authentication failed." };
     }
     const decryptedPassword = decryptPassword(
       user.password,
       user.passwordAccessKey
     );
     if (password !== decryptedPassword) {
-      return { success: false, message: "Invalid password."  };
+      return { success: false, message: "Invalid password." };
     }
-    return { success: true, message: "Login successful", userId:user._id  };
+    return { success: true, message: "Login successful", userId: user._id };
   } catch (error) {
     throw new Error("Error during login: " + error.message);
+  }
+};
+export const addFCMToken = async (userId, fcmToken) => {
+  try {
+    if (!fcmToken || fcmToken.trim() === "") {
+      return { success: false, message: "Invalid FCM token." };
+    }
+
+    // Find user by userId
+    const user = await UsersModel.findOne({ "users._id": userId });
+
+    if (!user) {
+      return { success: false, message: "User not found." };
+    }
+
+    let fcmEntry = await UserFCMTokenModel.findOne({ createdBy: userId });
+
+    if (fcmEntry) {
+      const tokenExists = fcmEntry.FCMTokens.some(
+        (tokenObj) => tokenObj.token === fcmToken
+      );
+
+      if (tokenExists) {
+        return { success: true, message: "FCM token already exists." };
+      }
+
+      // Add new token
+      fcmEntry.FCMTokens.push({ token: fcmToken });
+    } else {
+      fcmEntry = new UserFCMTokenModel({
+        FCMTokens: [{ token: fcmToken }],
+        createdBy: userId,
+      });
+    }
+
+    await fcmEntry.save();
+    return { success: true, message: "FCM token successfully added." };
+  } catch (error) {
+    throw new Error("Error adding FCM token: " + error.message);
   }
 };
 
@@ -217,11 +257,11 @@ export const getNewsByAdminId = async (adminId) => {
   }
 };
 
-
 export const getBannerDetails = async (adminId) => {
   try {
-  
-    const bannerDocument = await EcommerceBannerModel.findOne({ createdBy: adminId });
+    const bannerDocument = await EcommerceBannerModel.findOne({
+      createdBy: adminId,
+    });
 
     if (!bannerDocument) {
       return {
@@ -249,7 +289,9 @@ export const getBannerDetails = async (adminId) => {
 
 export const getVideoBannerDetails = async (adminId) => {
   try {
-    const bannerDocument = await VideoBannerModel.findOne({ createdBy: adminId });
+    const bannerDocument = await VideoBannerModel.findOne({
+      createdBy: adminId,
+    });
 
     if (!bannerDocument) {
       return {
