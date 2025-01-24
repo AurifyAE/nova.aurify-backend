@@ -89,3 +89,185 @@ export const orderPlace = async (adminId, userId, bookingData) => {
     };
   }
 };
+
+
+export const fetchBookingDetails = async (adminId, userId) => {
+  try {
+    if (!adminId || !userId) {
+      return {
+        success: false,
+        message: "Admin ID and User ID are required.",
+      };
+    }
+
+    const adminObjectId = new mongoose.Types.ObjectId(adminId);
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    const pipeline = [
+      // Match orders for the specific admin
+      {
+        $match: {
+          adminId: adminObjectId,
+          userId: userObjectId
+        },
+      },
+
+      // Lookup user details
+      {
+        $lookup: {
+          from: "users",
+          let: { userId: "$userId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$createdBy", adminObjectId] },
+                    { $in: ["$$userId", "$users._id"] },
+                  ],
+                },
+              },
+            },
+            {
+              $project: {
+                user: {
+                  $first: {
+                    $filter: {
+                      input: "$users",
+                      as: "user",
+                      cond: { $eq: ["$$user._id", "$$userId"] },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+          as: "userDetails",
+        },
+      },
+
+      // Lookup product details for all items in the order
+      {
+        $lookup: {
+          from: "products",
+          let: { orderItems: "$items" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$_id", "$$orderItems.productId"],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                price: 1,
+                images: 1,
+                sku: 1,
+                type: 1,
+                weight: 1,
+                purity: 1,
+                makingCharge: 1,
+              },
+            },
+          ],
+          as: "productDetails",
+        },
+      },
+
+      // Final shape of the data
+      {
+        $project: {
+          _id: 1,
+          orderNumber: 1,
+          orderDate: 1,
+          deliveryDate: 1,
+          totalPrice: 1,
+          orderStatus: 1,
+          paymentStatus: 1,
+          paymentMethod: 1,
+          transactionId: 1,
+
+          // Customer information
+          customer: {
+            $let: {
+              vars: {
+                userInfo: { $arrayElemAt: ["$userDetails", 0] },
+              },
+              in: {
+                id: "$userId",
+                name: "$$userInfo.user.name",
+                contact: "$$userInfo.user.contact",
+                location: "$$userInfo.user.location",
+              },
+            },
+          },
+
+          // Products in the order
+          items: {
+            $map: {
+              input: "$items",
+              as: "orderItem",
+              in: {
+                _id:"$$orderItem._id",
+                itemStatus:"$$orderItem.itemStatus",
+                quantity: "$$orderItem.quantity",
+                product: {
+                  $let: {
+                    vars: {
+                      productInfo: {
+                        $first: {
+                          $filter: {
+                            input: "$productDetails",
+                            as: "p",
+                            cond: { $eq: ["$$p._id", "$$orderItem.productId"] },
+                          },
+                        },
+                      },
+                    },
+                    in: {
+                      id: "$$productInfo._id",
+                      title: "$$productInfo.title",
+                      sku: "$$productInfo.sku",
+                      price: "$$productInfo.price",
+                      type: "$$productInfo.type",
+                      weight: "$$productInfo.weight",
+                      purity: "$$productInfo.purity",
+                      makingCharge: "$$productInfo.makingCharge",
+                      images: "$$productInfo.images",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      // Sort by order date descending
+      { $sort: { orderDate: -1 } },
+    ];
+
+    const orders = await orderModel.aggregate(pipeline);
+
+    if (orders.length === 0) {
+      return {
+        success: false,
+        message: "No orders found for the given admin and user.",
+      };
+    }
+
+    return {
+      success: true,
+      message: "Orders fetched successfully.",
+      orderDetails: orders,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error fetching orders: " + error.message,
+    };
+  }
+};

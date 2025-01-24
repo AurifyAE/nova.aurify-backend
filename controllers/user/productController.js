@@ -63,16 +63,24 @@ export const getBestSeller = async (req, res, next) => {
 };
 export const getViewAll = async (req, res, next) => {
   try {
-    const { page = 1, tags, mainCategory } = req.query;
-    const adminId = req.params.adminId
+    // Extracting query parameters correctly
+    const { page = '1', tags, mainCategory, adminId } = req.query;
+
+    if (!adminId) {
+      return res.status(400).json({
+        success: false,
+        message: "Admin ID is required",
+      });
+    }
+
     const filters = {
       tags,
       mainCategory,
-      adminId
+      adminId,
     };
 
     const { result, success, message, totalCount, totalPages } = await fetchAllProduct(
-      parseInt(page, 10),
+      parseInt(page, 10) || 1, // Ensuring page is a valid number with default as 1
       filters
     );
 
@@ -97,6 +105,7 @@ export const getViewAll = async (req, res, next) => {
     next(error);
   }
 };
+
 
 
 export const getNewArrival = async (req, res, next) => {

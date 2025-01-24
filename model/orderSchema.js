@@ -75,6 +75,10 @@ const orderSchema = new mongoose.Schema(
       type: String,
       maxlength: 500,
     },
+    notificationSentAt: {
+      type: Date,
+      default: null
+    }
   },
   { timestamps: true }
 );

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { orderModel } from "../../model/orderSchema.js";
-
+import UserFCMTokenModel from "../../model/userFCMToken.js";
+import NotificationService from "../../utils/sendPushNotification.js";
 export const updateOrderDetails = async (orderId, orderStatus) => {
   try {
     // Find the order by ID and update the orderStatus
@@ -32,7 +33,15 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
 
 export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
   try {
-    const { itemStatus, itemId, quantity } = orderDetails;
+    let { itemStatus, itemId, quantity } = orderDetails;
+
+    // Determine if the quantity is confirmed by the user
+    const isQuantityConfirmedByUser = quantity && quantity >= 1;
+
+    // Set default quantity to 1 if none provided or quantity is invalid (less than 1)
+    if (!quantity || quantity < 1) {
+      quantity = 1;
+    }
 
     // Find the order by ID
     const order = await orderModel.findById(orderId);
@@ -56,12 +65,14 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
       };
     }
 
-    // Update the specific item's quantity and status
+    // Update the specific item's quantity and status immediately
     order.items[itemIndex].quantity = quantity;
     order.items[itemIndex].itemStatus = itemStatus;
 
     // Check if all items are "Approved"
-    const allApproved = order.items.every((item) => item.itemStatus === "Approved");
+    const allApproved = order.items.every(
+      (item) => item.itemStatus === "Approved"
+    );
 
     // Check if any item has "User Approval Pending"
     const anyUserApprovalPending = order.items.some(
@@ -73,12 +84,57 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
       order.orderStatus = "Success";
     } else if (anyUserApprovalPending) {
       order.orderStatus = "User Approval Pending";
+      order.notificationSentAt = new Date();
     } else {
-      order.orderStatus = "Processing"; // Default status if conditions aren't met
+      order.orderStatus = "Processing";
     }
 
     // Save the updated order
     await order.save();
+
+    // Send confirmation notification only if quantity is confirmed by the user
+    if (isQuantityConfirmedByUser) {
+      // Fetch FCM tokens
+      let fcmTokenDoc = await UserFCMTokenModel.findOne({
+        createdBy: order.userId,
+      });
+
+      if (fcmTokenDoc && fcmTokenDoc.FCMTokens.length > 0) {
+        const invalidTokens = [];
+
+        // Send confirmation notifications to all tokens
+        for (const tokenObj of fcmTokenDoc.FCMTokens) {
+          try {
+            await NotificationService.sendQuantityConfirmationNotification(
+              tokenObj.token,
+              orderId,
+              itemId,
+              quantity
+            );
+          } catch (error) {
+            console.error(
+              `Failed to send confirmation notification to token: ${tokenObj.token}`,
+              error
+            );
+            if (
+              error.errorInfo &&
+              error.errorInfo.code ===
+                "messaging/registration-token-not-registered"
+            ) {
+              invalidTokens.push(tokenObj.token);
+            }
+          }
+        }
+
+        // Remove invalid tokens if any were found
+        if (invalidTokens.length > 0) {
+          fcmTokenDoc.FCMTokens = fcmTokenDoc.FCMTokens.filter(
+            (tokenObj) => !invalidTokens.includes(tokenObj.token)
+          );
+          await fcmTokenDoc.save();
+        }
+      }
+    }
 
     return {
       success: true,
@@ -92,8 +148,6 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
     };
   }
 };
-
-
 
 export const fetchBookingDetails = async (adminId) => {
   try {
@@ -215,8 +269,8 @@ export const fetchBookingDetails = async (adminId) => {
               input: "$items",
               as: "orderItem",
               in: {
-                _id:"$$orderItem._id",
-                itemStatus:"$$orderItem.itemStatus",
+                _id: "$$orderItem._id",
+                itemStatus: "$$orderItem.itemStatus",
                 quantity: "$$orderItem.quantity",
                 product: {
                   $let: {

@@ -32,6 +32,7 @@ import {
   getBanner,
   getVideoBanner
 } from "../../controllers/user/userController.js";
+import { fetchUserOrder, orderQuantityConfirmation } from "../../controllers/user/orderController.js";
 
 const router = Router();
 
@@ -49,7 +50,7 @@ router.get("/get-product/:mainCateId", getProductDetails);
 router.get("/best-seller", getBestSeller);
 router.get("/top-rated", getTopRated);
 router.get("/new-arrival", getNewArrival)
-router.get("/view-all/:adminId", getViewAll)
+router.get("/view-all", getViewAll)
 router.get("/get-cart/:userId", getUserCart);
 router.get("/get-wishlist/:userId", getUserWishlist);
 router.get("/get-banner/:adminId", getBanner);
@@ -70,5 +71,7 @@ router.post('/booking/:adminId/:userId',saveBooking)
 router.put('/products/fix-prices',fixedProductPrice)
 
 router.get("/get-premium-discount/:adminId", getPremiumDiscounts); // New route for premium discounts
+router.post('/order_quantity_confirmation',orderQuantityConfirmation)
+router.get('/fetch-order/:adminId/:userId',fetchUserOrder)
 
 export default router;

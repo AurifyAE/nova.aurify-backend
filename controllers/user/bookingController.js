@@ -24,3 +24,4 @@ export const saveBooking = async (req, res, next) => {
     next(error);
   }
 };
+
