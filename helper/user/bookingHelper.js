@@ -76,8 +76,6 @@ export const orderPlace = async (adminId, userId, bookingData) => {
       userId: new mongoose.Types.ObjectId(userId),
       items: orderItems,
       totalPrice: totalPrice,
-      orderStatus: "processing",
-      paymentStatus: "pending",
       deliveryDate: new Date(bookingData.deliveryDate),  // Ensure date format
       paymentMethod: bookingData.paymentMethod,
     });
