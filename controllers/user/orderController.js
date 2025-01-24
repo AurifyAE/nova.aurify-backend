@@ -17,6 +17,7 @@ export const orderQuantityConfirmation = async (req, res, next) => {
     }
 
     const item = order.items.find((item) => item._id.toString() === itemId);
+
     if (!item) {
       return res.status(404).json({
         success: false,

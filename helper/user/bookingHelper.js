@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Cart } from "../../model/cartSchema.js";
 import { orderModel } from "../../model/orderSchema.js";
+import Product from "../../model/productSchema.js";
 
 export const orderPlace = async (adminId, userId, bookingData) => {
   try {
@@ -10,9 +11,10 @@ export const orderPlace = async (adminId, userId, bookingData) => {
         message: "Missing required fields",
       };
     }
+
     // Fetch the user's cart items
     const cart = await Cart.findOne({ userId }).populate("items.productId");
-  
+
     // Check if the cart exists and has items
     if (!cart || cart.items.length === 0) {
       return {
@@ -20,20 +22,38 @@ export const orderPlace = async (adminId, userId, bookingData) => {
         message: "Cart is empty, cannot place an order.",
       };
     }
-    // Prepare order items
-    const orderItems = cart.items.map((item) => ({
-      productId: item.productId,
-      quantity: item.quantity,
-      addedAt: new Date(),
-    }));
+
+    // Fetch current prices from the Product collection
+    let totalPrice = 0;
+    const orderItems = await Promise.all(
+      cart.items.map(async (item) => {
+        const product = await Product.findById(item.productId);
+        const fixedPrice = product.price; // Fix the price at the order time
+
+        // Calculate item total and add to total price
+        const itemTotal = fixedPrice * item.quantity;
+        totalPrice += itemTotal;
+
+        return {
+          productId: item.productId,
+          quantity: item.quantity,
+          fixedPrice: fixedPrice,  // Store fixed price
+          totalPrice: itemTotal,    // Store calculated total
+          addedAt: new Date(),
+        };
+      })
+    );
 
     // Check if an existing order exists for the user
     const existingOrder = await orderModel.findOne({ userId, adminId });
+
     if (existingOrder) {
-      // Update the existing order by adding new items and adjusting the total price
+      // Update the existing order with new items and adjust the total price
       existingOrder.items.push(...orderItems);
-      existingOrder.totalPrice += cart.totalPrice;
+      existingOrder.totalPrice += totalPrice;
+
       const updatedOrder = await existingOrder.save();
+
       // Clear booked items from the cart
       const bookedProductIds = orderItems.map((item) => item.productId);
       await Cart.updateOne(
@@ -43,24 +63,27 @@ export const orderPlace = async (adminId, userId, bookingData) => {
           $set: { totalPrice: 0 },
         }
       );
+
       return {
         success: true,
         message: "Order updated successfully.",
         orderDetails: updatedOrder,
       };
     } else {
-      // Create a new order
+      // Create a new order with the fixed price
       const newOrder = new orderModel({
         adminId: new mongoose.Types.ObjectId(adminId),
         userId: new mongoose.Types.ObjectId(userId),
         items: orderItems,
-        totalPrice: cart.totalPrice,
+        totalPrice: totalPrice, // Use calculated total price
         orderStatus: "processing",
         paymentStatus: "pending",
-        deliveryDate:bookingData.deliveryDate,
-        paymentMethod:bookingData.paymentMethod
+        deliveryDate: bookingData.deliveryDate,
+        paymentMethod: bookingData.paymentMethod,
       });
+
       const savedOrder = await newOrder.save();
+
       if (savedOrder) {
         // Clear booked items from the cart
         const bookedProductIds = orderItems.map((item) => item.productId);
@@ -71,6 +94,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
             $set: { totalPrice: 0 },
           }
         );
+
         return {
           success: true,
           message: "Order placed successfully.",
@@ -78,6 +102,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
         };
       }
     }
+
     return {
       success: false,
       message: "Failed to process the order.",
@@ -89,6 +114,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
     };
   }
 };
+
 
 
 export const fetchBookingDetails = async (adminId, userId) => {
