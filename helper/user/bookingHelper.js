@@ -5,10 +5,10 @@ import Product from "../../model/productSchema.js";
 
 export const orderPlace = async (adminId, userId, bookingData) => {
   try {
-    if (!userId || !adminId) {
+    if (!userId || !adminId || !bookingData?.paymentMethod || !bookingData?.deliveryDate) {
       return {
         success: false,
-        message: "Missing required fields",
+        message: "Missing required fields (adminId, userId, paymentMethod, or deliveryDate).",
       };
     }
 
@@ -16,44 +16,75 @@ export const orderPlace = async (adminId, userId, bookingData) => {
     const cart = await Cart.findOne({ userId }).populate("items.productId");
 
     // Check if the cart exists and has items
-    if (!cart || cart.items.length === 0) {
+    if (!cart) {
+      return {
+        success: false,
+        message: "No cart found for the user.",
+      };
+    }
+
+    if (cart.items.length === 0) {
       return {
         success: false,
         message: "Cart is empty, cannot place an order.",
       };
     }
 
-    // Fetch current prices from the Product collection
     let totalPrice = 0;
     const orderItems = await Promise.all(
       cart.items.map(async (item) => {
         const product = await Product.findById(item.productId);
-        const fixedPrice = product.price; // Fix the price at the order time
 
-        // Calculate item total and add to total price
+        if (!product) {
+          return {
+            success: false,
+            message: `Product with ID ${item.productId} not found.`,
+          };
+        }
+
+        if (product.price <= 0) {
+          return {
+            success: false,
+            message: `Invalid price for product ID ${item.productId}.`,
+          };
+        }
+        const fixedPrice = product.price;
         const itemTotal = fixedPrice * item.quantity;
         totalPrice += itemTotal;
 
         return {
           productId: item.productId,
           quantity: item.quantity,
-          fixedPrice: fixedPrice,  // Store fixed price
-          totalPrice: itemTotal,    // Store calculated total
+          fixedPrice: fixedPrice, // Store fixed price
+          totalPrice: itemTotal, // Store calculated total
           addedAt: new Date(),
         };
       })
     );
 
-    // Check if an existing order exists for the user
-    const existingOrder = await orderModel.findOne({ userId, adminId });
+    // Validate total price
+    if (totalPrice <= 0) {
+      return {
+        success: false,
+        message: "Invalid total price calculation.",
+      };
+    }
 
-    if (existingOrder) {
-      // Update the existing order with new items and adjust the total price
-      existingOrder.items.push(...orderItems);
-      existingOrder.totalPrice += totalPrice;
+    // Create a new order with the fixed price
+    const newOrder = new orderModel({
+      adminId: new mongoose.Types.ObjectId(adminId),
+      userId: new mongoose.Types.ObjectId(userId),
+      items: orderItems,
+      totalPrice: totalPrice,
+      orderStatus: "processing",
+      paymentStatus: "pending",
+      deliveryDate: new Date(bookingData.deliveryDate),  // Ensure date format
+      paymentMethod: bookingData.paymentMethod,
+    });
 
-      const updatedOrder = await existingOrder.save();
+    const savedOrder = await newOrder.save();
 
+    if (savedOrder) {
       // Clear booked items from the cart
       const bookedProductIds = orderItems.map((item) => item.productId);
       await Cart.updateOne(
@@ -66,41 +97,9 @@ export const orderPlace = async (adminId, userId, bookingData) => {
 
       return {
         success: true,
-        message: "Order updated successfully.",
-        orderDetails: updatedOrder,
+        message: "Order placed successfully.",
+        orderDetails: savedOrder,
       };
-    } else {
-      // Create a new order with the fixed price
-      const newOrder = new orderModel({
-        adminId: new mongoose.Types.ObjectId(adminId),
-        userId: new mongoose.Types.ObjectId(userId),
-        items: orderItems,
-        totalPrice: totalPrice, // Use calculated total price
-        orderStatus: "processing",
-        paymentStatus: "pending",
-        deliveryDate: bookingData.deliveryDate,
-        paymentMethod: bookingData.paymentMethod,
-      });
-
-      const savedOrder = await newOrder.save();
-
-      if (savedOrder) {
-        // Clear booked items from the cart
-        const bookedProductIds = orderItems.map((item) => item.productId);
-        await Cart.updateOne(
-          { userId },
-          {
-            $pull: { items: { productId: { $in: bookedProductIds } } },
-            $set: { totalPrice: 0 },
-          }
-        );
-
-        return {
-          success: true,
-          message: "Order placed successfully.",
-          orderDetails: savedOrder,
-        };
-      }
     }
 
     return {
@@ -108,13 +107,13 @@ export const orderPlace = async (adminId, userId, bookingData) => {
       message: "Failed to process the order.",
     };
   } catch (error) {
+    console.error("Error placing the order:", error.message);
     return {
       success: false,
       message: "Error placing the order: " + error.message,
     };
   }
 };
-
 
 
 export const fetchBookingDetails = async (adminId, userId) => {
@@ -134,7 +133,7 @@ export const fetchBookingDetails = async (adminId, userId) => {
       {
         $match: {
           adminId: adminObjectId,
-          userId: userObjectId
+          userId: userObjectId,
         },
       },
 
@@ -237,8 +236,8 @@ export const fetchBookingDetails = async (adminId, userId) => {
               input: "$items",
               as: "orderItem",
               in: {
-                _id:"$$orderItem._id",
-                itemStatus:"$$orderItem.itemStatus",
+                _id: "$$orderItem._id",
+                itemStatus: "$$orderItem.itemStatus",
                 quantity: "$$orderItem.quantity",
                 product: {
                   $let: {
