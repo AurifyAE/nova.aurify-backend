@@ -33,7 +33,7 @@ export const orderQuantityConfirmation = async (req, res, next) => {
 
     // If action is false (rejected), add remark to orderRemark with transaction ID
     if (!action) {
-      order.orderRemark = `Order Transaction ID: ${order.transactionId} - Some items have been rejected. The order cannot proceed further.`;
+      order.orderRemark = `Some items were rejected. Order cannot proceed.`;
     }
 
     // Update the overall order status
@@ -123,20 +123,23 @@ export const checkPendingOrderNotifications = async () => {
       createdBy: order.userId,
     });
 
-    if (timeSinceNotification >= 2 && timeSinceNotification < 5) {
-      // Send warning notifications for each pending item
-      if (fcmTokenDoc && fcmTokenDoc.FCMTokens.length > 0) {
-        const invalidTokens = [];
+    if (fcmTokenDoc && fcmTokenDoc.FCMTokens.length > 0) {
+      const invalidTokens = [];
 
-        // Filter out items that are still pending approval
-        const pendingItems = order.items.filter(
-          (item) => item.itemStatus === "User Approval Pending"
-        );
+      // Filter pending items
+      const pendingItems = order.items.filter(
+        (item) => item.itemStatus === "User Approval Pending"
+      );
 
-        for (const item of pendingItems) {
-          for (const tokenObj of fcmTokenDoc.FCMTokens) {
-            try {
-              await NotificationService.sendWarningNotification(
+      // Notification sending logic
+      for (const item of pendingItems) {
+        for (const tokenObj of fcmTokenDoc.FCMTokens) {
+          try {
+            let notificationResult;
+            
+            // Conditional notification based on time
+            if (timeSinceNotification >= 2 && timeSinceNotification < 5) {
+              notificationResult = await NotificationService.sendWarningNotification(
                 tokenObj.token,
                 "⏳ Confirmation Countdown! 🕒",
                 `Your order is waiting! Confirm or adjust item quantities before time runs out. Item Quantity: ${item.quantity}`,
@@ -145,75 +148,79 @@ export const checkPendingOrderNotifications = async () => {
                   itemId: item._id.toString(),
                 }
               );
-            } catch (error) {
-              console.error(
-                `Failed to send confirmation notification for item ${item._id} to token: ${tokenObj.token}`,
-                error
+            } else if (timeSinceNotification >= 5) {
+              notificationResult = await NotificationService.sendRejectNotification(
+                tokenObj.token,
+                "❌ Order Auto-Canceled 🚫",
+                `Oops! Your item (Quantity: ${item.quantity}) was automatically rejected due to no response. Want to try again?`,
+                {
+                  orderId: order._id.toString(),
+                  itemId: item._id.toString(),
+                }
               );
+            }
 
-              if (
-                error.errorInfo &&
-                error.errorInfo.code ===
-                  "messaging/registration-token-not-registered"
-              ) {
-                invalidTokens.push(tokenObj.token);
-              }
+            // Track successful notification
+            if (notificationResult) {
+              console.log(`Notification sent successfully to token: ${tokenObj.token}`);
+            }
+          } catch (error) {
+            console.error(`Notification error for token: ${tokenObj.token}`, error);
+
+            // Specifically handle expired/invalid tokens
+            if (
+              error.errorInfo && 
+              (error.errorInfo.code === "messaging/registration-token-not-registered" ||
+               error.message.includes("is not registered or has expired"))
+            ) {
+              invalidTokens.push(tokenObj.token);
             }
           }
-        }
-
-        // Handle invalid tokens if needed
-        if (invalidTokens.length > 0) {
-          await UserFCMTokenModel.updateOne(
-            { _id: fcmTokenDoc._id },
-            { $pull: { FCMTokens: { token: { $in: invalidTokens } } } }
-          );
         }
       }
-    } else if (timeSinceNotification >= 5) {
-      // Reject order items that are still pending
-      const pendingItems = order.items.filter(
-        (item) => item.itemStatus === "User Approval Pending"
-      );
 
-      if (pendingItems.length > 0) {
-        pendingItems.forEach((item) => {
-          item.itemStatus = "Rejected";
-        });
-
-        // Add remark for the rejected item
-        order.orderRemark = order.orderRemark || "";
-        order.orderRemark += `\nYour item (Quantity: ${item.quantity}) was automatically rejected due to no response.`;
-
-        // Check if all items are rejected
-        if (order.items.every((item) => item.itemStatus === "Rejected")) {
-          order.orderStatus = "Rejected";
-        }
-
-        await order.save();
-
-        // Send rejection notifications for each pending item
-        if (fcmTokenDoc && fcmTokenDoc.FCMTokens.length > 0) {
-          for (const item of pendingItems) {
-            for (const tokenObj of fcmTokenDoc.FCMTokens) {
-              try {
-                await NotificationService.sendRejectNotification(
-                  tokenObj.token,
-                  "❌ Order Auto-Canceled 🚫",
-                  `Oops! Your item (Quantity: ${item.quantity}) was automatically rejected due to no response. Want to try again?`,
-                  {
-                    orderId: order._id.toString(),
-                    itemId: item._id.toString(),
-                  }
-                );
-              } catch (error) {
-                console.error(
-                  `Failed to send rejection notification for item ${item._id} to token: ${tokenObj.token}`,
-                  error
-                );
-              }
-            }
+      // Remove invalid tokens from user's FCM tokens
+      if (invalidTokens.length > 0) {
+        await UserFCMTokenModel.updateOne(
+          { _id: fcmTokenDoc._id },
+          { 
+            $pull: { 
+              FCMTokens: { 
+                token: { $in: invalidTokens } 
+              } 
+            } 
           }
+        );
+        
+        console.log(`Removed ${invalidTokens.length} invalid tokens for user ${order.userId}`);
+      }
+
+      // Handle order rejection if applicable
+      if (timeSinceNotification >= 5) {
+        const pendingItems = order.items.filter(
+          (item) => item.itemStatus === "User Approval Pending"
+        );
+
+        if (pendingItems.length > 0) {
+          // Update item statuses
+          pendingItems.forEach((item) => {
+            item.itemStatus = "Rejected";
+          });
+
+          // Update order remarks and status
+          const rejectionRemarks = pendingItems.map(
+            (item) => `Item (Qty: ${item.quantity}) auto-rejected due to no response.`
+          ).join('\n');
+
+          order.orderRemark = order.orderRemark 
+            ? `${order.orderRemark}\n${rejectionRemarks}` 
+            : rejectionRemarks;
+
+          if (order.items.every((item) => item.itemStatus === "Rejected")) {
+            order.orderStatus = "Rejected";
+          }
+
+          await order.save();
         }
       }
     }
