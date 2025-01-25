@@ -206,6 +206,7 @@ export const fetchBookingDetails = async (adminId, userId) => {
           _id: 1,
           orderNumber: 1,
           orderDate: 1,
+          orderRemark: 1,
           deliveryDate: 1,
           totalPrice: 1,
           orderStatus: 1,

@@ -31,6 +31,42 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
   }
 };
 
+export const updateOrderStatusHelper = async (orderId, orderDetails) => {
+  try {
+    const { orderStatus, remark } = orderDetails;
+
+    // Ensure the order status is being set correctly, including rejection scenario
+    const updatedOrder = await orderModel.findByIdAndUpdate(
+      orderId,  // Correct query syntax
+      { 
+        orderStatus, 
+        orderRemark: remark  // Correct way to update remark field
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedOrder) {
+      return {
+        success: false,
+        message: "Order not found",
+      };
+    }
+
+    return {
+      success: true,
+      message: "Order status updated successfully",
+      data: updatedOrder,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error updating order: " + error.message,
+    };
+  }
+};
+
+
+
 export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
   try {
     let { itemStatus, itemId, quantity } = orderDetails;

@@ -54,6 +54,10 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: "Processing",
     },
+    orderRemark: {
+      type: String,
+      default: null,
+    },
     paymentStatus: {
       type: String,
       default: "Pending",

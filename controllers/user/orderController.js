@@ -8,25 +8,35 @@ export const orderQuantityConfirmation = async (req, res, next) => {
   try {
     const { orderId, itemId, action } = req.body;
 
+    // Find the order by ID
     const order = await orderModel.findById(orderId);
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Order not found",
+        message: "Oops! We couldn't find the order you're looking for.",
       });
     }
 
+    // Find the specific item in the order
     const item = order.items.find((item) => item._id.toString() === itemId);
 
     if (!item) {
       return res.status(404).json({
         success: false,
-        message: "Item not found in the order",
+        message:
+          "The item you are trying to update does not exist in the order.",
       });
     }
 
+    // Update item status based on action (true: Approved, false: Rejected)
     item.itemStatus = action ? "Approved" : "Rejected";
 
+    // If action is false (rejected), add remark to orderRemark with transaction ID
+    if (!action) {
+      order.orderRemark = `Order Transaction ID: ${order.transactionId} - Some items have been rejected. The order cannot proceed further.`;
+    }
+
+    // Update the overall order status
     order.orderStatus = order.items.every(
       (item) => item.itemStatus === "Approved"
     )
@@ -35,18 +45,21 @@ export const orderQuantityConfirmation = async (req, res, next) => {
       ? "Processing"
       : "Rejected";
 
+    // Determine attractive response message
     const message =
       order.orderStatus === "Success"
-        ? "All items approved. Your order has been successfully processed."
+        ? `🎉 Your order with Transaction ID: ${order.transactionId} has been successfully processed!`
         : action
-        ? "Item approved. Order is still pending approval for other items."
-        : "The selected item has been rejected. Your order is now marked as rejected.";
+        ? `✅ Item approved! Your order with Transaction ID: ${order.transactionId} is still in process.`
+        : `⚠️ Attention: Your order with Transaction ID: ${order.transactionId} has been rejected due to certain items. Please review it.`;
 
+    // Save the updated order model
     await order.save();
 
     return res.status(200).json({
       success: true,
       message: message,
+      ...(order.orderRemark && { remark: order.orderRemark }),
     });
   } catch (error) {
     next(error);
@@ -167,6 +180,10 @@ export const checkPendingOrderNotifications = async () => {
         pendingItems.forEach((item) => {
           item.itemStatus = "Rejected";
         });
+
+        // Add remark for the rejected item
+        order.orderRemark = order.orderRemark || "";
+        order.orderRemark += `\nYour item (Quantity: ${item.quantity}) was automatically rejected due to no response.`;
 
         // Check if all items are rejected
         if (order.items.every((item) => item.itemStatus === "Rejected")) {

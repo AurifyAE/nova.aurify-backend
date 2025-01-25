@@ -84,6 +84,7 @@ import {
   fetchBookings,
   updateOrder,
   updateOrderQuantity,
+  updateOrderStatus
 } from "../../controllers/admin/bookingController.js";
 import {
   uploadBG,
@@ -286,4 +287,5 @@ router.delete("/videoBanner/:bannerId/:adminId", deleteVideoBanner);
 router.get("/booking/:adminId", fetchBookings);
 router.put("/update-order/:orderId", updateOrder);
 router.put("/update-order-quantity/:orderId", updateOrderQuantity);
+router.put("/update-order-reject/:orderId", updateOrderStatus);
 export default router;
