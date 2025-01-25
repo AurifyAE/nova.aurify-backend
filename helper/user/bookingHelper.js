@@ -55,7 +55,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
         return {
           productId: item.productId,
           quantity: item.quantity,
-          fixedPrice: fixedPrice, // Store fixed price
+          fixedPrice: fixedPrice || 0, // Store fixed price
           totalPrice: itemTotal, // Store calculated total
           addedAt: new Date(),
         };

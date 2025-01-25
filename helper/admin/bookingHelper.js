@@ -69,7 +69,7 @@ export const updateOrderStatusHelper = async (orderId, orderDetails) => {
 
 export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
   try {
-    let { itemStatus, itemId, quantity } = orderDetails;
+    let { itemStatus, itemId, quantity, fixedPrice } = orderDetails;
 
     // Determine if the quantity is confirmed by the user
     const isQuantityConfirmedByUser = quantity && quantity >= 1;
@@ -101,9 +101,16 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
       };
     }
 
-    // Update the specific item's quantity and status immediately
+    // Update the specific item's quantity, fixed price, and status
     order.items[itemIndex].quantity = quantity;
+    order.items[itemIndex].fixedPrice = fixedPrice;
     order.items[itemIndex].itemStatus = itemStatus;
+
+    // Recalculate total price for the order
+    order.totalPrice = order.items.reduce(
+      (total, item) => total + item.quantity * item.fixedPrice,
+      0
+    );
 
     // Check if all items are "Approved"
     const allApproved = order.items.every(
@@ -184,6 +191,7 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
     };
   }
 };
+
 
 export const fetchBookingDetails = async (adminId) => {
   try {
@@ -308,6 +316,7 @@ export const fetchBookingDetails = async (adminId) => {
                 _id: "$$orderItem._id",
                 itemStatus: "$$orderItem.itemStatus",
                 quantity: "$$orderItem.quantity",
+                fixedPrice: "$$orderItem.fixedPrice",
                 product: {
                   $let: {
                     vars: {

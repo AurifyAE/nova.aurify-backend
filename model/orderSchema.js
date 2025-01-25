@@ -11,6 +11,10 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  fixedPrice: {
+    type: Number,
+    required: true,
+  },
   addedAt: {
     type: Date,
     default: Date.now,
