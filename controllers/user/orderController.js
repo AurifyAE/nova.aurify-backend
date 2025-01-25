@@ -36,22 +36,22 @@ export const orderQuantityConfirmation = async (req, res, next) => {
       order.orderRemark = `Some items were rejected. Order cannot proceed.`;
     }
 
-    // Update the overall order status
-    order.orderStatus = order.items.every(
-      (item) => item.itemStatus === "Approved"
-    )
-      ? "Success"
-      : action
-      ? "Processing"
-      : "Rejected";
+    // Determine the overall order status based on item statuses
+    if (order.items.every((item) => item.itemStatus === "Approved")) {
+      order.orderStatus = "Success";
+    } else if (order.items.some((item) => item.itemStatus === "User Approval Pending")) {
+      order.orderStatus = "User Approval Pending";
+    } else {
+      order.orderStatus = "Processing";
+    }
 
     // Determine attractive response message
     const message =
       order.orderStatus === "Success"
-        ? `🎉 Your order with Transaction ID: ${order.transactionId} has been successfully processed!`
-        : action
-        ? `✅ Item approved! Your order with Transaction ID: ${order.transactionId} is still in process.`
-        : `⚠️ Attention: Your order with Transaction ID: ${order.transactionId} has been rejected due to certain items. Please review it.`;
+        ? `🎉 Your order with Transaction ID: ${order.transactionId} has been fully approved!`
+        : order.orderStatus === "User Approval Pending"
+        ? `⚠️ Your order with Transaction ID: ${order.transactionId} is awaiting user approval. Please take action.`
+        : `✅ Item approved! Your order with Transaction ID: ${order.transactionId} is still in process.`;
 
     // Save the updated order model
     await order.save();
@@ -65,6 +65,7 @@ export const orderQuantityConfirmation = async (req, res, next) => {
     next(error);
   }
 };
+
 
 export const fetchUserOrder = async (req, res, next) => {
   try {
