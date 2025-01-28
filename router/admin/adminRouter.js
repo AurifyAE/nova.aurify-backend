@@ -129,6 +129,7 @@ import {
   fetchProductData,
   fetchAllProductData,
 } from "../../controllers/admin/productController.js";
+import { deleteSliderImage, fetchScreenSlider, updateScreenSlider, uploadScreenSlider } from "../../controllers/admin/screenSlidersController.js";
 
 const router = Router();
 
@@ -288,4 +289,10 @@ router.get("/booking/:adminId", fetchBookings);
 router.put("/update-order/:orderId", updateOrder);
 router.put("/update-order-quantity/:orderId", updateOrderQuantity);
 router.put("/update-order-reject/:orderId", updateOrderStatus);
+
+//ScreenSliders
+router.post("/tv-sliders/upload/:adminId",uploadMultiple("image", 5), uploadScreenSlider);
+router.get("/tv-sliders/:adminId", fetchScreenSlider);
+router.put("/tv-sliders/:sliderId/settings/:adminId", updateScreenSlider);
+router.delete("/tv-sliders/:sliderId/delete/:imageName/:adminId", deleteSliderImage);
 export default router;

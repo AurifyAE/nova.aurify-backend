@@ -9,6 +9,7 @@ import { serverModel } from "../../model/serverSchema.js";
 import adminModel from "../../model/adminSchema.js";
 import PremiumModel from "../../model/premiumSchema.js";
 import DiscountModel from "../../model/discountSchema.js";
+import ScreenSliders from "../../model/screenSliders.js";
 
 export const activateDeviceController = async (req, res) => {
   const session = await mongoose.startSession();
@@ -206,5 +207,36 @@ export const getPremiumDiscounts = async (req, res, next) => {
   } catch (error) {
     console.error('Error in fetching:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const fetchScreenSlider = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+    const objectId = new mongoose.Types.ObjectId(adminId);
+
+    const screenSliderDoc = await ScreenSliders.findOne({
+      createdBy: objectId,
+    });
+
+    if (!screenSliderDoc) {
+      throw new Error("No sliders found for this admin");
+    }
+
+    const sliders = screenSliderDoc.sliders.reduce((acc, slider) => {
+      acc[slider.sliderName] = {
+        images: slider.images.map((img) => img.imageUrl),
+        timeout: slider.timeout,
+      };
+      return acc;
+    }, {});
+
+    res.status(200).json({
+      success: true,
+      message: "Fetched screen sliders successfully.",
+      sliders,
+    });
+  } catch (error) {
+    throw new Error("Failed to fetch screen sliders: " + error.message);
   }
 };

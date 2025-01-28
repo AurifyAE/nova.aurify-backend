@@ -31,41 +31,56 @@ export const orderQuantityConfirmation = async (req, res, next) => {
     // Update item status based on action (true: Approved, false: Rejected)
     item.itemStatus = action ? "Approved" : "Rejected";
 
-    // If action is false (rejected), add remark to orderRemark with transaction ID
-    if (!action) {
-      order.orderRemark = `Some items were rejected. Order cannot proceed.`;
-    }
+    // Save the updated item in the order
+    await order.save();
 
-    // Determine the overall order status based on item statuses
-    if (order.items.every((item) => item.itemStatus === "Approved")) {
+    // Recalculate order status based on items' statuses
+    const hasApprovedItems = order.items.some(
+      (item) => item.itemStatus === "Approved"
+    );
+    const hasPendingItems = order.items.some(
+      (item) => item.itemStatus === "User Approval Pending"
+    );
+
+    if (hasApprovedItems) {
+      // If any item is Approved
       order.orderStatus = "Success";
-    } else if (order.items.some((item) => item.itemStatus === "User Approval Pending")) {
+    } else if (hasPendingItems) {
+      // If any item is User Approval Pending
       order.orderStatus = "User Approval Pending";
     } else {
+      // Default to Processing if no Approved or Pending items
       order.orderStatus = "Processing";
     }
 
-    // Determine attractive response message
-    const message =
-      order.orderStatus === "Success"
-        ? `🎉 Your order with Transaction ID: ${order.transactionId} has been fully approved!`
-        : order.orderStatus === "User Approval Pending"
-        ? `⚠️ Your order with Transaction ID: ${order.transactionId} is awaiting user approval. Please take action.`
-        : `✅ Item approved! Your order with Transaction ID: ${order.transactionId} is still in process.`;
-
-    // Save the updated order model
+    // Save the updated order status
     await order.save();
+
+    // Create an appropriate message based on the updated order status
+    let message;
+    switch (order.orderStatus) {
+      case "Success":
+        message = `🎉 Great news! At least one item in your order (Transaction ID: ${order.transactionId}) has been approved!`;
+        break;
+      case "User Approval Pending":
+        message = `⚠️ Order ${order.transactionId} requires your attention: Some items need your approval.`;
+        break;
+      case "Processing":
+        message = `✅ Order ${order.transactionId} is being processed. We'll keep you updated!`;
+        break;
+      default:
+        message = `Order ${order.transactionId} status has been updated.`;
+    }
 
     return res.status(200).json({
       success: true,
-      message: message,
-      ...(order.orderRemark && { remark: order.orderRemark }),
+      message,
+      orderStatus: order.orderStatus,
     });
   } catch (error) {
     next(error);
   }
 };
-
 
 export const fetchUserOrder = async (req, res, next) => {
   try {
@@ -137,42 +152,50 @@ export const checkPendingOrderNotifications = async () => {
         for (const tokenObj of fcmTokenDoc.FCMTokens) {
           try {
             let notificationResult;
-            
+
             // Conditional notification based on time
             if (timeSinceNotification >= 2 && timeSinceNotification < 5) {
-              notificationResult = await NotificationService.sendWarningNotification(
-                tokenObj.token,
-                "⏳ Confirmation Countdown! 🕒",
-                `Your order is waiting! Confirm or adjust item quantities before time runs out. Item Quantity: ${item.quantity}`,
-                {
-                  orderId: order._id.toString(),
-                  itemId: item._id.toString(),
-                }
-              );
+              notificationResult =
+                await NotificationService.sendWarningNotification(
+                  tokenObj.token,
+                  "⏳ Confirmation Countdown! 🕒",
+                  `Your order is waiting! Confirm or adjust item quantities before time runs out. Item Quantity: ${item.quantity}`,
+                  {
+                    orderId: order._id.toString(),
+                    itemId: item._id.toString(),
+                  }
+                );
             } else if (timeSinceNotification >= 5) {
-              notificationResult = await NotificationService.sendRejectNotification(
-                tokenObj.token,
-                "❌ Order Auto-Canceled 🚫",
-                `Oops! Your item (Quantity: ${item.quantity}) was automatically rejected due to no response. Want to try again?`,
-                {
-                  orderId: order._id.toString(),
-                  itemId: item._id.toString(),
-                }
-              );
+              notificationResult =
+                await NotificationService.sendRejectNotification(
+                  tokenObj.token,
+                  "❌ Order Auto-Canceled 🚫",
+                  `Oops! Your item (Quantity: ${item.quantity}) was automatically rejected due to no response. Want to try again?`,
+                  {
+                    orderId: order._id.toString(),
+                    itemId: item._id.toString(),
+                  }
+                );
             }
 
             // Track successful notification
             if (notificationResult) {
-              console.log(`Notification sent successfully to token: ${tokenObj.token}`);
+              console.log(
+                `Notification sent successfully to token: ${tokenObj.token}`
+              );
             }
           } catch (error) {
-            console.error(`Notification error for token: ${tokenObj.token}`, error);
+            console.error(
+              `Notification error for token: ${tokenObj.token}`,
+              error
+            );
 
             // Specifically handle expired/invalid tokens
             if (
-              error.errorInfo && 
-              (error.errorInfo.code === "messaging/registration-token-not-registered" ||
-               error.message.includes("is not registered or has expired"))
+              error.errorInfo &&
+              (error.errorInfo.code ===
+                "messaging/registration-token-not-registered" ||
+                error.message.includes("is not registered or has expired"))
             ) {
               invalidTokens.push(tokenObj.token);
             }
@@ -184,16 +207,18 @@ export const checkPendingOrderNotifications = async () => {
       if (invalidTokens.length > 0) {
         await UserFCMTokenModel.updateOne(
           { _id: fcmTokenDoc._id },
-          { 
-            $pull: { 
-              FCMTokens: { 
-                token: { $in: invalidTokens } 
-              } 
-            } 
+          {
+            $pull: {
+              FCMTokens: {
+                token: { $in: invalidTokens },
+              },
+            },
           }
         );
-        
-        console.log(`Removed ${invalidTokens.length} invalid tokens for user ${order.userId}`);
+
+        console.log(
+          `Removed ${invalidTokens.length} invalid tokens for user ${order.userId}`
+        );
       }
 
       // Handle order rejection if applicable
@@ -209,12 +234,15 @@ export const checkPendingOrderNotifications = async () => {
           });
 
           // Update order remarks and status
-          const rejectionRemarks = pendingItems.map(
-            (item) => `Item (Qty: ${item.quantity}) auto-rejected due to no response.`
-          ).join('\n');
+          const rejectionRemarks = pendingItems
+            .map(
+              (item) =>
+                `Item (Qty: ${item.quantity}) auto-rejected due to no response.`
+            )
+            .join("\n");
 
-          order.orderRemark = order.orderRemark 
-            ? `${order.orderRemark}\n${rejectionRemarks}` 
+          order.orderRemark = order.orderRemark
+            ? `${order.orderRemark}\n${rejectionRemarks}`
             : rejectionRemarks;
 
           if (order.items.every((item) => item.itemStatus === "Rejected")) {

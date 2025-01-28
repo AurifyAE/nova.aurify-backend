@@ -42,7 +42,7 @@ const productSchema = new mongoose.Schema(
     },
     tags: {
       type: String,
-      default: null, 
+      default: "None", 
     },
     type: {
       type: String,

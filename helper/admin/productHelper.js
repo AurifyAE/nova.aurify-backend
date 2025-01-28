@@ -46,7 +46,7 @@ export const createProductHelper = async (productData) => {
       purity,
       stock: true, // Default stock status
       sku,
-      tags: tags || "New Arrival",
+      tags: tags || "None",
       type: type || "GOLD", // Default tag if not provided
     });
 

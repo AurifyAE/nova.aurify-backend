@@ -71,6 +71,7 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
   try {
     let { itemStatus, itemId, quantity, fixedPrice } = orderDetails;
 
+ 
     // Determine if the quantity is confirmed by the user
     const isQuantityConfirmedByUser = quantity && quantity >= 1;
 
