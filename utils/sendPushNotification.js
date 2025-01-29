@@ -77,8 +77,8 @@ class NotificationService {
     itemId,
     quantity
   ) {
-    const title = "Confirm Quantity Update";
-    const body = `Are you sure you want to update the quantity to ${quantity}?`;
+    const title = "⚡Action Required: Stock Exceeded!";
+    const body = `🔔 Quantity Exceeded! Requested ${quantity}. Proceed with update? `;
     if (
       !deviceToken ||
       typeof deviceToken !== "string" ||

@@ -159,7 +159,7 @@ export const checkPendingOrderNotifications = async () => {
                 await NotificationService.sendWarningNotification(
                   tokenObj.token,
                   "⏳ Confirmation Countdown! 🕒",
-                  `Your order is waiting! Confirm or adjust item quantities before time runs out. Item Quantity: ${item.quantity}`,
+                  `Review & confirm item quantity (${item.quantity}) before time runs out!`,
                   {
                     orderId: order._id.toString(),
                     itemId: item._id.toString(),
@@ -170,7 +170,7 @@ export const checkPendingOrderNotifications = async () => {
                 await NotificationService.sendRejectNotification(
                   tokenObj.token,
                   "❌ Order Auto-Canceled 🚫",
-                  `Oops! Your item (Quantity: ${item.quantity}) was automatically rejected due to no response. Want to try again?`,
+                  `⚠️ Auto-Rejected! (Qty: ${item.quantity}) No response detected. Retry? 🔄`,
                   {
                     orderId: order._id.toString(),
                     itemId: item._id.toString(),
