@@ -71,9 +71,8 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
   try {
     let { itemStatus, itemId, quantity, fixedPrice } = orderDetails;
 
- 
-    // Determine if the quantity is confirmed by the user
-    const isQuantityConfirmedByUser = quantity && quantity >= 1;
+    // Determine if the quantity is greater than 1
+    const isQuantityGreaterThanOne = quantity && quantity > 1;
 
     // Set default quantity to 1 if none provided or quantity is invalid (less than 1)
     if (!quantity || quantity < 1) {
@@ -136,9 +135,8 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
     // Save the updated order
     await order.save();
 
-    // Send confirmation notification only if quantity is confirmed by the user
-    if (isQuantityConfirmedByUser) {
-      // Fetch FCM tokens
+    // Send notification only if quantity > 1
+    if (isQuantityGreaterThanOne) {
       let fcmTokenDoc = await UserFCMTokenModel.findOne({
         createdBy: order.userId,
       });
@@ -146,7 +144,6 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
       if (fcmTokenDoc && fcmTokenDoc.FCMTokens.length > 0) {
         const invalidTokens = [];
 
-        // Send confirmation notifications to all tokens
         for (const tokenObj of fcmTokenDoc.FCMTokens) {
           try {
             await NotificationService.sendQuantityConfirmationNotification(
@@ -192,6 +189,7 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
     };
   }
 };
+
 
 
 export const fetchBookingDetails = async (adminId) => {
