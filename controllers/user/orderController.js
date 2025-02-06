@@ -82,11 +82,15 @@ export const orderQuantityConfirmation = async (req, res, next) => {
   }
 };
 
-export const fetchUserOrder = async (req, res, next) => {
+export const fetchUserOrder = async (req, res) => {
   try {
     const { adminId, userId } = req.params;
+    const { page = 1, limit = 10 } = req.query; // Default: page 1, 10 orders per page
 
-    // Validate required parameters
+    // Convert page & limit to integers
+    const pageNumber = parseInt(page, 10);
+    const pageSize = parseInt(limit, 10);
+
     if (!adminId || !userId) {
       return res.status(400).json({
         success: false,
@@ -94,8 +98,8 @@ export const fetchUserOrder = async (req, res, next) => {
       });
     }
 
-    // Fetch booking details from the helper function
-    const result = await fetchBookingDetails(adminId, userId);
+    // Fetch paginated booking details
+    const result = await fetchBookingDetails(adminId, userId, pageNumber, pageSize);
 
     if (!result.success) {
       return res.status(404).json({
@@ -108,6 +112,7 @@ export const fetchUserOrder = async (req, res, next) => {
       success: true,
       message: result.message,
       data: result.orderDetails,
+      pagination: result.pagination, // Includes totalPages, currentPage, totalOrders
     });
   } catch (error) {
     console.error("Error fetching user order:", error);
@@ -117,6 +122,7 @@ export const fetchUserOrder = async (req, res, next) => {
     });
   }
 };
+
 
 export const checkPendingOrderNotifications = async () => {
   const pendingOrders = await orderModel.find({

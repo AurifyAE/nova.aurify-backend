@@ -14,7 +14,8 @@ import {
   getBestSeller,
   getTopRated,
   getNewArrival,
-  getViewAll
+  getViewAll,
+  updateCartItemQuantity
 } from "../../controllers/user/productController.js";
 import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
@@ -58,6 +59,7 @@ router.get("/get-VideoBanner/:adminId", getVideoBanner);
 
 router.post("/cart/:adminId/:userId/:productId", addItemToCart);
 router.patch("/cart/increment/:adminId/:userId/:productId", incrementCartItem);
+router.put("/cart/update-quantity/:adminId/:userId/:productId", updateCartItemQuantity);
 router.patch("/cart/decrement/:adminId/:userId/:productId", decrementCartItem);
 router.delete("/cart/:adminId/:userId/:productId", deleteCartItem);
 

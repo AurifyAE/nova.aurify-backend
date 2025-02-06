@@ -114,122 +114,64 @@ export const orderPlace = async (adminId, userId, bookingData) => {
 };
 
 
-export const fetchBookingDetails = async (adminId, userId) => {
+export const fetchBookingDetails = async (adminId, userId, page, limit) => {
   try {
     if (!adminId || !userId) {
-      return {
-        success: false,
-        message: "Admin ID and User ID are required.",
-      };
+      return { success: false, message: "Admin ID and User ID are required." };
     }
 
     const adminObjectId = new mongoose.Types.ObjectId(adminId);
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
+    // Count total orders for pagination
+    const totalOrders = await orderModel.countDocuments({ adminId: adminObjectId, userId: userObjectId });
+
+    if (totalOrders === 0) {
+      return { success: false, message: "No orders found for the given admin and user." };
+    }
+
     const pipeline = [
-      // Match orders for the specific admin
-      {
-        $match: {
-          adminId: adminObjectId,
-          userId: userObjectId,
-        },
-      },
+      { $match: { adminId: adminObjectId, userId: userObjectId } },
 
       // Lookup user details
       {
         $lookup: {
           from: "users",
-          let: { userId: "$userId" },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ["$createdBy", adminObjectId] },
-                    { $in: ["$$userId", "$users._id"] },
-                  ],
-                },
-              },
-            },
-            {
-              $project: {
-                user: {
-                  $first: {
-                    $filter: {
-                      input: "$users",
-                      as: "user",
-                      cond: { $eq: ["$$user._id", "$$userId"] },
-                    },
-                  },
-                },
-              },
-            },
-          ],
+          localField: "userId",
+          foreignField: "_id",
           as: "userDetails",
         },
       },
+      { $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
 
-      // Lookup product details for all items in the order
+      // Lookup product details
       {
         $lookup: {
           from: "products",
-          let: { orderItems: "$items" },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $in: ["$_id", "$$orderItems.productId"],
-                },
-              },
-            },
-            {
-              $project: {
-                _id: 1,
-                title: 1,
-                price: 1,
-                images: 1,
-                sku: 1,
-                type: 1,
-                weight: 1,
-                purity: 1,
-                makingCharge: 1,
-              },
-            },
-          ],
+          localField: "items.productId",
+          foreignField: "_id",
           as: "productDetails",
         },
       },
 
-      // Final shape of the data
+      // Project required fields
       {
         $project: {
           _id: 1,
           orderNumber: 1,
           orderDate: 1,
-          orderRemark: 1,
           deliveryDate: 1,
           totalPrice: 1,
           orderStatus: 1,
           paymentStatus: 1,
           paymentMethod: 1,
           transactionId: 1,
-
-          // Customer information
           customer: {
-            $let: {
-              vars: {
-                userInfo: { $arrayElemAt: ["$userDetails", 0] },
-              },
-              in: {
-                id: "$userId",
-                name: "$$userInfo.user.name",
-                contact: "$$userInfo.user.contact",
-                location: "$$userInfo.user.location",
-              },
-            },
+            id: "$userId",
+            name: "$userDetails.name",
+            contact: "$userDetails.contact",
+            location: "$userDetails.location",
           },
-
-          // Products in the order
           items: {
             $map: {
               input: "$items",
@@ -239,30 +181,16 @@ export const fetchBookingDetails = async (adminId, userId) => {
                 itemStatus: "$$orderItem.itemStatus",
                 quantity: "$$orderItem.quantity",
                 product: {
-                  $let: {
-                    vars: {
-                      productInfo: {
-                        $first: {
-                          $filter: {
-                            input: "$productDetails",
-                            as: "p",
-                            cond: { $eq: ["$$p._id", "$$orderItem.productId"] },
-                          },
-                        },
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$productDetails",
+                        as: "p",
+                        cond: { $eq: ["$$p._id", "$$orderItem.productId"] },
                       },
                     },
-                    in: {
-                      id: "$$productInfo._id",
-                      title: "$$productInfo.title",
-                      sku: "$$productInfo.sku",
-                      price: "$$productInfo.price",
-                      type: "$$productInfo.type",
-                      weight: "$$productInfo.weight",
-                      purity: "$$productInfo.purity",
-                      makingCharge: "$$productInfo.makingCharge",
-                      images: "$$productInfo.images",
-                    },
-                  },
+                    0,
+                  ],
                 },
               },
             },
@@ -270,28 +198,28 @@ export const fetchBookingDetails = async (adminId, userId) => {
         },
       },
 
-      // Sort by order date descending
-      { $sort: { orderDate: -1 } },
+      { $sort: { orderDate: -1 } }, // Sort by latest order
+
+      // Pagination
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
     ];
 
     const orders = await orderModel.aggregate(pipeline);
-
-    if (orders.length === 0) {
-      return {
-        success: false,
-        message: "No orders found for the given admin and user.",
-      };
-    }
 
     return {
       success: true,
       message: "Orders fetched successfully.",
       orderDetails: orders,
+      pagination: {
+        totalOrders,
+        totalPages: Math.ceil(totalOrders / limit),
+        currentPage: page,
+      },
     };
   } catch (error) {
-    return {
-      success: false,
-      message: "Error fetching orders: " + error.message,
-    };
+    console.error("Error fetching orders:", error);
+    return { success: false, message: "Error fetching orders: " + error.message };
   }
 };
+
