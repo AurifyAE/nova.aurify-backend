@@ -7,6 +7,8 @@ const deviceSchema = new mongoose.Schema(
         macAddress: {
           type: String,
           default: null,
+          unique: true,
+          sparse: true 
         },
         isActive: {
           type: Boolean,
@@ -26,8 +28,6 @@ const deviceSchema = new mongoose.Schema(
   },
 );
 
-// Add a sparse unique index on macAddress
-deviceSchema.index({ "devices.macAddress": 1 }, { unique: true, sparse: true });
 
 const DeviceModel = mongoose.model("Device", deviceSchema);
 

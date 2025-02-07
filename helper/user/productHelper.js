@@ -314,67 +314,52 @@ export const updateCartItemCollection = async (userId, adminId, productId, userP
 
 
 
-export const updateCartCollection = async (
-  userId,
-  adminId,
-  productId,
-  quantityChange
-) => {
+export const updateCartCollection = async (userId, adminId, productId) => {
   try {
     if (!userId || !adminId || !productId) {
       throw new Error("Missing required fields");
     }
 
-    const shop = await Product.findOne({ _id: productId });
-
-    if (!shop) {
-      throw new Error("Shop or product not found");
+    const product = await Product.findById(productId);
+    if (!product) {
+      throw new Error("Product not found");
     }
 
     let cart = await Cart.findOne({ userId });
+
     if (!cart) {
-      cart = new Cart({ userId, items: [], totalPrice: 0 });
+      // Create a new cart with the first product added
+      cart = new Cart({
+        userId,
+        items: [{ productId, quantity: 1, totalPrice: product.price }],
+        totalPrice: product.price,
+      });
+      await cart.save();
+      return { success: true, message: "Product added to cart", data: cart };
     }
 
-    const existingItemIndex = cart.items.findIndex(
+    // Check if the product is already in the cart
+    const existingItem = cart.items.find(
       (item) => item.productId.toString() === productId.toString()
     );
 
-    if (existingItemIndex !== -1) {
-      cart.items[existingItemIndex].quantity += quantityChange;
-
-      if (cart.items[existingItemIndex].quantity <= 0) {
-        cart.items.splice(existingItemIndex, 1);
-      } else {
-        cart.items[existingItemIndex].totalPrice =
-          cart.items[existingItemIndex].quantity * shop.price;
-      }
-    } else {
-      if (quantityChange > 0) {
-        cart.items.push({
-          productId,
-          quantity: quantityChange,
-          totalPrice: quantityChange * shop.price,
-        });
-      } else {
-        throw new Error("Cannot decrement non-existing product in cart");
-      }
+    if (existingItem) {
+      return { success: false, message: "Product already exists in cart" };
     }
 
-    const productIds = cart.items.map((item) => item.productId);
-    const products = await Product.find({ _id: { $in: productIds } });
+    // Add new product to the cart with quantity 1
+    cart.items.push({
+      productId,
+      quantity: 1,
+      totalPrice: product.price,
+    });
 
-    cart.totalPrice = cart.items.reduce((total, item) => {
-      const product = products.find(
-        (product) => product._id.toString() === item.productId.toString()
-      );
-      return product ? total + item.quantity * product.price : total;
-    }, 0);
-
+    // Update total cart price
+    cart.totalPrice += product.price;
     cart.updatedAt = Date.now();
 
     await cart.save();
-    return { success: true, data: cart };
+    return { success: true, message: "Product added to cart", data: cart };
   } catch (error) {
     return { success: false, message: "Error updating cart: " + error.message };
   }

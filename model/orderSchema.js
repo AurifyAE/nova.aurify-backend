@@ -90,6 +90,6 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-orderSchema.index({ adminId: 1 });
+
 
 export const orderModel = mongoose.model("Order", orderSchema);
