@@ -13,7 +13,8 @@ import {
   fetchTopRatedProduct,
   fetchNewArrivalProduct,
   fetchAllProduct,
-  updateCartItemCollection
+  updateCartItemCollection,
+  incrementCartItemQuantity
 } from "../../helper/user/productHelper.js";
 
 export const getProductDetails = async (req, res, next) => {
@@ -193,7 +194,7 @@ export const incrementCartItem = async (req, res, next) => {
   try {
     const { userId, adminId, productId } = req.params;
     const { quantity = 1 } = req.body;
-    const { success, data, message } = await updateCartCollection(
+    const { success, data, message } = await incrementCartItemQuantity(
       userId,
       adminId,
       productId,
@@ -257,7 +258,7 @@ export const decrementCartItem = async (req, res, next) => {
   try {
     const { userId, adminId, productId } = req.params;
     const { quantity = -1 } = req.body;
-    const { success, data, message } = await updateCartCollection(
+    const { success, data, message } = await incrementCartItemQuantity(
       userId,
       adminId,
       productId,

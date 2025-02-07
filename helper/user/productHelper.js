@@ -312,6 +312,61 @@ export const updateCartItemCollection = async (userId, adminId, productId, userP
   }
 };
 
+export const incrementCartItemQuantity = async (userId, adminId, productId, quantityChange) => {
+  try {
+    if (!userId || !adminId || !productId) {
+      throw new Error("Missing required fields");
+    }
+
+    // Fetch the product details
+    const product = await Product.findById(productId);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    // Find or create the user's cart
+    let cart = await Cart.findOne({ userId });
+    if (!cart) {
+      cart = new Cart({ userId, items: [], totalPrice: 0 });
+    }
+
+    // Check if the product already exists in the cart
+    const existingItem = cart.items.find(item => item.productId.toString() === productId.toString());
+
+    if (existingItem) {
+      // Increment or decrement the quantity
+      existingItem.quantity += quantityChange;
+
+      // Remove item if quantity is zero or negative
+      if (existingItem.quantity <= 0) {
+        cart.items = cart.items.filter(item => item.productId.toString() !== productId.toString());
+      } else {
+        // Update the total price of the existing item
+        existingItem.totalPrice = existingItem.quantity * product.price;
+      }
+    } else {
+      // Add new item to cart if quantity is positive
+      if (quantityChange > 0) {
+        cart.items.push({
+          productId,
+          quantity: quantityChange,
+          totalPrice: quantityChange * product.price,
+        });
+      } else {
+        throw new Error("Cannot decrement non-existing product in cart");
+      }
+    }
+
+    // Recalculate total cart price
+    cart.totalPrice = cart.items.reduce((total, item) => total + item.totalPrice, 0);
+    cart.updatedAt = Date.now();
+
+    await cart.save();
+    return { success: true, data: cart };
+  } catch (error) {
+    return { success: false, message: "Error updating cart: " + error.message };
+  }
+};
 
 
 export const updateCartCollection = async (userId, adminId, productId) => {
