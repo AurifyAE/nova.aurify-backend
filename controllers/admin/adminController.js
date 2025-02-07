@@ -3,12 +3,11 @@ import {
   getUsersForAdmin,
   fetchActiveDevice,
   adminVerfication,
-  getUserData
+  getUserData,
 } from "../../helper/admin/adminHelper.js";
 import { createAppError } from "../../utils/errorHandler.js";
 import PremiumModel from "../../model/premiumSchema.js";
 import DiscountModel from "../../model/discountSchema.js";
-
 
 import adminModel from "../../model/adminSchema.js";
 import { verifyToken, generateToken } from "../../utils/jwt.js";
@@ -17,7 +16,7 @@ import { decryptPassword } from "../../utils/crypto.js";
 
 export const adminLoginController = async (req, res, next) => {
   try {
-    console.log("first")
+    console.log("first");
     const { userName, password, fcmToken, rememberMe } = req.body;
     const authLogin = await adminVerfication(userName);
     if (authLogin) {
@@ -28,17 +27,17 @@ export const adminLoginController = async (req, res, next) => {
       if (password !== decryptedPassword) {
         throw createAppError("Incorrect password.", 401);
       }
-      await addFCMToken(userName,fcmToken)
+      await addFCMToken(userName, fcmToken);
       const expiresIn = rememberMe ? "30d" : "3d";
-      const adminId = authLogin._id
-      console.log(adminId)
+      const adminId = authLogin._id;
+      console.log(adminId);
       const token = generateToken({ adminId: authLogin._id }, expiresIn);
-       
+
       res.status(200).json({
         success: true,
         message: "Authentication successful.",
         token,
-        adminId: adminId
+        adminId: adminId,
       });
     } else {
       throw createAppError("User not found.", 204);
@@ -112,8 +111,6 @@ export const adminTokenVerificationApi = async (req, res, next) => {
   }
 };
 
-
-
 export const getAdminDataController = async (req, res, next) => {
   try {
     const userName = req.params.userName;
@@ -134,8 +131,6 @@ export const getAdminDataController = async (req, res, next) => {
     next(error); // Pass the error to the global error handler
   }
 };
-
-
 
 export const saveBankDetailsController = async (req, res, next) => {
   try {
@@ -253,12 +248,10 @@ export const deleteBankDetailsController = async (req, res, next) => {
   }
 };
 
-
-
 export const fetchUsersForAdmin = async (req, res, next) => {
   try {
     const { adminId } = req.params;
-    const {success,message,users} = await getUsersForAdmin(adminId);
+    const { success, message, users } = await getUsersForAdmin(adminId);
     if (!success) {
       return res.status(204).json({
         success: false,
@@ -269,7 +262,7 @@ export const fetchUsersForAdmin = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       users,
-      message: message
+      message: message,
     });
   } catch (error) {
     next(error);
@@ -280,20 +273,20 @@ export const fetchAdminDevice = async (req, res, next) => {
   try {
     const { adminId } = req.params;
 
-    const { success, message, activeDeviceCount } = await fetchActiveDevice(adminId);
-    
+    const { success, message, activeDeviceCount } = await fetchActiveDevice(
+      adminId
+    );
+
     // Always return success: true, even if no devices are found
     return res.status(200).json({
       success: true,
       activeDeviceCount,
       message: message || "Devices fetched successfully",
     });
-    
   } catch (error) {
-    next(error);  // Pass the error to the global error handler
+    next(error); // Pass the error to the global error handler
   }
 };
-
 
 //Sidebar Features
 export const getAdminFeaturesController = async (req, res, next) => {
@@ -306,7 +299,9 @@ export const getAdminFeaturesController = async (req, res, next) => {
         .json({ success: false, message: "userName parameter is required." });
     }
 
-    const admin = await adminModel.findOne({ userName }).select("features email");
+    const admin = await adminModel
+      .findOne({ userName })
+      .select("features email");
 
     if (!admin) {
       return res
@@ -329,102 +324,100 @@ export const getAdminFeaturesController = async (req, res, next) => {
   }
 };
 
-
-
 export const premiumDiscounts = async (req, res, next) => {
   try {
-      const { userId } = req.params;
-      const { type, value, time } = req.body;
-  
-      if (!type || !value || isNaN(value) || value === 0) {
-        return res.status(400).json({ message: 'Invalid data' });
-      }
-  
-      const timestamp = new Date(time).getTime();
-  
-      let premiumDiscounts;
-      if (type === 'Premium') {
-        premiumDiscounts = await PremiumModel.findOneAndUpdate(
-          { createdBy: userId },
-          { 
-            $push: { 
-              premium: { 
-                timestamp, 
-                value: Number(value) 
-              } 
-            } 
-          },
-          { new: true, upsert: true }
-        );
-      } else if (type === 'Discount') {
-        premiumDiscounts = await DiscountModel.findOneAndUpdate(
-          { createdBy: userId },
-          { 
-            $push: { 
-              discount: { 
-                timestamp, 
-                value: Number(value) 
-              } 
-            } 
-          },
-          { new: true, upsert: true }
-        );
-      } else {
-        return res.status(400).json({ message: 'Invalid type' });
-      }
-  
-      const newPremiumDiscounts = premiumDiscounts[type.toLowerCase()].slice(-1)[0];
-  
-      res.status(201).json({
-        message: 'added successfully',
-        premiumDiscounts: {
-          _id: newPremiumDiscounts._id,
-          type,
-          value: newPremiumDiscounts.value,
-          time: new Date(newPremiumDiscounts.timestamp).toLocaleString()
-        }
-      });
-    } catch (error) {
-      console.error('Error in adding', error);
-      res.status(500).json({ message: 'Server error' });
+    const { userId } = req.params;
+    const { type, value, time } = req.body;
+
+    if (!type || !value || isNaN(value) || value === 0) {
+      return res.status(400).json({ message: "Invalid data" });
     }
+
+    const timestamp = new Date(time).getTime();
+
+    let premiumDiscounts;
+    if (type === "Premium") {
+      premiumDiscounts = await PremiumModel.findOneAndUpdate(
+        { createdBy: userId },
+        {
+          $push: {
+            premium: {
+              timestamp,
+              value: Number(value),
+            },
+          },
+        },
+        { new: true, upsert: true }
+      );
+    } else if (type === "Discount") {
+      premiumDiscounts = await DiscountModel.findOneAndUpdate(
+        { createdBy: userId },
+        {
+          $push: {
+            discount: {
+              timestamp,
+              value: Number(value),
+            },
+          },
+        },
+        { new: true, upsert: true }
+      );
+    } else {
+      return res.status(400).json({ message: "Invalid type" });
+    }
+
+    const newPremiumDiscounts =
+      premiumDiscounts[type.toLowerCase()].slice(-1)[0];
+
+    res.status(201).json({
+      message: "added successfully",
+      premiumDiscounts: {
+        _id: newPremiumDiscounts._id,
+        type,
+        value: newPremiumDiscounts.value,
+        time: new Date(newPremiumDiscounts.timestamp).toLocaleString(),
+      },
+    });
+  } catch (error) {
+    console.error("Error in adding", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
 export const getPremiumDiscounts = async (req, res, next) => {
   try {
-      const { userId } = req.params;
-  
-      const premiums = await PremiumModel.findOne({ createdBy: userId });
-      const discounts = await DiscountModel.findOne({ createdBy: userId });
-  
-      let premiumDiscounts = [];
-      if (premiums) {
-        premiumDiscounts = premiumDiscounts.concat(
-          premiums.premium.map(sub => ({
-            _id: sub._id,
-            type: 'Premium',
-            value: sub.value,
-            time: new Date(sub.timestamp).toLocaleString()
-          }))
-        );
-      }
-      if (discounts) {
-        premiumDiscounts = premiumDiscounts.concat(
-          discounts.discount.map(sub => ({
-            _id: sub._id,
-            type: 'Discount',
-            value: sub.value,
-            time: new Date(sub.timestamp).toLocaleString()
-          }))
-        );
-      }
-  
+    const { userId } = req.params;
 
-      premiumDiscounts.sort((a, b) => new Date(b.time) - new Date(a.time));
-  
-      res.json({ premiumDiscounts });
-    } catch (error) {
-      console.error('Error in fetching:', error);
-      res.status(500).json({ message: 'Server error' });
+    const premiums = await PremiumModel.findOne({ createdBy: userId });
+    const discounts = await DiscountModel.findOne({ createdBy: userId });
+
+    let premiumDiscounts = [];
+    if (premiums) {
+      premiumDiscounts = premiumDiscounts.concat(
+        premiums.premium.map((sub) => ({
+          _id: sub._id,
+          type: "Premium",
+          value: sub.value,
+          time: new Date(sub.timestamp).toLocaleString(),
+        }))
+      );
     }
+    if (discounts) {
+      premiumDiscounts = premiumDiscounts.concat(
+        discounts.discount.map((sub) => ({
+          _id: sub._id,
+          type: "Discount",
+          value: sub.value,
+          time: new Date(sub.timestamp).toLocaleString(),
+        }))
+      );
+    }
+
+    premiumDiscounts.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    res.json({ premiumDiscounts });
+  } catch (error) {
+    console.error("Error in fetching:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };
