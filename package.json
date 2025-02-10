@@ -28,7 +28,7 @@
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "macaddress": "^0.5.3",
-    "mjml": "^1.3.4",
+    "mjml": "^4.15.3",
     "mongodb": "^6.8.0",
     "mongoose": "^8.9.5",
     "morgan": "^1.10.0",
