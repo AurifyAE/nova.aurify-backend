@@ -157,10 +157,12 @@ export const fetchBookingDetails = async (adminId, userId, page, limit) => {
       // Project required fields
       {
         $project: {
-          _id: 1,
           orderNumber: 1,
           orderDate: 1,
           deliveryDate: 1,
+          pricingOption:1,
+          premiumAmount:1,
+          discountAmount:1,
           totalPrice: 1,
           orderStatus: 1,
           paymentStatus: 1,
@@ -171,6 +173,7 @@ export const fetchBookingDetails = async (adminId, userId, page, limit) => {
             name: "$userDetails.name",
             contact: "$userDetails.contact",
             location: "$userDetails.location",
+            email: "$userDetails.email",
           },
           items: {
             $map: {
