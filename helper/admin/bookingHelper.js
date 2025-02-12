@@ -305,7 +305,9 @@ export const fetchBookingDetails = async (adminId) => {
                 name: "$$userInfo.user.name",
                 contact: "$$userInfo.user.contact",
                 location: "$$userInfo.user.location",
-                email:"$$userInfo.user.email"
+                email: "$$userInfo.user.email",
+                cashBalance: "$$userInfo.user.cashBalance",
+                goldBalance: "$$userInfo.user.goldBalance"
               },
             },
           },

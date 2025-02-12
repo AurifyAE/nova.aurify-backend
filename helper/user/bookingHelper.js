@@ -5,10 +5,16 @@ import Product from "../../model/productSchema.js";
 
 export const orderPlace = async (adminId, userId, bookingData) => {
   try {
-    if (!userId || !adminId || !bookingData?.paymentMethod || !bookingData?.deliveryDate) {
+    if (
+      !userId ||
+      !adminId ||
+      !bookingData?.paymentMethod ||
+      !bookingData?.deliveryDate
+    ) {
       return {
         success: false,
-        message: "Missing required fields (adminId, userId, paymentMethod, or deliveryDate).",
+        message:
+          "Missing required fields (adminId, userId, paymentMethod, or deliveryDate).",
       };
     }
 
@@ -76,7 +82,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
       userId: new mongoose.Types.ObjectId(userId),
       items: orderItems,
       totalPrice: totalPrice,
-      deliveryDate: new Date(bookingData.deliveryDate),  // Ensure date format
+      deliveryDate: new Date(bookingData.deliveryDate), // Ensure date format
       paymentMethod: bookingData.paymentMethod,
     });
 
@@ -113,7 +119,6 @@ export const orderPlace = async (adminId, userId, bookingData) => {
   }
 };
 
-
 export const fetchBookingDetails = async (adminId, userId, page, limit) => {
   try {
     if (!adminId || !userId) {
@@ -124,21 +129,39 @@ export const fetchBookingDetails = async (adminId, userId, page, limit) => {
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
     // Count total orders for pagination
-    const totalOrders = await orderModel.countDocuments({ adminId: adminObjectId, userId: userObjectId });
+    const totalOrders = await orderModel.countDocuments({
+      adminId: adminObjectId,
+      userId: userObjectId,
+    });
 
     if (totalOrders === 0) {
-      return { success: false, message: "No orders found for the given admin and user." };
+      return {
+        success: false,
+        message: "No orders found for the given admin and user.",
+      };
     }
 
     const pipeline = [
       { $match: { adminId: adminObjectId, userId: userObjectId } },
 
-      // Lookup user details
+      // Lookup user details (Fix: Unwind users array and match userId)
       {
         $lookup: {
           from: "users",
-          localField: "userId",
-          foreignField: "_id",
+          let: { userId: "$userId" },
+          pipeline: [
+            { $unwind: "$users" },
+            { $match: { $expr: { $eq: ["$users._id", "$$userId"] } } },
+            {
+              $project: {
+                _id: "$users._id",
+                name: "$users.name",
+                contact: "$users.contact",
+                location: "$users.location",
+                email: "$users.email",
+              },
+            },
+          ],
           as: "userDetails",
         },
       },
@@ -160,9 +183,9 @@ export const fetchBookingDetails = async (adminId, userId, page, limit) => {
           orderNumber: 1,
           orderDate: 1,
           deliveryDate: 1,
-          pricingOption:1,
-          premiumAmount:1,
-          discountAmount:1,
+          pricingOption: 1,
+          premiumAmount: 1,
+          discountAmount: 1,
           totalPrice: 1,
           orderStatus: 1,
           paymentStatus: 1,
@@ -170,10 +193,10 @@ export const fetchBookingDetails = async (adminId, userId, page, limit) => {
           transactionId: 1,
           customer: {
             id: "$userId",
-            name: "$userDetails.name",
-            contact: "$userDetails.contact",
-            location: "$userDetails.location",
-            email: "$userDetails.email",
+            name: { $ifNull: ["$userDetails.name", "N/A"] },
+            contact: { $ifNull: ["$userDetails.contact", "N/A"] },
+            location: { $ifNull: ["$userDetails.location", "N/A"] },
+            email: { $ifNull: ["$userDetails.email", "N/A"] },
           },
           items: {
             $map: {
@@ -222,16 +245,26 @@ export const fetchBookingDetails = async (adminId, userId, page, limit) => {
     };
   } catch (error) {
     console.error("Error fetching orders:", error);
-    return { success: false, message: "Error fetching orders: " + error.message };
+    return {
+      success: false,
+      message: "Error fetching orders: " + error.message,
+    };
   }
 };
 
 export const createOrderDetails = async (adminId, userId, bookingData) => {
   try {
-    if (!userId || !adminId || !bookingData?.paymentMethod || !bookingData?.deliveryDate || !bookingData?.bookingData?.length) {
+    if (
+      !userId ||
+      !adminId ||
+      !bookingData?.paymentMethod ||
+      !bookingData?.deliveryDate ||
+      !bookingData?.bookingData?.length
+    ) {
       return {
         success: false,
-        message: "Missing required fields (adminId, userId, paymentMethod, deliveryDate, or items).",
+        message:
+          "Missing required fields (adminId, userId, paymentMethod, deliveryDate, or items).",
       };
     }
 
@@ -260,8 +293,8 @@ export const createOrderDetails = async (adminId, userId, bookingData) => {
       deliveryDate: new Date(bookingData.deliveryDate),
       paymentMethod: bookingData.paymentMethod,
       pricingOption: bookingData.pricingOption, // Store Discount/Premium option
-      discountAmount:discount, // Store discount only if "Discount" is selected
-      premiumAmount:premium, // Store premium only if "Premium" is selected
+      discountAmount: discount, // Store discount only if "Discount" is selected
+      premiumAmount: premium, // Store premium only if "Premium" is selected
       orderStatus: "Processing",
       paymentStatus: "Pending",
     });
