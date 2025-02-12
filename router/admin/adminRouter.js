@@ -84,7 +84,7 @@ import {
   fetchBookings,
   updateOrder,
   updateOrderQuantity,
-  updateOrderStatus
+  updateOrderStatus,
 } from "../../controllers/admin/bookingController.js";
 import {
   uploadBG,
@@ -102,6 +102,8 @@ import {
   editUser,
   getUsers,
 } from "../../controllers/admin/userController.js";
+
+import { proxyImage } from "../../controllers/admin/proxyImageController.js";
 import {
   addUserCommodity,
   deleteUserCommodity,
@@ -129,7 +131,19 @@ import {
   fetchProductData,
   fetchAllProductData,
 } from "../../controllers/admin/productController.js";
-import { deleteSliderImage, fetchScreenSlider, updateScreenSlider, uploadScreenSlider } from "../../controllers/admin/screenSlidersController.js";
+import {
+  deleteSliderImage,
+  fetchScreenSlider,
+  updateScreenSlider,
+  uploadScreenSlider,
+} from "../../controllers/admin/screenSlidersController.js";
+import {
+  createPricingOption,
+  editPricingOption,
+  getLatestPricingOption,
+  removePricingOption,
+  fetchAllPricingOptions
+} from "../../controllers/admin/pricingOptionController.js";
 
 const router = Router();
 
@@ -291,8 +305,25 @@ router.put("/update-order-quantity/:orderId", updateOrderQuantity);
 router.put("/update-order-reject/:orderId", updateOrderStatus);
 
 //ScreenSliders
-router.post("/tv-sliders/upload/:adminId",uploadMultiple("image", 5), uploadScreenSlider);
+router.post(
+  "/tv-sliders/upload/:adminId",
+  uploadMultiple("image", 5),
+  uploadScreenSlider
+);
 router.get("/tv-sliders/:adminId", fetchScreenSlider);
 router.put("/tv-sliders/:sliderId/settings/:adminId", updateScreenSlider);
-router.delete("/tv-sliders/:sliderId/delete/:imageName/:adminId", deleteSliderImage);
+router.delete(
+  "/tv-sliders/:sliderId/delete/:imageName/:adminId",
+  deleteSliderImage
+);
+
+router.get("/proxy-image", proxyImage);
+
+// Admin Pricing Routes
+router.post("/pricing/add/:adminId", createPricingOption);
+router.get("/pricing/latest/:adminId", getLatestPricingOption);
+router.get("/pricing/all/:adminId", fetchAllPricingOptions);
+router.put("/pricing/edit/:pricingId", editPricingOption);
+router.delete("/pricing/delete/:pricingId", removePricingOption);
+
 export default router;

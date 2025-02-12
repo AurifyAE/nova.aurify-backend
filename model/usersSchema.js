@@ -12,10 +12,13 @@ const UsersSchema = new mongoose.Schema({
         type: String,
         required: true,
       },
+      email: {
+        type: String,
+        required: true,
+      },
       contact: {
         type: Number,
         required: true,
-        unique: true,
       },
       location: {
         type: String,
@@ -33,6 +36,14 @@ const UsersSchema = new mongoose.Schema({
       passwordAccessKey: {
         type: String,
         required: true,
+      },
+      cashBalance: {
+        type: Number,
+        default: 0,
+      },
+      goldBalance: {
+        type: Number,
+        default: 0,
       },
       createdAt: {
         type: Date,

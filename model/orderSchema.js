@@ -14,6 +14,7 @@ const orderItemSchema = new mongoose.Schema({
   fixedPrice: {
     type: Number,
     required: true,
+    default:0
   },
   addedAt: {
     type: Date,
@@ -42,14 +43,26 @@ const orderSchema = new mongoose.Schema(
     totalPrice: {
       type: Number,
       required: true,
+      default: 0
+    },
+    pricingOption: {
+      type: String,
+      enum: ["Discount", "Premium", null], // Ensures only valid values are used
+      default: null
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+    },
+    premiumAmount: {
+      type: Number,
+      default: 0,
     },
     transactionId: {
       type: String,
       unique: true,
       default: () => {
-        // Get current timestamp in milliseconds and convert to base 36
         const timestamp = Date.now().toString(36);
-        // Take first 8 characters of UUID v4 (without dashes)
         const shortUuid = uuidv4().replace(/-/g, '').substring(0, 8);
         return `TX${timestamp}${shortUuid}`.toUpperCase();
       }
@@ -68,11 +81,11 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      required: true,
+      required: true
     },
     deliveryDate: {
       type: Date,
-      default: Date.now,
+      required: true,
     },
     orderDate: {
       type: Date,
@@ -90,6 +103,14 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-
+// Pre-save hook to ensure discount and premium are not applied together
+orderSchema.pre("save", function (next) {
+  if (this.pricingOption === "Discount") {
+    this.premiumAmount = 0;
+  } else if (this.pricingOption === "Premium") {
+    this.discountAmount = 0;
+  }
+  next();
+});
 
 export const orderModel = mongoose.model("Order", orderSchema);

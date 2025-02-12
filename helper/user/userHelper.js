@@ -9,6 +9,7 @@ import { spotRateModel } from "../../model/spotRateSchema.js";
 import { EcommerceBannerModel } from "../../model/EcommerceBannerSchema.js";
 import { VideoBannerModel } from "../../model/videoBannerSchema.js";
 import { encryptPassword, decryptPassword } from "../../utils/crypto.js";
+import { PricingOption } from "../../model/pricingOptionModel.js";
 
 export const updateUserPassword = async (adminId, contact, newPassword) => {
   try {
@@ -319,6 +320,12 @@ export const getVideoBannerDetails = async (adminId) => {
     };
   }
 };
+
+
+export const getLastPricingOption = async (createdBy, methodType) => {
+  return await PricingOption.findOne({ createdBy, methodType }).sort({ createdAt: -1 });
+};
+
 
 // export const addFCMToken = async (email, fcmToken) => {
 //   try {

@@ -17,7 +17,7 @@ import {
   getViewAll,
   updateCartItemQuantity
 } from "../../controllers/user/productController.js";
-import { saveBooking } from "../../controllers/user/bookingController.js";
+import { saveBooking , createOrder} from "../../controllers/user/bookingController.js";
 import {
   fetchAdminBankDetails,
   forgotPassword,
@@ -31,7 +31,8 @@ import {
   userLoginController,
   getProfile,
   getBanner,
-  getVideoBanner
+  getVideoBanner,
+  getLatestPricingOption
 } from "../../controllers/user/userController.js";
 import { fetchUserOrder, orderQuantityConfirmation } from "../../controllers/user/orderController.js";
 
@@ -75,5 +76,10 @@ router.put('/products/fix-prices',fixedProductPrice)
 router.get("/get-premium-discount/:adminId", getPremiumDiscounts); // New route for premium discounts
 router.post('/order_quantity_confirmation',orderQuantityConfirmation)
 router.get('/fetch-order/:adminId/:userId',fetchUserOrder)
+
+// cart Management 
+
+router.post('/order-place/:adminId/:userId',createOrder)
+router.get('/pricing/latest/:adminId',getLatestPricingOption)
 
 export default router;

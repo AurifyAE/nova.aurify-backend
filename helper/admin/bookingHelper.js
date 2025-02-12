@@ -285,6 +285,9 @@ export const fetchBookingDetails = async (adminId) => {
           orderNumber: 1,
           orderDate: 1,
           deliveryDate: 1,
+          pricingOption:1,
+          premiumAmount:1,
+          discountAmount:1,
           totalPrice: 1,
           orderStatus: 1,
           paymentStatus: 1,
@@ -302,6 +305,7 @@ export const fetchBookingDetails = async (adminId) => {
                 name: "$$userInfo.user.name",
                 contact: "$$userInfo.user.contact",
                 location: "$$userInfo.user.location",
+                email:"$$userInfo.user.email"
               },
             },
           },

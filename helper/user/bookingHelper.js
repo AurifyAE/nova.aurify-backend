@@ -223,3 +223,58 @@ export const fetchBookingDetails = async (adminId, userId, page, limit) => {
   }
 };
 
+export const createOrderDetails = async (adminId, userId, bookingData) => {
+  try {
+    if (!userId || !adminId || !bookingData?.paymentMethod || !bookingData?.deliveryDate || !bookingData?.bookingData?.length) {
+      return {
+        success: false,
+        message: "Missing required fields (adminId, userId, paymentMethod, deliveryDate, or items).",
+      };
+    }
+
+    // Validate pricing option and assign the appropriate value
+    let discount = 0;
+    let premium = 0;
+
+    if (bookingData.pricingOption === "Discount") {
+      discount = bookingData.discount || 0;
+    } else if (bookingData.pricingOption === "Premium") {
+      premium = bookingData.premium || 0;
+    }
+
+    // Process order items (without storing fixed prices)
+    const orderItems = bookingData.bookingData.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      addedAt: new Date(),
+    }));
+
+    // Create a new order (without storing fixed prices)
+    const newOrder = new orderModel({
+      adminId: new mongoose.Types.ObjectId(adminId),
+      userId: new mongoose.Types.ObjectId(userId),
+      items: orderItems,
+      deliveryDate: new Date(bookingData.deliveryDate),
+      paymentMethod: bookingData.paymentMethod,
+      pricingOption: bookingData.pricingOption, // Store Discount/Premium option
+      discountAmount:discount, // Store discount only if "Discount" is selected
+      premiumAmount:premium, // Store premium only if "Premium" is selected
+      orderStatus: "Processing",
+      paymentStatus: "Pending",
+    });
+
+    const savedOrder = await newOrder.save();
+
+    return {
+      success: true,
+      message: "Order placed successfully.",
+      orderDetails: savedOrder,
+    };
+  } catch (error) {
+    console.error("Error placing the order:", error.message);
+    return {
+      success: false,
+      message: "Error placing the order: " + error.message,
+    };
+  }
+};

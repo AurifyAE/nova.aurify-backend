@@ -9,7 +9,8 @@ import {
   getAdminProfile,
   getBannerDetails,
   getVideoBannerDetails,
-  addFCMToken
+  addFCMToken,
+  getLastPricingOption
 } from "../../helper/user/userHelper.js";
 import adminModel from "../../model/adminSchema.js";
 import DiscountModel from "../../model/discountSchema.js";
@@ -348,5 +349,33 @@ export const getVideoBanner = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const getLatestPricingOption = async (req, res) => {
+  try {
+    const createdBy = req.params.adminId;
+    const { methodType } = req.query; // Extract methodType from query params
+
+    if (!methodType || !["Cash", "Bank"].includes(methodType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid methodType. Allowed values: 'Cash' or 'Bank'.",
+      });
+    }
+
+    const lastPricing = await getLastPricingOption(createdBy, methodType);
+
+    if (!lastPricing) {
+      return res.status(404).json({
+        success: false,
+        message: "No pricing options found for the selected method type.",
+      });
+    }
+
+    res.status(200).json({ success: true, data: lastPricing });
+  } catch (error) {
+    console.error("Error fetching latest pricing option:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error." });
   }
 };
