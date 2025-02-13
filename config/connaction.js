@@ -1,19 +1,20 @@
 import mongoose from "mongoose";
-mongoose.set("strictQuery", false);
+
+const MONGO_URI = process.env.MONGO_URI; // Ensure full URI is stored in .env
+
 const mongodb = async () => {
+  if (!MONGO_URI) {
+    console.error("❌ MongoDB URI is missing in environment variables!");
+    process.exit(1);
+  }
+
   try {
-    await mongoose
-      .connect(
-        `mongodb+srv://aurifydxb:${process.env.MONGOOES_PASS}@aurifycluster.rdzxh.mongodb.net/Aurify-Database?retryWrites=true&w=majority&appName=Aurify`
-      )
-      .then(() => {
-        console.log("connection successful");
-      })
-      .catch((error) => {
-        console.log(error);
-      });
+    await mongoose.connect(MONGO_URI);
+    console.log("✅ MongoDB connection successful!");
   } catch (error) {
-    console.log(error);
+    console.error("❌ MongoDB connection error:", error);
+    process.exit(1);
   }
 };
+
 export { mongodb };
