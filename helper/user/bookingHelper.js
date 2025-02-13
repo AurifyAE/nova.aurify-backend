@@ -119,7 +119,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
   }
 };
 
-export const fetchBookingDetails = async (adminId, userId, page, limit) => {
+export const fetchBookingDetails = async (adminId, userId, page, limit, orderStatus) => {
   try {
     if (!adminId || !userId) {
       return { success: false, message: "Admin ID and User ID are required." };
@@ -128,23 +128,33 @@ export const fetchBookingDetails = async (adminId, userId, page, limit) => {
     const adminObjectId = new mongoose.Types.ObjectId(adminId);
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
-    // Count total orders for pagination
-    const totalOrders = await orderModel.countDocuments({
+    // Create match condition based on orderStatus
+    const matchCondition = {
       adminId: adminObjectId,
       userId: userObjectId,
-    });
+    };
+
+    // Add orderStatus to match condition if provided
+    if (orderStatus) {
+      matchCondition.orderStatus = orderStatus;
+    }
+
+    // Count total orders for pagination with status filter
+    const totalOrders = await orderModel.countDocuments(matchCondition);
 
     if (totalOrders === 0) {
       return {
         success: false,
-        message: "No orders found for the given admin and user.",
+        message: orderStatus 
+          ? `No orders found with status '${orderStatus}' for the given admin and user.`
+          : "No orders found for the given admin and user.",
       };
     }
 
     const pipeline = [
-      { $match: { adminId: adminObjectId, userId: userObjectId } },
+      { $match: matchCondition },
 
-      // Lookup user details (Fix: Unwind users array and match userId)
+      // Rest of your existing pipeline stages...
       {
         $lookup: {
           from: "users",
@@ -224,9 +234,7 @@ export const fetchBookingDetails = async (adminId, userId, page, limit) => {
         },
       },
 
-      { $sort: { orderDate: -1 } }, // Sort by latest order
-
-      // Pagination
+      { $sort: { orderDate: -1 } },
       { $skip: (page - 1) * limit },
       { $limit: limit },
     ];
@@ -251,7 +259,6 @@ export const fetchBookingDetails = async (adminId, userId, page, limit) => {
     };
   }
 };
-
 export const createOrderDetails = async (adminId, userId, bookingData) => {
   try {
     if (

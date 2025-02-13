@@ -85,7 +85,7 @@ export const orderQuantityConfirmation = async (req, res, next) => {
 export const fetchUserOrder = async (req, res) => {
   try {
     const { adminId, userId } = req.params;
-    const { page = 1, limit = 10 } = req.query; // Default: page 1, 10 orders per page
+    const { page = 1, limit = 10, orderStatus } = req.query; // Added orderStatus query parameter
 
     // Convert page & limit to integers
     const pageNumber = parseInt(page, 10);
@@ -98,8 +98,8 @@ export const fetchUserOrder = async (req, res) => {
       });
     }
 
-    // Fetch paginated booking details
-    const result = await fetchBookingDetails(adminId, userId, pageNumber, pageSize);
+    // Pass orderStatus to fetchBookingDetails
+    const result = await fetchBookingDetails(adminId, userId, pageNumber, pageSize, orderStatus);
 
     if (!result.success) {
       return res.status(404).json({
@@ -112,7 +112,7 @@ export const fetchUserOrder = async (req, res) => {
       success: true,
       message: result.message,
       data: result.orderDetails,
-      pagination: result.pagination, // Includes totalPages, currentPage, totalOrders
+      pagination: result.pagination,
     });
   } catch (error) {
     console.error("Error fetching user order:", error);
