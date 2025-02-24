@@ -234,29 +234,44 @@ export const getSportrate = async (adminId) => {
 
 export const getNewsByAdminId = async (adminId) => {
   try {
-    const news = await newsModel.findOne({ createdBy: adminId });
+    // Check if automated news exists
+    const automatedNews = await newsModel.findOne({ isAutomated: true });
 
-    if (!news) {
+    // If automated news exists, return only automated news
+    if (automatedNews) {
       return {
-        success: false,
-        news: null,
-        message: "No news found for this admin",
+        success: true,
+        news: [automatedNews],
+        message: "Automated news fetched successfully",
       };
     }
 
+    // If no automated news, fetch admin-specific news
+    const adminNews = await newsModel.find({ createdBy: adminId });
+
+    if (adminNews.length > 0) {
+      return {
+        success: true,
+        news: adminNews,
+        message: "Admin news fetched successfully",
+      };
+    }
+
+    // If no news is found at all
     return {
-      success: true,
-      news,
-      message: "News fetched successfully",
+      success: false,
+      news: [],
+      message: "No news found",
     };
   } catch (error) {
     return {
       success: false,
-      news: null,
+      news: [],
       message: "Error fetching news: " + error.message,
     };
   }
 };
+
 
 export const getBannerDetails = async (adminId) => {
   try {

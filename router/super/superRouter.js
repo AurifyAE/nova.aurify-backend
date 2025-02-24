@@ -8,7 +8,7 @@ import {
   changeDeviceStatus,
   deleteDevice,
 } from "../../controllers/super/superAdminController.js";
-import { uploadSingle ,uploadMultiple } from "../../middleware/multer.js";
+import { uploadSingle, uploadMultiple } from "../../middleware/multer.js";
 import {
   addServer,
   updateSelectedServer,
@@ -39,6 +39,19 @@ import {
   fetchProductData,
   updateProduct,
 } from "../../controllers/super/productController.js";
+import {
+  addNewsController,
+  deleteNewsController,
+  getAllNewsController,
+  updateNewsController,
+} from "../../controllers/super/newsController.js";
+import {
+  addLondonFixController,
+  getAllLondonFixController,
+  getLondonFixByIdController,
+  updateLondonFixController,
+  deleteLondonFixController,
+} from "../../controllers/super/londonFixController.js";
 const router = Router();
 
 router.post("/register", uploadSingle("logo"), registerAdmin);
@@ -78,9 +91,23 @@ router.get("/main-categories", getMainCategories);
 router.get("/sub-categories", getSubCategories);
 
 // router.get("/get-product/:mainCateId",fetchProductData);
-router.get("/get-product",fetchProductData);
+router.get("/get-product", fetchProductData);
 
-router.post("/products",uploadMultiple('image',5), createProduct);
-router.put("/products/:id",uploadMultiple('image',5), updateProduct);
+router.post("/products", uploadMultiple("image", 5), createProduct);
+router.put("/products/:id", uploadMultiple("image", 5), updateProduct);
 router.delete("/products/:id", deleteProduct);
+
+//news
+
+router.post("/news-add", addNewsController);
+router.put("/news-update/:newsId/:parentId", updateNewsController);
+router.delete("/news-delete/:newsId", deleteNewsController);
+router.get("/news-all", getAllNewsController);
+
+//londonfix
+router.post("/londonfix", addLondonFixController); 
+router.get("/londonfix", getAllLondonFixController); 
+router.get("/londonfix/:id", getLondonFixByIdController);
+router.put("/londonfix/:id", updateLondonFixController); 
+router.delete("/londonfix/:id", deleteLondonFixController); 
 export default router;

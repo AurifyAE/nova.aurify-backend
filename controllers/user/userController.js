@@ -233,7 +233,7 @@ export const getCurrentNews = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       news,
-      message: "News fetched successfully",
+      message
     });
   } catch (error) {
     next(error);
