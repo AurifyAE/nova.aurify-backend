@@ -12,10 +12,18 @@ const productSchema = new mongoose.Schema(
       default: null,
       required: [true, "Product description is required"],
     },
-    images: {
-      type: [String],
-      validate: [(val) => val.length > 0, "At least one image is required"],
-    },
+    images: [
+      {
+        url: {
+          type: String,
+          required: [true, "Image URL is required"],
+        },
+        key: {
+          type: String,
+          required: [true, "S3 key is required"],
+        },
+      },
+    ],
     price: {
       type: Number,
       default:0,
@@ -41,10 +49,7 @@ const productSchema = new mongoose.Schema(
       enum: [true,false], 
       default: true, 
     },
-    tags: {
-      type: String,
-      default: "None", 
-    },
+    
     type: {
       type: String,
       default: 'GOLD', 
@@ -56,11 +61,7 @@ const productSchema = new mongoose.Schema(
       unique: true, 
       trim: true,
     },
-    subCategory: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "SubCategory",
-      required: true,
-    },
+   
     addedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",

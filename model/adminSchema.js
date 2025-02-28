@@ -4,6 +4,10 @@ const adminSchema = new mongoose.Schema({
   userName: { type: String, required: true, unique: true },
   companyName: { type: String, required: true },
   logo: { type: String },
+  awsS3Key: { 
+    type: String, 
+    required: true 
+  },
   address: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -34,18 +38,6 @@ const adminSchema = new mongoose.Schema({
   serviceStartDate: { type: Date, required: true },
   serviceEndDate: { type: Date },
 
-  // Additional fields for admin features
-  userDetails: {
-    deviceIP: { type: String },
-    location: { type: String },
-    spreadValue: { type: String },
-  },
-  socialMediaLinks: {
-    facebook: { type: String },
-    twitter: { type: String },
-    linkedin: { type: String },
-    instagram: { type: String },
-  },
   bankDetails: [
     {
       holderName: { type: String },
@@ -58,6 +50,10 @@ const adminSchema = new mongoose.Schema({
       city: { type: String },
       country: { type: String },
       logo: { type: String },
+      awsS3Key: { 
+        type: String, 
+        required: true 
+      },
     },
   ],
 });

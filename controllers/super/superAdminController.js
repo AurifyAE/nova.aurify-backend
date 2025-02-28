@@ -2,7 +2,7 @@ import {
   userCollectionSave,
   fetchAdminData,
   collectionUpdate,
-
+  deleteAdminData,
 } from "../../helper/superAdmin/superHelper.js";
 
 export const registerAdmin = async (req, res, next) => {
@@ -11,6 +11,7 @@ export const registerAdmin = async (req, res, next) => {
       userName: req.body.userName,
       companyName: req.body.companyName,
       logo: req.file ? req.file.location : undefined,
+      awsS3Key: req.file ? req.file.key : undefined, // Add S3 key from file object
       address: req.body.address,
       email: req.body.email,
       password: req.body.password,
@@ -40,6 +41,33 @@ export const getAdmin = async (req, res, next) => {
     next(error);
   }
 };
+
+export const deleteAdmin = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+
+    if (!adminId) {
+      return res.status(400).json({
+        success: false,
+        message: "Admin ID is required",
+      });
+    }
+
+    const result = await deleteAdminData(adminId);
+
+    return res.status(result.status).json({
+      success: result.success,
+      message: result.message,
+      ...(result.error && { error: result.error }),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to process delete request",
+      error: error.message,
+    });
+  }
+};
 export const editAdmin = async (req, res, next) => {
   try {
     const { adminId } = req.params;
@@ -54,6 +82,7 @@ export const editAdmin = async (req, res, next) => {
     const userData = {
       userName: req.body.userName,
       logo: req.file ? req.file.location : undefined,
+      awsS3Key: req.file ? req.file.key : undefined, // Add the S3 key when uploading a new file
       address: req.body.address,
       email: req.body.email,
       password: req.body.password,
@@ -68,9 +97,13 @@ export const editAdmin = async (req, res, next) => {
       serviceEndDate: formatDate(req.body.serviceEndDate),
     };
 
-    await collectionUpdate(adminId, userData);
+    const updatedAdmin = await collectionUpdate(adminId, userData);
+    return res.status(200).json({
+      success: true,
+      message: "Admin updated successfully",
+      data: updatedAdmin,
+    });
   } catch (error) {
     next(error);
   }
 };
-
