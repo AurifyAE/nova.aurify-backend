@@ -45,18 +45,10 @@ const orderSchema = new mongoose.Schema(
       required: true,
       default: 0
     },
-    pricingOption: {
-      type: String,
-      enum: ["Discount", "Premium", null], // Ensures only valid values are used
-      default: null
-    },
-    discountAmount: {
+    totalWeight: {
       type: Number,
-      default: 0,
-    },
-    premiumAmount: {
-      type: Number,
-      default: 0,
+      required: true,
+      default: 0
     },
     transactionId: {
       type: String,
@@ -83,10 +75,6 @@ const orderSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    deliveryDate: {
-      type: Date,
-      required: true,
-    },
     orderDate: {
       type: Date,
       default: Date.now,
@@ -103,14 +91,5 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Pre-save hook to ensure discount and premium are not applied together
-orderSchema.pre("save", function (next) {
-  if (this.pricingOption === "Discount") {
-    this.premiumAmount = 0;
-  } else if (this.pricingOption === "Premium") {
-    this.discountAmount = 0;
-  }
-  next();
-});
 
 export const orderModel = mongoose.model("Order", orderSchema);

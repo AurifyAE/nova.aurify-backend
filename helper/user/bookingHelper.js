@@ -8,8 +8,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
     if (
       !userId ||
       !adminId ||
-      !bookingData?.paymentMethod ||
-      !bookingData?.deliveryDate
+      !bookingData?.paymentMethod 
     ) {
       return {
         success: false,
@@ -37,6 +36,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
     }
 
     let totalPrice = 0;
+    let totalWeight = 0;
     const orderItems = await Promise.all(
       cart.items.map(async (item) => {
         const product = await Product.findById(item.productId);
@@ -54,15 +54,19 @@ export const orderPlace = async (adminId, userId, bookingData) => {
             message: `Invalid price for product ID ${item.productId}.`,
           };
         }
+
         const fixedPrice = product.price;
         const itemTotal = fixedPrice * item.quantity;
+        const itemWeight = (Number(product.weight) || 0) * item.quantity; // Assuming product has a weight field
         totalPrice += itemTotal;
+        totalWeight += itemWeight;
 
         return {
           productId: item.productId,
           quantity: item.quantity,
           fixedPrice: fixedPrice || 0, // Store fixed price
           totalPrice: itemTotal, // Store calculated total
+          totalWeight: itemWeight, // Store total weight
           addedAt: new Date(),
         };
       })
@@ -76,13 +80,13 @@ export const orderPlace = async (adminId, userId, bookingData) => {
       };
     }
 
-    // Create a new order with the fixed price
+    // Create a new order with the fixed price and total weight
     const newOrder = new orderModel({
       adminId: new mongoose.Types.ObjectId(adminId),
       userId: new mongoose.Types.ObjectId(userId),
       items: orderItems,
       totalPrice: totalPrice,
-      deliveryDate: new Date(bookingData.deliveryDate), // Ensure date format
+      totalWeight: totalWeight, 
       paymentMethod: bookingData.paymentMethod,
     });
 
@@ -95,7 +99,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
         { userId },
         {
           $pull: { items: { productId: { $in: bookedProductIds } } },
-          $set: { totalPrice: 0 },
+          $set: { totalWeight: 0 },
         }
       );
 
@@ -118,6 +122,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
     };
   }
 };
+
 
 export const fetchBookingDetails = async (adminId, userId, page, limit, orderStatus) => {
   try {
@@ -167,7 +172,7 @@ export const fetchBookingDetails = async (adminId, userId, page, limit, orderSta
                 _id: "$users._id",
                 name: "$users.name",
                 contact: "$users.contact",
-                location: "$users.location",
+                address: "$users.address",
                 email: "$users.email",
               },
             },
@@ -192,11 +197,8 @@ export const fetchBookingDetails = async (adminId, userId, page, limit, orderSta
         $project: {
           orderNumber: 1,
           orderDate: 1,
-          deliveryDate: 1,
-          pricingOption: 1,
-          premiumAmount: 1,
-          discountAmount: 1,
           totalPrice: 1,
+          totalWeight: 1,
           orderStatus: 1,
           paymentStatus: 1,
           paymentMethod: 1,
@@ -205,7 +207,7 @@ export const fetchBookingDetails = async (adminId, userId, page, limit, orderSta
             id: "$userId",
             name: { $ifNull: ["$userDetails.name", "N/A"] },
             contact: { $ifNull: ["$userDetails.contact", "N/A"] },
-            location: { $ifNull: ["$userDetails.location", "N/A"] },
+            address: { $ifNull: ["$userDetails.address", "N/A"] },
             email: { $ifNull: ["$userDetails.email", "N/A"] },
           },
           items: {
@@ -259,65 +261,4 @@ export const fetchBookingDetails = async (adminId, userId, page, limit, orderSta
     };
   }
 };
-export const createOrderDetails = async (adminId, userId, bookingData) => {
-  try {
-    if (
-      !userId ||
-      !adminId ||
-      !bookingData?.paymentMethod ||
-      !bookingData?.deliveryDate ||
-      !bookingData?.bookingData?.length
-    ) {
-      return {
-        success: false,
-        message:
-          "Missing required fields (adminId, userId, paymentMethod, deliveryDate, or items).",
-      };
-    }
 
-    // Validate pricing option and assign the appropriate value
-    let discount = 0;
-    let premium = 0;
-
-    if (bookingData.pricingOption === "Discount") {
-      discount = bookingData.discount || 0;
-    } else if (bookingData.pricingOption === "Premium") {
-      premium = bookingData.premium || 0;
-    }
-
-    // Process order items (without storing fixed prices)
-    const orderItems = bookingData.bookingData.map((item) => ({
-      productId: item.productId,
-      quantity: item.quantity,
-      addedAt: new Date(),
-    }));
-
-    // Create a new order (without storing fixed prices)
-    const newOrder = new orderModel({
-      adminId: new mongoose.Types.ObjectId(adminId),
-      userId: new mongoose.Types.ObjectId(userId),
-      items: orderItems,
-      deliveryDate: new Date(bookingData.deliveryDate),
-      paymentMethod: bookingData.paymentMethod,
-      pricingOption: bookingData.pricingOption, // Store Discount/Premium option
-      discountAmount: discount, // Store discount only if "Discount" is selected
-      premiumAmount: premium, // Store premium only if "Premium" is selected
-      orderStatus: "Processing",
-      paymentStatus: "Pending",
-    });
-
-    const savedOrder = await newOrder.save();
-
-    return {
-      success: true,
-      message: "Order placed successfully.",
-      orderDetails: savedOrder,
-    };
-  } catch (error) {
-    console.error("Error placing the order:", error.message);
-    return {
-      success: false,
-      message: "Error placing the order: " + error.message,
-    };
-  }
-};

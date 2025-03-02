@@ -27,17 +27,11 @@ const productSchema = new mongoose.Schema(
     price: {
       type: Number,
       default:0,
-      required: [true, "Product price is required"],
-      min: [0, "Price cannot be negative"],
     },
     weight: {
       type: Number,
       required: [true, "Product weight is required"],
       min: [0, "Weight cannot be negative"],
-    },
-    makingCharge: {
-      type: Number,
-      required: [true, "Product makingCharge is required"],
     },
     purity: {
       type: Number,

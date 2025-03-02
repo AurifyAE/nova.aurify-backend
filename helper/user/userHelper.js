@@ -4,12 +4,7 @@ import NotificationModel from "../../model/notificationSchema.js";
 import FCMTokenModel from "../../model/fcmTokenSchema.js";
 import UserFCMTokenModel from "../../model/userFCMToken.js";
 import NotificationService from "../../utils/sendPushNotification.js";
-import newsModel from "../../model/newsSchema.js";
-import { spotRateModel } from "../../model/spotRateSchema.js";
-import { EcommerceBannerModel } from "../../model/EcommerceBannerSchema.js";
-import { VideoBannerModel } from "../../model/videoBannerSchema.js";
 import { encryptPassword, decryptPassword } from "../../utils/crypto.js";
-import { PricingOption } from "../../model/pricingOptionModel.js";
 
 export const updateUserPassword = async (adminId, contact, newPassword) => {
   try {
@@ -95,7 +90,10 @@ export const userVerification = async (adminId, contact, password, token) => {
     const user = usersDoc.users.find((user) => user.contact === contact);
 
     if (!user) {
-      return { success: false, message: "Invalid contact number. Authentication failed." };
+      return {
+        success: false,
+        message: "Invalid contact number. Authentication failed.",
+      };
     }
     const decryptedPassword = decryptPassword(
       user.password,
@@ -146,22 +144,6 @@ export const addFCMToken = async (userId, fcmToken) => {
     return { success: true, message: "FCM token successfully added." };
   } catch (error) {
     throw new Error("Error adding FCM token: " + error.message);
-  }
-};
-
-export const userUpdateSpread = async (adminId, userId, spread, title) => {
-  try {
-    const usersDoc = await UsersModel.findOneAndUpdate(
-      { createdBy: adminId, "users._id": userId },
-      { $set: { "users.$.spread": spread, "users.$.spreadTitle": title } },
-      { new: true }
-    );
-    if (!usersDoc) {
-      return { success: false, message: "User not found" };
-    }
-    return { success: true, message: "Spread value updated successfully" };
-  } catch (error) {
-    throw new Error("Error updating spread value" + error.message);
   }
 };
 
@@ -217,162 +199,3 @@ export const requestPassInAdmin = async (adminId, request) => {
     throw new Error("Error For the Requesting" + error.message);
   }
 };
-
-export const getSportrate = async (adminId) => {
-  try {
-    const fetchSpotRate = await spotRateModel.findOne({ createdBy: adminId });
-
-    if (!fetchSpotRate) {
-      return { success: false, fetchSpotRate: null };
-    }
-
-    return { success: true, fetchSpotRate };
-  } catch (error) {
-    throw new Error("Error fetching SpotRate: " + error.message);
-  }
-};
-
-export const getNewsByAdminId = async (adminId) => {
-  try {
-    // Check if automated news exists
-    const automatedNews = await newsModel.findOne({ isAutomated: true });
-
-    // If automated news exists, return only automated news
-    if (automatedNews) {
-      return {
-        success: true,
-        news: [automatedNews],
-        message: "Automated news fetched successfully",
-      };
-    }
-
-    // If no automated news, fetch admin-specific news
-    const adminNews = await newsModel.find({ createdBy: adminId });
-
-    if (adminNews.length > 0) {
-      return {
-        success: true,
-        news: adminNews,
-        message: "Admin news fetched successfully",
-      };
-    }
-
-    // If no news is found at all
-    return {
-      success: false,
-      news: [],
-      message: "No news found",
-    };
-  } catch (error) {
-    return {
-      success: false,
-      news: [],
-      message: "Error fetching news: " + error.message,
-    };
-  }
-};
-
-
-export const getBannerDetails = async (adminId) => {
-  try {
-    const bannerDocument = await EcommerceBannerModel.findOne({
-      createdBy: adminId,
-    });
-
-    if (!bannerDocument) {
-      return {
-        success: false,
-        banners: [],
-        message: "No banners found for this admin",
-      };
-    }
-
-    const images = bannerDocument.banner.flatMap((item) => item.imageUrl);
-
-    return {
-      success: true,
-      banners: images,
-      message: "Banners fetched successfully",
-    };
-  } catch (error) {
-    return {
-      success: false,
-      banners: [],
-      message: "Error fetching banners: " + error.message,
-    };
-  }
-};
-
-export const getVideoBannerDetails = async (adminId) => {
-  try {
-    const bannerDocument = await VideoBannerModel.findOne({
-      createdBy: adminId,
-    });
-
-    if (!bannerDocument) {
-      return {
-        success: false,
-        banners: [],
-        message: "No VideoBanner found for this admin",
-      };
-    }
-
-    // Flatten the videos array and extract only the location links
-    const locations = bannerDocument.banner
-      .flatMap((item) => item.videos) // Extract all videos arrays and flatten them
-      .map((video) => video.location); // Extract only the location property
-
-    return {
-      success: true,
-      banners: locations,
-      message: "VideoBanner fetched successfully",
-    };
-  } catch (error) {
-    return {
-      success: false,
-      banners: [],
-      message: "Error fetching VideoBanner: " + error.message,
-    };
-  }
-};
-
-
-export const getLastPricingOption = async (createdBy, methodType) => {
-  return await PricingOption.findOne({ createdBy, methodType }).sort({ createdAt: -1 });
-};
-
-
-// export const addFCMToken = async (email, fcmToken) => {
-//   try {
-//     const admin = await adminModel.findOne({ email });
-
-//     if (!admin) {
-//       return { success: false, message: "Invalid email. Admin not found." };
-//     }
-
-//     let fcmEntry = await FCMTokenModel.findOne({ createdBy: admin._id });
-
-//     if (fcmEntry) {
-//       const tokenExists = fcmEntry.FCMTokens.some(
-//         (tokenObj) => tokenObj.token === fcmToken
-//       );
-
-//       if (tokenExists) {
-//         return { success: false, message: "FCM token already exists." };
-//       } else {
-//         fcmEntry.FCMTokens.push({ token: fcmToken });
-//       }
-//     } else {
-//       fcmEntry = new FCMTokenModel({
-//         FCMTokens: [{ token: fcmToken }],
-//         createdBy: admin._id,
-//       });
-//     }
-
-//     await fcmEntry.save();
-
-//     return { success: true, message: "FCM token successfully added." };
-//   } catch (error) {
-//     throw new Error("Error FCMToken " + error.message);
-//   }
-// };

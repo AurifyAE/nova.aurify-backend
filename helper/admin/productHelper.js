@@ -12,7 +12,6 @@ export const createProductHelper = async (productData) => {
       addedBy,
       addedByUser,
       weight,
-      makingCharge,
       purity,
       sku,
       type,
@@ -33,7 +32,6 @@ export const createProductHelper = async (productData) => {
       addedBy: addedBy || null,
       addedByUser: addedByUser || null,
       weight,
-      makingCharge,
       purity,
       stock: true, // Default stock status
       sku,
