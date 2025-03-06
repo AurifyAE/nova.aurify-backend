@@ -111,7 +111,129 @@ export const getUsers = async (req, res) => {
     });
   }
 };
+export const updateUserCashBalance = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { amount } = req.body;
 
+    // Validate input
+    if (!userId || !amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid userId or amount" });
+    }
+
+    // Call helper function to update balance
+    const updatedUser = await userHelper.updateCashBalance(userId, amount);
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Cash balance updated successfully",
+      data: updatedUser.data,
+    });
+
+  } catch (error) {
+    console.error("Error updating cash balance:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating cash balance",
+      error: error.message,
+    });
+  }
+};
+export const updateUserGoldBalance = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { amount } = req.body;
+
+    // Validate input
+    if (!userId || !amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid userId or amount" });
+    }
+
+    // Call helper function to update balance
+    const updatedUser = await userHelper.updateGoldBalance(userId, amount);
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Cash balance updated successfully",
+      data: updatedUser.data,
+    });
+
+  } catch (error) {
+    console.error("Error updating cash balance:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating cash balance",
+      error: error.message,
+    });
+  }
+};
+export const updateReceivedMetrics = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    let { receivedPurity, receivedWeight } = req.body;
+
+    // Convert values to numbers if provided
+    receivedPurity = receivedPurity !== undefined ? Number(receivedPurity) : undefined;
+    receivedWeight = receivedWeight !== undefined ? Number(receivedWeight) : undefined;
+
+    // Validate input
+    if (!userId || (receivedPurity === undefined && receivedWeight === undefined)) {
+      return res.status(400).json({ success: false, message: "Invalid userId or no values provided" });
+    }
+
+    if ((receivedPurity !== undefined && isNaN(receivedPurity)) || 
+        (receivedWeight !== undefined && isNaN(receivedWeight))) {
+      return res.status(400).json({ success: false, message: "Invalid numeric values" });
+    }
+
+    // Call helper function to update metrics
+    const updatedUser = await userHelper.updateReceivedMetrics(userId, receivedPurity, receivedWeight);
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Received gold metrics updated successfully",
+      data: updatedUser.data,
+    });
+
+  } catch (error) {
+    console.error("Error updating received gold metrics:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating received gold metrics",
+      error: error.message,
+    });
+  }
+};
+
+export const getUserDetail = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Get all users
+    const users = await userHelper.getUser(userId);
+
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error("Error in getUsers:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching users",
+      error: error.message,
+    });
+  }
+};
 export const deleteUser = async (req, res) => {
   try {
     const { adminId, userId } = req.params;

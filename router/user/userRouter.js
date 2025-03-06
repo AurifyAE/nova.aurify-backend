@@ -19,6 +19,7 @@ import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
   fetchUserOrder,
   orderQuantityConfirmation,
+  fetchUserTranstions 
 } from "../../controllers/user/orderController.js";
 const router = Router();
 
@@ -39,4 +40,5 @@ router.put("/products/fix-prices", fixedProductPrice);
 router.post("/order_quantity_confirmation", orderQuantityConfirmation);
 router.get("/fetch-order/:adminId/:userId", fetchUserOrder);
 
+router.get("/fetch-transtion/:userId", fetchUserTranstions);
 export default router;

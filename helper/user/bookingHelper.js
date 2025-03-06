@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import { Cart } from "../../model/cartSchema.js";
 import { orderModel } from "../../model/orderSchema.js";
 import Product from "../../model/productSchema.js";
+import { TransactionModel } from "../../model/transaction.js";
+import { UsersModel } from "../../model/usersSchema.js";
 
 export const orderPlace = async (adminId, userId, bookingData) => {
   try {
@@ -262,3 +264,222 @@ export const fetchBookingDetails = async (adminId, userId, page, limit, orderSta
   }
 };
 
+export const getUserTransactions = async (userId, options = {}) => {
+  try {
+    // Validate userId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return {
+        success: false,
+        message: "Invalid user ID format"
+      };
+    }
+    
+    // Set default options
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = -1,
+      filterBy = null,
+      filterValue = null,
+      startDate = null,
+      endDate = null
+    } = options;
+    
+    // Build query
+    const query = { userId };
+    
+    // Apply filters
+    if (filterBy && filterValue) {
+      query[filterBy] = filterValue;
+    }
+    
+    // Apply date range filter
+    if (startDate && endDate) {
+      query.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+    
+    // Execute query with pagination
+    const skip = (page - 1) * limit;
+    const sort = { [sortBy]: sortOrder };
+    
+    const transactions = await TransactionModel.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate({
+        path: 'orderId',
+        select: 'orderNumber totalAmount totalWeight paymentMethod'
+      });
+    
+    // Get total count
+    const totalCount = await TransactionModel.countDocuments(query);
+    
+    // Calculate summary statistics
+    const summary = await calculateTransactionSummary(userId);
+    
+    // Get user details
+    const user = await UsersModel.findOne(
+      { "users._id": userId },
+      { "users.$": 1 }
+    );
+    
+    if (!user || !user.users.length) {
+      return {
+        success: false,
+        message: "User not found"
+      };
+    }
+    
+    const userDetails = user.users[0];
+    
+    // Calculate balance info
+    const goldBalance = Number(userDetails.goldBalance) || 0;
+    const cashBalance = Number(userDetails.cashBalance) || 0;
+    
+    const balanceInfo = {
+      totalGoldBalance: goldBalance,
+      availableGold: goldBalance > 0 ? goldBalance : 0,
+      goldCredit: goldBalance < 0 ? Math.abs(goldBalance) : 0,
+      cashBalance: cashBalance,
+      name: userDetails.name,
+      email: userDetails.email
+    };
+    
+    return {
+      success: true,
+      data: {
+        transactions,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          totalItems: totalCount,
+          itemsPerPage: limit
+        },
+        summary,
+        balanceInfo
+      }
+    };
+  } catch (error) {
+    console.error("Error in getUserTransactions:", error);
+    return {
+      success: false,
+      message: "Error fetching transactions: " + error.message
+    };
+  }
+};
+
+
+async function calculateTransactionSummary(userId) {
+  try {
+    // Get total credits and debits for gold
+    const goldCredits = await TransactionModel.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          type: "CREDIT",
+          balanceType: "GOLD"
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    const goldDebits = await TransactionModel.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          type: "DEBIT",
+          balanceType: "GOLD"
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // Get total credits and debits for cash
+    const cashCredits = await TransactionModel.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          type: "CREDIT",
+          balanceType: "CASH"
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    const cashDebits = await TransactionModel.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          type: "DEBIT",
+          balanceType: "CASH"
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // Get recent transactions
+    const recentTransactions = await TransactionModel.find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(5);
+    
+    return {
+      gold: {
+        totalCredits: goldCredits[0]?.total || 0,
+        totalDebits: goldDebits[0]?.total || 0,
+        creditCount: goldCredits[0]?.count || 0,
+        debitCount: goldDebits[0]?.count || 0,
+        netFlow: (goldCredits[0]?.total || 0) - (goldDebits[0]?.total || 0)
+      },
+      cash: {
+        totalCredits: cashCredits[0]?.total || 0,
+        totalDebits: cashDebits[0]?.total || 0,
+        creditCount: cashCredits[0]?.count || 0,
+        debitCount: cashDebits[0]?.count || 0,
+        netFlow: (cashCredits[0]?.total || 0) - (cashDebits[0]?.total || 0)
+      },
+      recentTransactions: recentTransactions.map(t => ({
+        transactionId: t.transactionId,
+        type: t.type,
+        method: t.method,
+        amount: t.amount,
+        balanceType: t.balanceType,
+        createdAt: t.createdAt
+      }))
+    };
+  } catch (error) {
+    console.error("Error calculating transaction summary:", error);
+    return {
+      gold: { totalCredits: 0, totalDebits: 0, creditCount: 0, debitCount: 0, netFlow: 0 },
+      cash: { totalCredits: 0, totalDebits: 0, creditCount: 0, debitCount: 0, netFlow: 0 },
+      recentTransactions: []
+    };
+  }
+}

@@ -23,6 +23,10 @@ const orderItemSchema = new mongoose.Schema({
   itemStatus: {
     type: String,
     default: "Approval Pending"
+  },
+  select : {
+    type: Boolean,
+    default: false
   }
 });
 

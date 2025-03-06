@@ -23,6 +23,10 @@ import {
   deleteUser,
   editUser,
   getUsers,
+  getUserDetail,
+  updateUserCashBalance,
+  updateUserGoldBalance,
+  updateReceivedMetrics
 } from "../../controllers/admin/userController.js";
 import {
   addCategory,
@@ -34,6 +38,13 @@ import {
   getUserCommodity,
   updateUserSpread,
 } from "../../controllers/admin/UserSpotRateController.js";
+import {
+  fetchBookings,
+  updateOrder,
+  updateOrderQuantity,
+  updateOrderStatus,
+  orderQuantityConfirmation
+} from "../../controllers/admin/bookingController.js";
 const router = Router();
 
 router.post("/login", adminLoginController);
@@ -63,6 +74,11 @@ router.post("/add-users/:adminId", addUser);
 router.put("/edit-users/:userId/:adminId", editUser);
 router.delete("/delete-users/:userId/:adminId", deleteUser);
 router.get("/get-users/:adminId", getUsers);
+router.get("/get-profile/:userId",getUserDetail)
+router.patch("/receive-cash/:userId",updateUserCashBalance)
+router.patch("/receive-gold/:userId",updateUserGoldBalance)
+router.patch("/update-received-metrics/:userId", updateReceivedMetrics);
+
 //category management
 router.post("/addCategory/:adminId", addCategory);
 router.put("/editCategory/:id/:adminId", editCategory);
@@ -71,5 +87,10 @@ router.get("/getCategories/:adminId", getCategories);
 //user spotrate router
 router.get("/spotrates/:adminId/:categoryId", getUserCommodity);
 router.post("/update-user-spread/:adminId/:categoryId", updateUserSpread);
-
+//order management
+router.get("/booking/:adminId", fetchBookings);
+router.put("/update-order/:orderId", updateOrder);
+router.put("/update-order-quantity/:orderId", updateOrderQuantity);
+router.put("/update-order-reject/:orderId", updateOrderStatus);
+router.post("/orders/confirm-quantity",orderQuantityConfirmation)
 export default router;

@@ -28,6 +28,8 @@ const UsersSchema = new mongoose.Schema({
       },
       discountAmount: { type: Number, default: 0 },
       premiumAmount: { type: Number, default: 0 },
+      receivedPurity: { type: Number, default: 0 },  
+      receivedWeight: { type: Number, default: 0 },
       makingCharge: { type: Number, default: 0 },
       createdAt: { type: Date, default: Date.now },
     },
