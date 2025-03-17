@@ -6,6 +6,7 @@ import UserFCMTokenModel from "../../model/userFCMToken.js";
 import NotificationService from "../../utils/sendPushNotification.js";
 import {TransactionModel} from "../../model/transaction.js"
 import { UsersModel } from "../../model/usersSchema.js";
+import adminModel from '../../model/adminSchema.js';
 
 export const updateOrderDetails = async (orderId, orderStatus) => {
   // Validate inputs
@@ -363,8 +364,8 @@ const sendQuantityConfirmationEmail = async (orderId, itemId, quantity) => {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER || "aurifycontact@gmail.com",
-        pass: process.env.EMAIL_PASSWORD || "hnrgcobxcinqbuae",
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
       },
     });
 
