@@ -658,4 +658,4 @@ export const checkPendingOrderNotifications = async () => {
 };
 
 // Start a cron job to check pending orders every minute
-cron.schedule("* * * * *", checkPendingOrderNotifications);
+// cron.schedule("* * * * *", checkPendingOrderNotifications);

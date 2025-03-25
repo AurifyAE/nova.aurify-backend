@@ -237,7 +237,6 @@ export const getUserDetail = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const { adminId, userId } = req.params;
-
     // Delete the user
     await userHelper.deleteUser(adminId, userId);
 

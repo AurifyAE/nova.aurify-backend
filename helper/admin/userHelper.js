@@ -294,7 +294,7 @@ class UserHelper {
     const updateObject = {};
     
     const fields = [
-      'name', 'contact', 'email', 'location', 'categoryId', 
+      'name', 'contact', 'email', 'address', 'categoryId', 
       'cashBalance', 'goldBalance', 'pricingOption', 
       'discountAmount', 'premiumAmount', 'makingCharge'
     ];
