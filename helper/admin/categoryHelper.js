@@ -5,6 +5,28 @@ export const checkCategoryExists = async (name, adminId) => {
   return await CategoryModel.findOne({ name, createdBy: adminId });
 };
 
+export const addProductDetailHelper = async (categoryId, productDetail) => {
+  try {
+    const category = await CategoryModel.findById(categoryId);
+    if (!category) {
+      throw new Error("Category not found");
+    }
+    const isProductExists = category.products.some(
+      (product) => product.productId.toString() === productDetail.productId
+    );
+
+    if (isProductExists) {
+      throw createAppError("Product already exists in this category", 400);
+    }
+    category.products.push(productDetail);
+
+    const updatedCategory = await category.save();
+    return updatedCategory;
+  } catch (error) {
+    throw error
+  }
+};
+
 export const createCategory = async (name, adminId) => {
   const existingCategory = await checkCategoryExists(name, adminId);
   if (existingCategory) {

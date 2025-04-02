@@ -3,18 +3,29 @@ import {
   fixedProductFixHelper,
   updateCartItemQuantity,
   deleteCartProduct,
-  getUserCartItems
+  getUserCartItems,
 } from "../../helper/user/productHelper.js";
 
 export const fetchProductData = async (req, res, next) => {
   try {
-    const { adminId } = req.params;
-    const result = await fetchProductHelper(adminId);
+    let { adminId, categoryId } = req.params; 
+
+    if (!adminId && !categoryId) {
+      return next(createAppError("Either adminId or categoryId is required", 400));
+    }
+
+
+    adminId = adminId === "null" ? undefined : adminId;
+    categoryId = categoryId === "null" ? undefined : categoryId;
+
+    const result = await fetchProductHelper(adminId, categoryId);
     res.status(200).json({ success: true, data: result });
+
   } catch (error) {
     next(error);
   }
 };
+
 
 export const fixedProductPrice = async (req, res, next) => {
   try {
@@ -60,18 +71,14 @@ export const decrementCartItem = async (req, res, next) => {
   try {
     const { userId, adminId, productId } = req.params;
     const { quantity = -1 } = req.body;
-    const { success, data,totalQuantity, message } = await updateCartItemQuantity(
-      userId,
-      adminId,
-      productId,
-      quantity
-    );
+    const { success, data, totalQuantity, message } =
+      await updateCartItemQuantity(userId, adminId, productId, quantity);
     if (success) {
       res.status(200).json({
         success: true,
         message: "Item successfully added to cart",
         cart: data,
-        totalQuantity:totalQuantity
+        totalQuantity: totalQuantity,
       });
     } else {
       res.status(400).json({

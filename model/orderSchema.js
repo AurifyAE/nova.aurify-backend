@@ -83,10 +83,7 @@ const orderSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    instructions: {
-      type: String,
-      maxlength: 500,
-    },
+    
     notificationSentAt: {
       type: Date,
       default: null

@@ -14,6 +14,7 @@ import {
   requestAdmin,
   userLoginController,
   getProfile,
+  fetchProductCount
 } from "../../controllers/user/userController.js";
 import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
@@ -26,7 +27,8 @@ const router = Router();
 router.post("/login/:adminId", userLoginController);
 router.post("/request-admin/:adminId", requestAdmin);
 router.get("/get-banks/:adminId", fetchAdminBankDetails);
-router.get("/get-product/:adminId", fetchProductData);
+router.get("/get-product/:adminId?/:categoryId?", fetchProductData);
+router.get("/product-count/:categoryId", fetchProductCount);
 router.put("/forgot-password/:adminId", forgotPassword);
 router.get("/get-profile/:adminId", getProfile);
 // cart Management

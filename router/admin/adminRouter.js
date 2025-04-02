@@ -26,13 +26,14 @@ import {
   getUserDetail,
   updateUserCashBalance,
   updateUserGoldBalance,
-  updateReceivedMetrics
+  updateReceivedMetrics,
 } from "../../controllers/admin/userController.js";
 import {
   addCategory,
   deleteCategory,
   editCategory,
   getCategories,
+  addProductDetail,
 } from "../../controllers/admin/categoryController.js";
 import {
   getUserCommodity,
@@ -43,8 +44,16 @@ import {
   updateOrder,
   updateOrderQuantity,
   updateOrderStatus,
-  orderQuantityConfirmation
+  orderQuantityConfirmation,
+  deleteOrder,
 } from "../../controllers/admin/bookingController.js";
+import {
+  getDashboardOverview,
+  getUserCount,
+  getCompletedOrders,
+  getTotalRevenue,
+} from "../../controllers/admin/dashboardController.js";
+import { fetchUserOrder } from "../../controllers/user/orderController.js";
 const router = Router();
 
 router.post("/login", adminLoginController);
@@ -74,15 +83,17 @@ router.post("/add-users/:adminId", addUser);
 router.put("/edit-users/:userId/:adminId", editUser);
 router.delete("/delete-users/:userId/:adminId", deleteUser);
 router.get("/get-users/:adminId", getUsers);
-router.get("/get-profile/:userId",getUserDetail)
-router.patch("/receive-cash/:userId",updateUserCashBalance)
-router.patch("/receive-gold/:userId",updateUserGoldBalance)
+router.get("/get-profile/:userId", getUserDetail);
+router.patch("/receive-cash/:userId", updateUserCashBalance);
+router.patch("/receive-gold/:userId", updateUserGoldBalance);
 router.patch("/update-received-metrics/:userId", updateReceivedMetrics);
 
 //category management
 router.post("/addCategory/:adminId", addCategory);
 router.put("/editCategory/:id/:adminId", editCategory);
 router.delete("/deleteCategory/:id/:adminId", deleteCategory);
+router.patch("/products/:categoryId", addProductDetail);
+
 router.get("/getCategories/:adminId", getCategories);
 //user spotrate router
 router.get("/spotrates/:adminId/:categoryId", getUserCommodity);
@@ -92,5 +103,15 @@ router.get("/booking/:adminId", fetchBookings);
 router.put("/update-order/:orderId", updateOrder);
 router.put("/update-order-quantity/:orderId", updateOrderQuantity);
 router.put("/update-order-reject/:orderId", updateOrderStatus);
-router.post("/orders/confirm-quantity",orderQuantityConfirmation)
+router.post("/orders/confirm-quantity", orderQuantityConfirmation);
+router.get("/fetch-order/:adminId/:userId", fetchUserOrder);
+router.delete("/delete-order/:orderId", deleteOrder);
+
+//Dashboard overview
+router.get("/overview/:adminId", getDashboardOverview);
+
+// Individual endpoint routes
+router.get("/users/:adminId", getUserCount);
+router.get("/completed-orders/:adminId", getCompletedOrders);
+router.get("/revenue/:adminId", getTotalRevenue);
 export default router;

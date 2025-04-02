@@ -44,11 +44,6 @@ const productSchema = new mongoose.Schema(
       default: true, 
     },
     
-    type: {
-      type: String,
-      default: 'GOLD', 
-      required:true
-    },
     sku: {
       type: String,
       required: [true, "SKU code is required"],

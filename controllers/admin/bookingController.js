@@ -34,6 +34,27 @@ export const fetchBookings = async (req, res, next) => {
     next(error);
   }
 };
+export const deleteOrder = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    if (!orderId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Order ID is required" });
+    }
+    const deletedOrder = await orderModel.findByIdAndDelete(orderId);
+    if (!deletedOrder) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
+    }
+    return res
+      .status(200)
+      .json({ success: true, message: "Order deleted successfully" });
+  } catch (error) {
+    next(error); // Pass error to the global error handler
+  }
+};
 export const updateOrder = async (req, res, next) => {
   try {
     const { orderId } = req.params;
@@ -189,7 +210,7 @@ const sendStatusConfirmationEmail = async (orderId, itemId, isApproved) => {
     const productName = product.name || "Product";
     const productWeight = product.weight || 0;
     const totalWeight = productWeight * item.quantity;
-    
+
     const admin = await adminModel.findById(order.adminId);
     const adminBrandName =
       admin && admin.companyName ? admin.companyName : "Aurify";
@@ -199,7 +220,7 @@ const sendStatusConfirmationEmail = async (orderId, itemId, isApproved) => {
       service: "gmail",
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        pass: process.env.EMAIL_PASS,
       },
     });
 
@@ -304,7 +325,10 @@ const sendStatusConfirmationEmail = async (orderId, itemId, isApproved) => {
                   <strong>Order Status:</strong> ${order.orderStatus}
                 </mj-text>
                 <mj-text font-size="14px" color="#555555" padding-bottom="20px">
-                  <strong>Date:</strong> ${new Date().toLocaleDateString('en-US', {year: 'numeric', month: 'long', day: 'numeric'})}
+                  <strong>Date:</strong> ${new Date().toLocaleDateString(
+                    "en-US",
+                    { year: "numeric", month: "long", day: "numeric" }
+                  )}
                 </mj-text>
                 
                 <mj-divider border-color="#eeeeee" padding="0 0 20px" />
@@ -331,8 +355,12 @@ const sendStatusConfirmationEmail = async (orderId, itemId, isApproved) => {
                       <tr>
                         <td>${productName}</td>
                         <td>${item.quantity}</td>
-                        <td>${productWeight}g × ${item.quantity} = ${totalWeight}g</td>
-                        <td>₹${formattedPrice} × ${item.quantity} = ₹${totalPrice}</td>
+                        <td>${productWeight}g × ${
+        item.quantity
+      } = ${totalWeight}g</td>
+                        <td>₹${formattedPrice} × ${
+        item.quantity
+      } = ₹${totalPrice}</td>
                       </tr>
                     </mj-table>
                   </mj-column>

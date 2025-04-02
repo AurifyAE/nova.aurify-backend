@@ -3,75 +3,76 @@ import Product from "../../model/productSchema.js";
 import { createAppError } from "../../utils/errorHandler.js";
 import { Cart } from "../../model/cartSchema.js";
 
-export const fetchProductHelper = async (adminId) => {
+export const fetchProductHelper = async (adminId, categoryId) => {
   try {
-    const result = await mongoose.model("Product").aggregate([
-      {
-        $match: {
-          $or: [
-            { addedBy: new mongoose.Types.ObjectId(adminId) },
-            { addedBy: null },
-          ],
-        },
-      },
-      {
-        $lookup: {
-          from: "subcategories",
-          localField: "subCategory",
-          foreignField: "_id",
-          as: "subCategoryDetails",
-        },
-      },
+    let products = [];
 
-      {
-        $unwind: {
-          path: "$subCategoryDetails",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
+    if (categoryId) {
+      const category = await mongoose.model("Category").findById(categoryId).populate("products.productId");
 
-      {
-        $lookup: {
-          from: "maincategories",
-          localField: "subCategoryDetails.mainCategory",
-          foreignField: "_id",
-          as: "mainCategoryDetails",
-        },
-      },
-      {
-        $unwind: {
-          path: "$mainCategoryDetails",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $project: {
-          title: 1,
-          description: 1,
-          images: 1,
-          price: 1,
-          weight: 1,
-          purity: 1,
-          stock: 1,
-          makingCharge: 1,
-          tags: 1,
-          type: 1,
-          sku: 1,
-          subCategoryDetails: 1,
-          mainCategoryDetails: 1,
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      },
-    ]);
+      if (!category) {
+        throw createAppError("Category not found", 404);
+      }
 
-    return result;
+      products = category.products.map((product) => ({
+        ...product.productId.toObject(),
+        pricingType: product.pricingType,
+        markingCharge: product.markingCharge,
+        value: product.value,
+        isActive: product.isActive,
+      }));
+
+      // If category products exist, return them
+      if (products.length > 0) {
+        return products;
+      }
+    }
+
+    // If category has no products or categoryId was not provided, fetch all products by adminId
+    if (adminId) {
+      products = await mongoose.model("Product").aggregate([
+        {
+          $match: {
+            $or: [
+              { addedBy: new mongoose.Types.ObjectId(adminId) },
+              { addedBy: null },
+            ],
+          },
+        },
+        {
+          $project: {
+            title: 1,
+            description: 1,
+            images: 1,
+            price: 1,
+            weight: 1,
+            purity: 1,
+            stock: 1,
+            sku: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            pricingType: { $literal: null },
+            markingCharge: { $literal: 0 },
+            value: { $literal: 0 },
+            isActive: { $literal: false },
+          },
+        },
+      ]);
+    }
+
+    if (products.length === 0) {
+      throw createAppError("No products found", 404);
+    }
+
+    return products;
   } catch (error) {
-    if (error.isOperational) throw error;
-
-    throw createAppError(`Error Fetching product: ${error.message}`, 500);
+    throw createAppError(`Error fetching products: ${error.message}`, 500);
   }
 };
+
+
+
+
 
 export const fixedProductFixHelper = async (bookingData) => {
   try {
