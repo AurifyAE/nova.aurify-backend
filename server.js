@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import adminRouter from './router/admin/adminRouter.js'
 import superRouter from './router/super/superRouter.js'
 import userRouter from './router/user/userRouter.js'
-import { mongodb } from "./config/connaction.js";
+import { mongodb } from "./config/connection.js";
 import { errorHandler } from "./utils/errorHandler.js";
 
 dotenv.config();
