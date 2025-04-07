@@ -11,17 +11,19 @@ export const registerAdmin = async (req, res, next) => {
       userName: req.body.userName,
       companyName: req.body.companyName,
       logo: req.file ? req.file.location : undefined,
-      awsS3Key: req.file ? req.file.key : undefined, // Add S3 key from file object
-      address: req.body.address,
+      awsS3Key: req.file ? req.file.key : undefined,
+      address: {
+        buildingNameNumber: req.body.address?.buildingNameNumber,
+        city: req.body.address?.city,
+        country: req.body.address?.country,
+        latitude: req.body.address?.latitude,
+        longitude: req.body.address?.longitude
+      },
       email: req.body.email,
       password: req.body.password,
       contact: req.body.contact,
       whatsapp: req.body.whatsapp,
-      userType: req.body.userType,
-      solutions: req.body.solutions,
-      screenCount: req.body.screenCount ? +req.body.screenCount : 0,
-      features: req.body.additionalFeatures,
-      commodities: req.body.commodities,
+      socialMedia: req.body.socialMedia || [],
       workCompletionDate: req.body.workCompletionDate,
       serviceStartDate: req.body.serviceStartDate,
     };

@@ -24,22 +24,16 @@ export const userCollectionSave = async (userData) => {
       password,
       contact,
       whatsapp,
-      userType,
-      screenCount,
-      solutions = [],
-      features = [],
-      commodities = [],
+      socialMedia = [],
       workCompletionDate,
       serviceStartDate,
     } = userData;
-
     // Check if the email already exists
     const existingAdminByEmail = await adminModel.findOne({ email });
     if (existingAdminByEmail) {
       return {
         success: false,
-        message:
-          "The email provided is already in use. Please use a different email.",
+        message: "The email provided is already in use. Please use a different email.",
       };
     }
 
@@ -48,51 +42,35 @@ export const userCollectionSave = async (userData) => {
     if (existingAdminByUsername) {
       return {
         success: false,
-        message:
-          "The username provided is already in use. Please choose a different username.",
+        message: "The username provided is already in use. Please choose a different username.",
       };
     }
 
-    // Rest of your code remains the same...
+    // Calculate service end date (1 year after start date)
     const serviceStartDateObj = new Date(serviceStartDate);
     const serviceEndDate = new Date(serviceStartDateObj);
     serviceEndDate.setDate(serviceEndDate.getDate() + 365);
 
-    const formattedSolutions = solutions.map((solution) => ({
-      type: solution,
-      enabled: true,
-    }));
-
-    const formattedFeatures = features.map((feature) => ({
-      name: feature,
-      enabled: true,
-    }));
-
-    const formattedCommodities = commodities.map((commodity) => ({
-      symbol: commodity,
-      enabled: true, // Added the enabled field as per schema
-    }));
-
+    // Encrypt password
     const { iv, encryptedData } = encryptPassword(password);
+
+    // Create new admin document
     const authCollection = new adminModel({
       userName,
       companyName,
       logo,
-      awsS3Key,
+      awsS3Key: awsS3Key || "", // Making this required as per schema
       address,
       email,
       password: encryptedData,
       passwordAccessKey: iv,
       contact,
       whatsapp,
-      userType,
-      screenLimit: screenCount,
-      solutions: formattedSolutions,
-      features: formattedFeatures,
-      commodities: formattedCommodities,
+      socialMedia,
       workCompletionDate,
       serviceStartDate: serviceStartDateObj,
       serviceEndDate,
+     
     });
 
     await authCollection.save();

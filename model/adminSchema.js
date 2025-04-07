@@ -8,31 +8,23 @@ const adminSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
-  address: { type: String, required: true },
+  address: { 
+    buildingNameNumber: { type: String },
+    city: { type: String },
+    country: { type: String },
+    latitude: { type: String },
+    longitude: { type: String }
+  },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   passwordAccessKey: { type: String, required: true },
   contact: { type: String, required: true },
   whatsapp: { type: String, required: true },
-  userType: { type: String, required: true },
-  screenLimit: { type: Number, required: true },
-  solutions: [
+  socialMedia: [
     {
-      type: { type: String, required: true },
-      enabled: { type: Boolean, default: true },
-    },
-  ],
-  features: [
-    {
-      name: { type: String },
-      enabled: { type: Boolean, default: true },
-    },
-  ],
-  commodities: [
-    {
-      symbol: { type: String, required: true },
-      enabled: { type: Boolean, default: true },
-    },
+      platform: { type: String },
+      link: { type: String },
+    }
   ],
   workCompletionDate: { type: Date },
   serviceStartDate: { type: Date, required: true },

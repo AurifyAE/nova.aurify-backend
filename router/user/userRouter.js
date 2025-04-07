@@ -6,6 +6,7 @@ import {
   decrementCartItem,
   deleteCartItem,
   getUserCart,
+  updateCartQuantity
 } from "../../controllers/user/productController.js";
 
 import {
@@ -34,9 +35,11 @@ router.get("/get-profile/:adminId", getProfile);
 // cart Management
 router.get("/get-cart/:userId", getUserCart);
 router.patch("/cart-increment/:adminId/:userId/:productId", incrementCartItem);
+router.put("/cart/update-quantity/:adminId/:userId/:productId", updateCartQuantity);
 router.patch("/cart-decrement/:adminId/:userId/:productId", decrementCartItem);
 router.delete("/delete-cart/:adminId/:userId/:productId", deleteCartItem);
 //order management
+
 router.post("/booking/:adminId/:userId", saveBooking);
 router.put("/products/fix-prices", fixedProductPrice);
 router.post("/order_quantity_confirmation", orderQuantityConfirmation);

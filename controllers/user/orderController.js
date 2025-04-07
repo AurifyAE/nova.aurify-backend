@@ -552,7 +552,7 @@ export const checkPendingOrderNotifications = async () => {
 
       try {
         // Send warning email when time is between 2-5 minutes
-        if (timeSinceNotification >= 1 && timeSinceNotification < 2) {
+        if (timeSinceNotification >= 2 && timeSinceNotification < 2) {
           const emailResult = await sendQuantityConfirmationEmail(
             order._id.toString(),
             item._id.toString(),
@@ -565,7 +565,7 @@ export const checkPendingOrderNotifications = async () => {
           }
         }
         // Send auto-reject email when time is 5+ minutes
-        else if (timeSinceNotification >= 2 && !autoRejectEmailSent) {
+        else if (timeSinceNotification >= 5 && !autoRejectEmailSent) {
           const emailResult = await sendQuantityConfirmationEmail(
             order._id.toString(),
             item._id.toString(),
@@ -601,7 +601,7 @@ export const checkPendingOrderNotifications = async () => {
       }
 
       // Handle order rejection if applicable
-      if (timeSinceNotification >= 2) {
+      if (timeSinceNotification >= 5) {
         const pendingItems = order.items.filter(
           (item) => item.itemStatus === "User Approval Pending"
         );
@@ -658,4 +658,4 @@ export const checkPendingOrderNotifications = async () => {
 };
 
 // Start a cron job to check pending orders every minute
-// cron.schedule("* * * * *", checkPendingOrderNotifications);
+cron.schedule("* * * * *", checkPendingOrderNotifications);

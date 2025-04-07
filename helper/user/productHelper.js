@@ -70,7 +70,75 @@ export const fetchProductHelper = async (adminId, categoryId) => {
   }
 };
 
+export const updateCartItemCollection = async (userId, adminId, productId, userPassedQuantity) => {
+  try {
+    if (!userId || !adminId || !productId) {
+      throw new Error("Missing required fields: userId, adminId, or productId");
+    }
 
+    // Check if the product exists
+    const product = await Product.findById(productId);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    // Check if the user has a cart
+    let cart = await Cart.findOne({ userId });
+    if (!cart) {
+      return { success: false, message: "Cart does not exist for the user" };
+    }
+
+    // Find the item in the cart
+    const existingItemIndex = cart.items.findIndex(
+      (item) => item.productId.toString() === productId.toString()
+    );
+
+    if (existingItemIndex !== -1) {
+      let existingQuantity = cart.items[existingItemIndex].quantity;
+
+      if (existingQuantity === 1) {
+        // If the existing quantity is 1, update it with user-passed quantity
+        cart.items[existingItemIndex].quantity = userPassedQuantity;
+      } else {
+        // Otherwise, add the user-passed quantity to the existing quantity
+        cart.items[existingItemIndex].quantity += userPassedQuantity;
+      }
+
+      // Remove item if quantity becomes 0 or less
+      if (cart.items[existingItemIndex].quantity <= 0) {
+        cart.items.splice(existingItemIndex, 1);
+      } else {
+        cart.items[existingItemIndex].totalPrice =
+          cart.items[existingItemIndex].quantity * product.price;
+      }
+    } else {
+      // If the product is not in the cart, add it with the user-passed quantity
+      if (userPassedQuantity > 0) {
+        cart.items.push({
+          productId,
+          quantity: userPassedQuantity,
+          totalPrice: userPassedQuantity * product.price,
+        });
+      } else {
+        return { success: false, message: "Cannot decrement a non-existing item in the cart" };
+      }
+    }
+
+    // Update total cart price
+    cart.totalPrice = cart.items.reduce((total, item) => {
+      return total + item.quantity * product.price;
+    }, 0);
+
+    cart.updatedAt = Date.now();
+
+    // Save the updated cart
+    await cart.save();
+
+    return { success: true, data: cart };
+  } catch (error) {
+    return { success: false, message: "Error updating cart: " + error.message };
+  }
+};
 
 
 
