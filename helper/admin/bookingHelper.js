@@ -7,7 +7,7 @@ import NotificationService from "../../utils/sendPushNotification.js";
 import {TransactionModel} from "../../model/transaction.js"
 import { UsersModel } from "../../model/usersSchema.js";
 import adminModel from '../../model/adminSchema.js';
-
+import userNotification from '../../model/userNotificationSchema.js'
 export const updateOrderDetails = async (orderId, orderStatus) => {
   // Validate inputs
   if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) {
@@ -230,6 +230,8 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
     );
     
     let statusChanged = false;
+    let previousStatus = order.orderStatus;
+    
     // Update orderStatus based on items' statuses
     if (allApproved) {
       order.orderStatus = "Success";
@@ -244,6 +246,57 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
     
     // Save the updated order
     await order.save();
+    
+    // Add notification to user notification model for status change
+    if (order.orderStatus !== previousStatus) {
+      try {
+        let notificationMessage = "";
+        
+        // Create appropriate notification message based on new status
+        switch (order.orderStatus) {
+          case "Success":
+            notificationMessage = `🎉 Congratulations! Your order #${order.transactionId} has been successfully processed and approved.`;
+            break;
+          case "User Approval Pending":
+            notificationMessage = `🔔 Action Required: Please review and confirm the quantity (${quantity}) for an item in your order #${order.transactionId}.`;
+            break;
+          case "Processing":
+            notificationMessage = `📦 Your order #${order.transactionId} is now being processed. We'll keep you updated on its progress.`;
+            break;
+          default:
+            notificationMessage = `📝 Your order #${order.transactionId} status has been updated to: ${order.orderStatus}`;
+        }
+        
+        // Find existing user notification document or create a new one
+        let userNotificationDoc = await userNotification.findOne({ createdBy: order.userId });
+        
+        if (userNotificationDoc) {
+          // Add notification to existing document
+          userNotificationDoc.notification.push({
+            message: notificationMessage,
+            read: false,
+            createdAt: new Date()
+          });
+          await userNotificationDoc.save();
+        } else {
+          // Create new notification document
+          userNotificationDoc = new userNotification({
+            notification: [{
+              message: notificationMessage,
+              read: false,
+              createdAt: new Date()
+            }],
+            createdBy: order.userId
+          });
+          await userNotificationDoc.save();
+        }
+        
+        console.log(`Order status change notification added for user ${order.userId}`);
+      } catch (notificationError) {
+        console.error("Error creating order status notification:", notificationError.message);
+        // Continue processing - notification failure shouldn't stop the order update
+      }
+    }
     
     // Send notification and email only if status changed to "User Approval Pending"
     if (order.orderStatus === "User Approval Pending" && statusChanged) {
@@ -472,12 +525,12 @@ const sendQuantityConfirmationEmail = async (orderId, itemId, quantity) => {
                   </tr>
                   <tr>
                     <td>Price Per Unit</td>
-                    <td style="text-align: right;">₹${formattedPrice}</td>
+                    <td style="text-align: right;">AED ${formattedPrice}</td>
                   </tr>
                   <tr>
                     <td style="font-weight: bold;">Total Investment</td>
                     <td style="text-align: right; font-weight: bold; color: #2C3E50;">
-                      ₹${new Intl.NumberFormat('en-IN', {
+                      AED ${new Intl.NumberFormat('en-IN', {
                         maximumFractionDigits: 2,
                         minimumFractionDigits: 2
                       }).format(item.fixedPrice * quantity)}

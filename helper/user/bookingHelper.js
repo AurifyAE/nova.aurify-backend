@@ -7,7 +7,8 @@ import Product from "../../model/productSchema.js";
 import { TransactionModel } from "../../model/transaction.js";
 import { UsersModel } from "../../model/usersSchema.js";
 import adminModel from "../../model/adminSchema.js";
-
+import userNotification from '../../model/userNotificationSchema.js'
+import Notification from '../../model/notificationSchema.js'
 // Function to send order confirmation email
 const sendOrderConfirmationEmail = async (order, userData) => {
   try {
@@ -82,8 +83,8 @@ const orderItems = await Promise.all(
           <td style="padding: 12px; border-bottom: 1px solid #E0E0E0;">${item.productName}</td>
           <td style="padding: 12px; border-bottom: 1px solid #E0E0E0; text-align: center;">${quantity}</td>
           <td style="padding: 12px; border-bottom: 1px solid #E0E0E0; text-align: right;">${item.productWeight}g</td>
-          <td style="padding: 12px; border-bottom: 1px solid #E0E0E0; text-align: right;">₹${formattedPrice}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #E0E0E0; text-align: right;">₹${formattedItemTotal}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #E0E0E0; text-align: right;">AED ${formattedPrice}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #E0E0E0; text-align: right;">AED ${formattedItemTotal}</td>
         </tr>
       `;
     }).join('');
@@ -179,7 +180,7 @@ const orderItems = await Promise.all(
                       <strong>Order Date:</strong> ${new Date().toLocaleDateString('en-IN', {year: 'numeric', month: 'long', day: 'numeric'})}<br>
                       <strong>Payment Method:</strong> ${order.paymentMethod}<br>
                       <strong>Total Weight:</strong> ${order.totalWeight}g<br>
-                      <strong>Total Amount:</strong> ₹${formattedTotalPrice}
+                      <strong>Total Amount:</strong> AED ${formattedTotalPrice}
                     </mj-text>
                   </mj-column>
                 </mj-section>
@@ -200,7 +201,7 @@ const orderItems = await Promise.all(
                   ${orderItemsHTML}
                   <tr>
                     <td colspan="4" style="padding: 12px; text-align: right; font-weight: bold;">Grand Total:</td>
-                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #D4AF37;">₹${formattedTotalPrice}</td>
+                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #D4AF37;">AED ${formattedTotalPrice}</td>
                   </tr>
                 </mj-table>
                 
@@ -282,7 +283,6 @@ const orderItems = await Promise.all(
   }
 };
 
-// Modified orderPlace function with email confirmation
 export const orderPlace = async (adminId, userId, bookingData) => {
   try {
     if (
@@ -388,43 +388,108 @@ export const orderPlace = async (adminId, userId, bookingData) => {
         }
       );
 
-    // Get user data for the email
-    const userData = await UsersModel.findOne(
-      { "users._id": userId },
-      { "users.$": 1 }
-    );
+      // Get user data for the email and notifications
+      const userData = await UsersModel.findOne(
+        { "users._id": userId },
+        { "users.$": 1 }
+      );
 
-    if (userData && userData.users && userData.users.length > 0) {
-      // Send order confirmation email
-      const emailResult = await sendOrderConfirmationEmail(savedOrder, userData);
-      
-      if (!emailResult.success) {
-        console.warn("Order placed successfully but failed to send confirmation email:", emailResult.message);
+      // Extract user name for notifications
+      let userName = "Customer";
+      if (userData && userData.users && userData.users.length > 0) {
+        // Try to get the user's name, falling back to different name fields if available
+        userName = userData.users[0].name || 
+                  `Customer ${userId.toString().slice(-5)}`;
+        
+        // Send order confirmation email
+        const emailResult = await sendOrderConfirmationEmail(savedOrder, userData);
+        
+        if (!emailResult.success) {
+          console.warn("Order placed successfully but failed to send confirmation email:", emailResult.message);
+        }
+      } else {
+        console.warn("User data not found for sending confirmation email");
       }
-    } else {
-      console.warn("User data not found for sending confirmation email");
+
+      // Create notification for user
+      try {
+        const userNotificationMessage = `Your order #${transactionId} has been placed successfully for ${totalPrice.toFixed(2)}. Your order status is 'Pending'.`;
+        
+        // Find existing user notification document or create a new one
+        let userNotificationDoc = await userNotification.findOne({ createdBy: userId });
+        
+        if (userNotificationDoc) {
+          // Add notification to existing document
+          userNotificationDoc.notification.push({
+            message: userNotificationMessage,
+            read: false,
+            createdAt: new Date()
+          });
+          await userNotificationDoc.save();
+        } else {
+          // Create new notification document
+          userNotificationDoc = new userNotification({
+            notification: [{
+              message: userNotificationMessage,
+              read: false,
+              createdAt: new Date()
+            }],
+            createdBy: userId
+          });
+          await userNotificationDoc.save();
+        }
+        
+        // Create notification for admin with user's name
+        const adminNotificationMessage = `New order #${transactionId} placed by ${userName} for ${totalPrice.toFixed(2)}.`;
+        
+        let adminNotificationDoc = await Notification.findOne({ createdBy: adminId });
+        
+        if (adminNotificationDoc) {
+          // Add notification to existing document
+          adminNotificationDoc.notification.push({
+            message: adminNotificationMessage,
+            read: false,
+            createdAt: new Date()
+          });
+          await adminNotificationDoc.save();
+        } else {
+          // Create new notification document
+          adminNotificationDoc = new Notification({
+            notification: [{
+              message: adminNotificationMessage,
+              read: false,
+              createdAt: new Date()
+            }],
+            createdBy: adminId
+          });
+          await adminNotificationDoc.save();
+        }
+        
+        console.log("Notifications created for both user and admin");
+      } catch (notificationError) {
+        console.error("Error creating notifications:", notificationError.message);
+        // Don't return error here, as the order is already placed successfully
+      }
+
+      return {
+        success: true,
+        message: "Order placed successfully.",
+        orderDetails: savedOrder,
+      };
     }
 
     return {
-      success: true,
-      message: "Order placed successfully.",
-      orderDetails: savedOrder,
+      success: false,
+      message: "Failed to process the order.",
+    };
+  } catch (error) {
+    console.error("Error placing the order:", error.message);
+    return {
+      success: false,
+      message: "Error placing the order: " + error.message,
     };
   }
-
-  return {
-    success: false,
-    message: "Failed to process the order.",
-  };
-} catch (error) {
-  console.error("Error placing the order:", error.message);
-  return {
-    success: false,
-    message: "Error placing the order: " + error.message,
-  };
-}
 };
-
 
 export const fetchBookingDetails = async (adminId, userId, page, limit, orderStatus) => {
   try {

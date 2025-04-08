@@ -17,6 +17,11 @@ const UsersSchema = new mongoose.Schema({
         ref: "Category",
         required: true,
       },
+      userSpotRateId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "UserSpotRate",
+        default:null
+      },
       password: { type: String, required: true },
       passwordAccessKey: { type: String, required: true },
       cashBalance: { type: Number, default: 0 },

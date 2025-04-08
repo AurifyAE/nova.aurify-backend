@@ -1,7 +1,6 @@
 import cron from "node-cron";
 import mjml2html from 'mjml';
 import nodemailer from 'nodemailer';
-
 import { orderModel } from "../../model/orderSchema.js";
 import UserFCMTokenModel from "../../model/userFCMToken.js";
 import NotificationService from "../../utils/sendPushNotification.js";
@@ -12,7 +11,7 @@ import {
 import { UsersModel } from "../../model/usersSchema.js";
 import mongoose from "mongoose";
 import adminModel from "../../model/adminSchema.js";
-
+import userNotification from '../../model/userNotificationSchema.js'
 export const orderQuantityConfirmation = async (req, res, next) => {
   try {
     const { orderId, itemId, action } = req.body;
@@ -79,6 +78,28 @@ export const orderQuantityConfirmation = async (req, res, next) => {
         break;
       default:
         message = `Order ${order.transactionId} status has been updated.`;
+    }
+    
+    // Add notification to user notification model
+    try {
+      const userId = order.userId;
+      const notificationMessage = message;
+      
+      // Find existing user notification document or create a new one
+      let userNotificationDoc = await userNotification.findOne({ createdBy: userId });
+      
+      if (userNotificationDoc) {
+        // Add notification to existing document
+        userNotificationDoc.notification.push({
+          message: notificationMessage,
+          read: false,
+          createdAt: new Date()
+        });
+        await userNotificationDoc.save();
+      } 
+    } catch (notificationError) {
+      console.error("Error creating order status notification:", notificationError.message);
+      // Don't return error here, as the status update is already successful
     }
 
     return res.status(200).json({
@@ -407,12 +428,12 @@ const sendQuantityConfirmationEmail = async (
                   </tr>
                   <tr>
                     <td>Price Per Unit</td>
-                    <td style="text-align: right;">₹${formattedPrice}</td>
+                    <td style="text-align: right;">AED ${formattedPrice}</td>
                   </tr>
                   <tr>
                     <td style="font-weight: bold;">Total Investment</td>
                     <td style="text-align: right; font-weight: bold; color: #2C3E50;">
-                      ₹${new Intl.NumberFormat("en-IN", {
+                      AED ${new Intl.NumberFormat("en-IN", {
                         maximumFractionDigits: 2,
                         minimumFractionDigits: 2,
                       }).format(item.fixedPrice * quantity)}
@@ -465,155 +486,250 @@ const sendQuantityConfirmationEmail = async (
 };
 
 export const checkPendingOrderNotifications = async () => {
-  const pendingOrders = await orderModel.find({
-    orderStatus: "User Approval Pending",
-    "items.itemStatus": "User Approval Pending",
-  });
-
-  if (!pendingOrders.length) {
-    console.log("No pending orders to process.");
-    return;
-  }
-
-  const currentTime = new Date();
-
-  for (const order of pendingOrders) {
-    const timeSinceNotification =
-      (currentTime - order.notificationSentAt) / (1000 * 60);
-
-    const fcmTokenDoc = await UserFCMTokenModel.findOne({
-      createdBy: order.userId,
+  try {
+    console.log("Starting to check pending orders for notifications...");
+    
+    // Query orders with pending status
+    const pendingOrders = await orderModel.find({
+      orderStatus: "User Approval Pending",
+      "items.itemStatus": "User Approval Pending",
     });
 
-    if (fcmTokenDoc && fcmTokenDoc.FCMTokens.length > 0) {
-      const invalidTokens = [];
+    console.log(`Found ${pendingOrders.length} pending orders to process`);
 
-      // Filter pending items
+    if (!pendingOrders.length) {
+      return;
+    }
+
+    const currentTime = new Date();
+
+    for (const order of pendingOrders) {
+      console.log(`Processing order ${order._id}, transactionId: ${order.transactionId}`);
+      
+      // Ensure notificationSentAt exists and is a valid date
+      if (!order.notificationSentAt) {
+        console.log(`Order ${order._id} missing notificationSentAt timestamp, setting current time`);
+        order.notificationSentAt = currentTime;
+        await order.save();
+        continue; // Skip this iteration to process on next cron run
+      }
+
+      // Ensure proper date object conversion
+      const notificationSentAt = new Date(order.notificationSentAt);
+      const timeSinceNotification = (currentTime - notificationSentAt) / (1000 * 60);
+      
+      console.log(`Time since notification: ${timeSinceNotification.toFixed(2)} minutes`);
+
+      // Get user FCM tokens with error handling
+      let fcmTokenDoc;
+      try {
+        fcmTokenDoc = await UserFCMTokenModel.findOne({
+          createdBy: order.userId,
+        });
+        console.log(`Found FCM token document: ${fcmTokenDoc ? 'Yes' : 'No'}`);
+      } catch (tokenError) {
+        console.error(`Error fetching FCM tokens for user ${order.userId}:`, tokenError);
+      }
+
+      // CRITICAL FIX: Continue with email notifications even if FCM tokens are not found
+      const hasFcmTokens = fcmTokenDoc && fcmTokenDoc.FCMTokens && fcmTokenDoc.FCMTokens.length > 0;
+      
+      if (!hasFcmTokens) {
+        console.log(`No FCM tokens found for user ${order.userId}, continuing with email notifications only`);
+      } else {
+        console.log(`Found ${fcmTokenDoc.FCMTokens.length} tokens for user ${order.userId}`);
+      }
+      
+      // Gather pending items
       const pendingItems = order.items.filter(
         (item) => item.itemStatus === "User Approval Pending"
       );
-      // Track if auto-reject email has been sent
-      let autoRejectEmailSent = false;
-      // Notification sending logic
-      for (const item of pendingItems) {
-        for (const tokenObj of fcmTokenDoc.FCMTokens) {
-          try {
-            let notificationResult;
-
-            // Conditional notification based on time
-            if (timeSinceNotification >= 2 && timeSinceNotification < 5) {
-              notificationResult =
-                await NotificationService.sendWarningNotification(
-                  tokenObj.token,
-                  "⏳ Confirmation Countdown! 🕒",
-                  `Review & confirm item quantity (${item.quantity}) before time runs out!`,
-                  {
-                    orderId: order._id.toString(),
-                    itemId: item._id.toString(),
-                  }
-                );
-            } else if (timeSinceNotification >= 5) {
-              notificationResult =
-                await NotificationService.sendRejectNotification(
-                  tokenObj.token,
-                  "❌ Order Auto-Canceled 🚫",
-                  `⚠️ Auto-Rejected! (Qty: ${item.quantity}) No response detected. Retry? 🔄`,
-                  {
-                    orderId: order._id.toString(),
-                    itemId: item._id.toString(),
-                  }
-                );
-            }
-
-            // Track successful notification
-            if (notificationResult) {
-              console.log(
-                `Notification sent successfully to token: ${tokenObj.token}`
-              );
-            }
-          } catch (error) {
-            console.error(
-              `Notification error for token: ${tokenObj.token}`,
-              error
-            );
-
-            // Specifically handle expired/invalid tokens
-            if (
-              error.errorInfo &&
-              (error.errorInfo.code ===
-                "messaging/registration-token-not-registered" ||
-                error.message.includes("is not registered or has expired"))
-            ) {
-              invalidTokens.push(tokenObj.token);
-            }
-          }
-        }
       
+      console.log(`Found ${pendingItems.length} pending items in order ${order._id}`);
+      
+      if (pendingItems.length === 0) {
+        continue;
+      }
 
-      try {
-        // Send warning email when time is between 2-5 minutes
-        if (timeSinceNotification >= 2 && timeSinceNotification < 2) {
-          const emailResult = await sendQuantityConfirmationEmail(
-            order._id.toString(),
-            item._id.toString(),
-            item.quantity,
-            false // Not an auto-reject
+      const invalidTokens = [];
+      let autoRejectEmailSent = false;
+
+      // Use explicit check for time conditions
+      let shouldSendWarning = (timeSinceNotification >= 1 && timeSinceNotification < 2);
+      let shouldAutoReject = (timeSinceNotification >= 2);
+      
+      console.log(`Should send warning: ${shouldSendWarning}, Should auto-reject: ${shouldAutoReject}`);
+
+      // Process each item
+      for (const item of pendingItems) {
+        console.log(`Processing item ${item._id}, quantity: ${item.quantity}`);
+        
+        // Send FCM notifications only if tokens are available
+        if (hasFcmTokens) {
+          for (const tokenObj of fcmTokenDoc.FCMTokens) {
+            if (!tokenObj || !tokenObj.token) {
+              console.log("Found invalid token object, skipping");
+              continue;
+            }
+            
+            const token = tokenObj.token;
+            console.log(`Processing token: ${token.substring(0, 10)}...`);
+
+            // Send warning notification
+            if (shouldSendWarning) {
+              try {
+                console.log("Attempting to send warning notification...");
+                const message = `Review & confirm item quantity (${item.quantity}) before time runs out!`;
+                
+                const notificationPayload = {
+                  notification: {
+                    title: "⏳ Confirmation Countdown! 🕒",
+                    body: message
+                  },
+                  data: {
+                    orderId: order._id.toString(),
+                    itemId: item._id.toString(),
+                    notificationType: "warning"
+                  },
+                  token: token
+                };
+                
+                try {
+                  // If using Firebase Admin SDK directly
+                  const result = await admin.messaging().send(notificationPayload);
+                  console.log("Warning notification sent successfully:", result);
+                } catch (firebaseError) {
+                  console.error("Firebase notification error:", firebaseError);
+                  if (
+                    firebaseError.code === "messaging/registration-token-not-registered" ||
+                    firebaseError.message.includes("is not registered")
+                  ) {
+                    invalidTokens.push(token);
+                  }
+                }
+              } catch (notifError) {
+                console.error("Error in warning notification process:", notifError);
+              }
+            } 
+            
+            // Send auto-reject notification
+            if (shouldAutoReject) {
+              try {
+                console.log("Attempting to send auto-reject notification...");
+                const message = `⚠️ Auto-Rejected! (Qty: ${item.quantity}) No response detected. Retry? 🔄`;
+                
+                const notificationPayload = {
+                  notification: {
+                    title: "❌ Order Auto-Canceled 🚫",
+                    body: message
+                  },
+                  data: {
+                    orderId: order._id.toString(),
+                    itemId: item._id.toString(),
+                    notificationType: "reject"
+                  },
+                  token: token
+                };
+                
+                try {
+                  // If using Firebase Admin SDK directly
+                  const result = await admin.messaging().send(notificationPayload);
+                  console.log("Reject notification sent successfully:", result);
+                } catch (firebaseError) {
+                  console.error("Firebase notification error:", firebaseError);
+                  if (
+                    firebaseError.code === "messaging/registration-token-not-registered" ||
+                    firebaseError.message.includes("is not registered")
+                  ) {
+                    invalidTokens.push(token);
+                  }
+                }
+              } catch (notifError) {
+                console.error("Error in auto-reject notification process:", notifError);
+              }
+            }
+          }
+
+          // Remove invalid tokens if any were found
+          if (invalidTokens.length > 0) {
+            try {
+              console.log(`Removing ${invalidTokens.length} invalid tokens`);
+              await UserFCMTokenModel.updateOne(
+                { _id: fcmTokenDoc._id },
+                {
+                  $pull: {
+                    FCMTokens: {
+                      token: { $in: invalidTokens },
+                    },
+                  },
+                }
+              );
+            } catch (tokenUpdateError) {
+              console.error("Error removing invalid tokens:", tokenUpdateError);
+            }
+          }
+        }
+
+        // Always create user notification records regardless of FCM token availability
+        if (shouldSendWarning) {
+          await createUserNotification(
+            order.userId, 
+            `⏳ Confirmation Countdown! Review & confirm item quantity (${item.quantity}) before time runs out!`
           );
+        }
+        
+        if (shouldAutoReject) {
+          await createUserNotification(
+            order.userId, 
+            `❌ Order Auto-Canceled! Item (Qty: ${item.quantity}) was auto-rejected due to no response. Order ID: ${order.transactionId}`
+          );
+        }
 
-          if (emailResult.success) {
+        // Always send emails regardless of FCM token availability
+        if (shouldSendWarning) {
+          try {
+            console.log("Sending warning email...");
+            await sendQuantityConfirmationEmail(
+              order._id.toString(),
+              item._id.toString(),
+              item.quantity,
+              false
+            );
             console.log("Warning email sent successfully");
+          } catch (emailError) {
+            console.error("Error sending warning email:", emailError);
           }
-        }
-        // Send auto-reject email when time is 5+ minutes
-        else if (timeSinceNotification >= 5 && !autoRejectEmailSent) {
-          const emailResult = await sendQuantityConfirmationEmail(
-            order._id.toString(),
-            item._id.toString(),
-            item.quantity,
-            true // This is an auto-reject email
-          );
-
-          if (emailResult.success) {
+        } 
+        
+        if (shouldAutoReject && !autoRejectEmailSent) {
+          try {
+            console.log("Sending auto-reject email...");
+            await sendQuantityConfirmationEmail(
+              order._id.toString(),
+              item._id.toString(),
+              item.quantity,
+              true
+            );
             console.log("Auto-reject email sent successfully");
-            autoRejectEmailSent = true; // Prevent sending multiple auto-reject emails
+            autoRejectEmailSent = true;
+          } catch (emailError) {
+            console.error("Error sending auto-reject email:", emailError);
           }
         }
-      } catch (emailError) {
-        console.error("Error sending email:", emailError);
       }
 
-      // Remove invalid tokens from user's FCM tokens
-      if (invalidTokens.length > 0) {
-        await UserFCMTokenModel.updateOne(
-          { _id: fcmTokenDoc._id },
-          {
-            $pull: {
-              FCMTokens: {
-                token: { $in: invalidTokens },
-              },
-            },
-          }
-        );
-
-        console.log(
-          `Removed ${invalidTokens.length} invalid tokens for user ${order.userId}`
-        );
-      }
-
-      // Handle order rejection if applicable
-      if (timeSinceNotification >= 5) {
-        const pendingItems = order.items.filter(
-          (item) => item.itemStatus === "User Approval Pending"
-        );
-
-        if (pendingItems.length > 0) {
+      // Handle auto-rejection
+      if (shouldAutoReject) {
+        try {
+          console.log("Processing auto-rejection for pending items...");
+          
           // Update item statuses
-          pendingItems.forEach((item) => {
+          for (const item of pendingItems) {
             item.itemStatus = "Rejected";
-            item.select = true
-          });
+            item.select = true;
+          }
 
-          // Update order remarks and status
+          // Update order remarks
           const rejectionRemarks = pendingItems
             .map(
               (item) =>
@@ -625,37 +741,85 @@ export const checkPendingOrderNotifications = async () => {
             ? `${order.orderRemark}\n${rejectionRemarks}`
             : rejectionRemarks;
 
-          if (order.items.every((item) => item.itemStatus === "Rejected")) {
+          // Check if all items are rejected
+          const allItemsRejected = order.items.every((item) => item.itemStatus === "Rejected");
+          
+          if (allItemsRejected) {
+            console.log("All items rejected, updating order status to Rejected");
             order.orderStatus = "Rejected";
-          }
-
-          await order.save();
-
-          if (!autoRejectEmailSent) {
-            try {
-              await sendQuantityConfirmationEmail(
-                order._id.toString(),
-                pendingItems[0]._id.toString(),
-                pendingItems[0].quantity,
-                true
-              );
-
-              if (finalEmailResult.success) {
+            
+            // Add final notification
+            await createUserNotification(
+              order.userId,
+              `⚠️ Your order #${order.transactionId} has been completely rejected due to no response to quantity confirmation requests.`
+            );
+            
+            // Send final email if not sent already
+            if (!autoRejectEmailSent) {
+              try {
+                await sendQuantityConfirmationEmail(
+                  order._id.toString(),
+                  pendingItems[0]._id.toString(),
+                  pendingItems[0].quantity,
+                  true
+                );
                 console.log("Final auto-reject email sent successfully");
+              } catch (finalEmailError) {
+                console.error("Error sending final rejection email:", finalEmailError);
               }
-            } catch (finalEmailError) {
-              console.error(
-                "Error sending final rejection email:",
-                finalEmailError
-              );
             }
           }
+          
+          // Save the updated order
+          await order.save();
+          console.log(`Order ${order._id} updated successfully`);
+        } catch (rejectionError) {
+          console.error("Error in auto-rejection process:", rejectionError);
         }
       }
     }
-  }
+    
+    console.log("Finished processing all pending orders");
+  } catch (mainError) {
+    console.error("Main error in checkPendingOrderNotifications:", mainError);
   }
 };
 
+// Helper function to create user notifications with better error handling
+async function createUserNotification(userId, message) {
+  try {
+    console.log(`Creating user notification for ${userId}: ${message}`);
+    
+    // Find existing notification doc or create new one
+    let userNotificationDoc = await userNotification.findOne({ createdBy: userId });
+    
+    if (userNotificationDoc) {
+      // Add to existing doc
+      userNotificationDoc.notification.push({
+        message: message,
+        read: false,
+        createdAt: new Date()
+      });
+    } else {
+      // Create new doc
+      userNotificationDoc = new userNotification({
+        notification: [{
+          message: message,
+          read: false,
+          createdAt: new Date()
+        }],
+        createdBy: userId
+      });
+    }
+    
+    await userNotificationDoc.save();
+    console.log("User notification created successfully");
+    return true;
+  } catch (notificationError) {
+    console.error("Error creating user notification:", notificationError);
+    return false;
+  }
+}
+
 // Start a cron job to check pending orders every minute
-// cron.schedule("* * * * *", checkPendingOrderNotifications);
+cron.schedule("* * * * *", checkPendingOrderNotifications);

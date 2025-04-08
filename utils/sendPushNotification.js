@@ -221,6 +221,52 @@ class NotificationService {
       }
     }
   }
+  static async sendSuccessNotification(deviceToken, title, body, info) {
+    if (
+      !deviceToken ||
+      typeof deviceToken !== "string" ||
+      deviceToken.trim() === ""
+    ) {
+      console.error("Invalid device token:", deviceToken);
+      throw new Error("Invalid device token");
+    }
+
+    const data = {
+      orderId: info.orderId,
+      title,
+      body,
+      itemId: info.itemId,
+    };
+
+    const message = {
+      token: deviceToken.trim(),
+      data: {
+        ...data,
+      },
+    };
+    try {
+      const response = await admin.messaging().send(message);
+      console.log("Notification sent successfully:", response);
+      return response;
+    } catch (error) {
+      // Handle specific Firebase errors
+      if (
+        error.errorInfo &&
+        error.errorInfo.code === "messaging/registration-token-not-registered"
+      ) {
+        console.error(
+          `The device token ${deviceToken} is not registered or has expired.`
+        );
+        throw new Error(
+          `Device token ${deviceToken} is not registered or has expired.`
+        );
+      } else {
+        console.error("Error sending notification:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
+        throw error;
+      }
+    }
+  }
 }
 
 export default NotificationService;

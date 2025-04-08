@@ -10,7 +10,6 @@ const ProductDetailSchema = new mongoose.Schema(
     markingCharge: {
       type: Number,
       default: 0,
-      min: 0,
     },
     pricingType: {
       type: String,
@@ -20,8 +19,6 @@ const ProductDetailSchema = new mongoose.Schema(
     value: {
       type: Number,
       default: 0,
-      min: 0,
-      max: 100,
     },
     isActive: {
       type: Boolean,
