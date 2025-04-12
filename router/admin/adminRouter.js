@@ -54,6 +54,7 @@ import {
   getTotalRevenue,
 } from "../../controllers/admin/dashboardController.js";
 import { fetchUserOrder } from "../../controllers/user/orderController.js";
+import { addVideoBanner, deleteVideoBanner, fetchVideoBanner } from "../../controllers/admin/bannerController.js";
 const router = Router();
 
 router.post("/login", adminLoginController);
@@ -114,4 +115,12 @@ router.get("/overview/:adminId", getDashboardOverview);
 router.get("/users/:adminId", getUserCount);
 router.get("/completed-orders/:adminId", getCompletedOrders);
 router.get("/revenue/:adminId", getTotalRevenue);
+// video banner
+router.post(
+  "/video-banner/create/:adminId",
+  uploadMultiple("video", 5),
+  addVideoBanner
+);
+router.get("/videoBanners/:adminId", fetchVideoBanner);
+router.delete("/videoBanner/:bannerId/:adminId", deleteVideoBanner);
 export default router;

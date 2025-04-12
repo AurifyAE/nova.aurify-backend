@@ -4,6 +4,7 @@ import {
   userVerification,
   getAdminProfile,
   addFCMToken,
+  getVideoBannerDetails,
 } from "../../helper/user/userHelper.js";
 import { UserSpotRateModel } from "../../model/UserSpotRateSchema.js";
 import { UsersModel } from "../../model/usersSchema.js";
@@ -98,7 +99,27 @@ export const fetchProductCount = async (req, res, next) => {
   }
 };
 
+export const getVideoBanner = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+    const { success, banners, message } = await getVideoBannerDetails(adminId);
 
+    if (!success) {
+      return res.status(204).json({
+        success: false,
+        message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      banners,
+      message: "VideoBanner fetching successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 export const getProfile = async (req, res, next) => {
   try {
     const { adminId } = req.params;

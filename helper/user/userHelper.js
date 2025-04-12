@@ -5,6 +5,7 @@ import FCMTokenModel from "../../model/fcmTokenSchema.js";
 import UserFCMTokenModel from "../../model/userFCMToken.js";
 import NotificationService from "../../utils/sendPushNotification.js";
 import { encryptPassword, decryptPassword } from "../../utils/crypto.js";
+import { VideoBannerModel } from "../../model/videoBannerSchema.js";
 
 export const updateUserPassword = async (adminId, contact, newPassword) => {
   try {
@@ -146,7 +147,38 @@ export const addFCMToken = async (userId, fcmToken) => {
     throw new Error("Error adding FCM token: " + error.message);
   }
 };
+export const getVideoBannerDetails = async (adminId) => {
+  try {
+    const bannerDocument = await VideoBannerModel.findOne({
+      createdBy: adminId,
+    });
 
+    if (!bannerDocument) {
+      return {
+        success: false,
+        banners: [],
+        message: "No VideoBanner found for this admin",
+      };
+    }
+
+    // Flatten the videos array and extract only the location links
+    const locations = bannerDocument.banner
+      .flatMap((item) => item.videos) // Extract all videos arrays and flatten them
+      .map((video) => video.location); // Extract only the location property
+
+    return {
+      success: true,
+      banners: locations,
+      message: "VideoBanner fetched successfully",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      banners: [],
+      message: "Error fetching VideoBanner: " + error.message,
+    };
+  }
+};
 export const requestPassInAdmin = async (adminId, request) => {
   try {
     const notificationMessage = `📩 New Request: ${

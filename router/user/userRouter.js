@@ -15,7 +15,8 @@ import {
   requestAdmin,
   userLoginController,
   getProfile,
-  fetchProductCount
+  fetchProductCount,
+  getVideoBanner
 } from "../../controllers/user/userController.js";
 import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
@@ -32,6 +33,7 @@ router.get("/get-product/:adminId?/:categoryId?", fetchProductData);
 router.get("/product-count/:categoryId", fetchProductCount);
 router.put("/forgot-password/:adminId", forgotPassword);
 router.get("/get-profile/:adminId", getProfile);
+router.get("/get-VideoBanner/:adminId", getVideoBanner);
 // cart Management
 router.get("/get-cart/:userId", getUserCart);
 router.patch("/cart-increment/:adminId/:userId/:productId", incrementCartItem);
