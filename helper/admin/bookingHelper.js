@@ -1,27 +1,23 @@
-import nodemailer from 'nodemailer';
-import mjml2html from 'mjml';
+import nodemailer from "nodemailer";
+import mjml2html from "mjml";
 import mongoose from "mongoose";
 import { orderModel } from "../../model/orderSchema.js";
 import UserFCMTokenModel from "../../model/userFCMToken.js";
 import NotificationService from "../../utils/sendPushNotification.js";
-import {TransactionModel} from "../../model/transaction.js"
+import { TransactionModel } from "../../model/transaction.js";
 import { UsersModel } from "../../model/usersSchema.js";
-import adminModel from '../../model/adminSchema.js';
-import userNotification from '../../model/userNotificationSchema.js'
+import adminModel from "../../model/adminSchema.js";
+import userNotification from "../../model/userNotificationSchema.js";
 export const updateOrderDetails = async (orderId, orderStatus) => {
-  // Validate inputs
   if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) {
     return {
       success: false,
       message: "Invalid order ID format",
     };
   }
-
   const session = await mongoose.startSession();
   session.startTransaction();
-
   try {
-    // Find the order by ID and update the orderStatus
     const updatedOrder = await orderModel.findByIdAndUpdate(
       orderId,
       { orderStatus },
@@ -36,48 +32,116 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
         message: "Order not found",
       };
     }
+    const userId = updatedOrder.userId;
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      await session.abortTransaction();
+      session.endSession();
+      return {
+        success: false,
+        message: "Invalid user ID associated with order",
+      };
+    }
 
-    // Process balance updates and create transactions only when order is approved
+    let orderNotificationMessage = `Your order #${orderId
+      .toString()
+      .slice(-6)} `;
+    switch (orderStatus) {
+      case "Approved":
+        orderNotificationMessage += "has been approved and is being processed.";
+        break;
+      case "Processing":
+        orderNotificationMessage += "is now being processed.";
+        break;
+      case "Shipped":
+        orderNotificationMessage += "has been shipped.";
+        break;
+      case "Delivered":
+        orderNotificationMessage +=
+          "has been delivered. Thank you for your purchase!";
+        break;
+      case "Cancelled":
+        orderNotificationMessage += "has been cancelled.";
+        break;
+      default:
+        orderNotificationMessage += `status has been updated to ${orderStatus}.`;
+    }
+
+    const addNotification = async (userId, message) => {
+      if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+        console.error("Invalid userId for notification:", userId);
+        throw new Error("Invalid userId for notification");
+      }
+      try {
+        let notification = await userNotification.findOne(
+          { createdBy: userId },
+          null,
+          { session }
+        );
+
+        if (notification) {
+          notification.notification.push({
+            message,
+            read: false,
+            createdAt: new Date(),
+          });
+          await notification.save({ session });
+        } else {
+          notification = new userNotification({
+            notification: [
+              {
+                message,
+                read: false,
+                createdAt: new Date(),
+              },
+            ],
+            createdBy: userId,
+          });
+          await notification.save({ session });
+        }
+       
+      } catch (err) {
+        console.error("Error creating notification:", err);
+        throw err;
+      }
+    };
+
+    await addNotification(userId, orderNotificationMessage);
+
     if (orderStatus === "Approved") {
-      const userId = updatedOrder.userId;
-      
-      // First, fetch the user to get current balances
       const user = await UsersModel.findOne(
         { "users._id": userId },
         { "users.$": 1 },
         { session }
       );
-      
+
       if (!user || !user.users.length) {
         throw new Error("User not found");
       }
-      
+
       const currentUser = user.users[0];
-      
-      // Validate order amounts to prevent NaN
+
       const totalAmount = Number(updatedOrder.totalPrice);
       const totalWeight = Number(updatedOrder.totalWeight);
-      
+
       if (isNaN(totalAmount) || isNaN(totalWeight)) {
-        throw new Error("Invalid order amounts: totalAmount or totalWeight is not a number");
+        throw new Error(
+          "Invalid order amounts: totalAmount or totalWeight is not a number"
+        );
       }
-      
+
       let updateOperation = {};
       let transactions = [];
-      
+      let transactionNotificationMessage = "";
+
       if (updatedOrder.paymentMethod === "Cash") {
-        // Ensure current cash balance is a number
         const currentCashBalance = Number(currentUser.cashBalance) || 0;
-        
-        // UPDATED: Always subtract from the cash balance (accumulate negative values)
+
         const newCashBalance = currentCashBalance - totalAmount;
-        
-        // Update cash balance with explicit value
+
         updateOperation = {
-          "users.$.cashBalance": newCashBalance
+          "users.$.cashBalance": newCashBalance,
         };
-        
-        // Prepare transaction
+
         transactions.push({
           userId,
           type: "DEBIT",
@@ -85,22 +149,26 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
           amount: totalAmount,
           balanceType: "CASH",
           balanceAfter: newCashBalance,
-          orderId
+          orderId,
         });
-      } 
-      else if (updatedOrder.paymentMethod === "Gold To Gold") {
-        // Ensure current gold balance is a number
+
+        transactionNotificationMessage = `A cash payment of ${totalAmount.toFixed(
+          2
+        )} has been processed for your order #${orderId
+          .toString()
+          .slice(-6)}. Your new cash balance is ${newCashBalance.toFixed(2)}.`;
+      } else if (
+        updatedOrder.paymentMethod === "Gold To Gold" ||
+        updatedOrder.paymentMethod === "Gold"
+      ) {
         const currentGoldBalance = Number(currentUser.goldBalance) || 0;
 
-        // UPDATED: Always subtract from the gold balance (accumulate negative values)
         const newGoldBalance = currentGoldBalance - totalWeight;
-        
-        // Update gold balance with explicit value
+
         updateOperation = {
-          "users.$.goldBalance": newGoldBalance
+          "users.$.goldBalance": newGoldBalance,
         };
-        
-        // Prepare transaction
+
         transactions.push({
           userId,
           type: "DEBIT",
@@ -108,20 +176,30 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
           amount: totalWeight,
           balanceType: "GOLD",
           balanceAfter: newGoldBalance,
-          orderId
+          orderId,
         });
+
+        transactionNotificationMessage = `A gold payment of ${totalWeight.toFixed(
+          3
+        )} grams has been processed for your order #${orderId
+          .toString()
+          .slice(-6)}. Your new gold balance is ${newGoldBalance.toFixed(
+          3
+        )} grams.`;
       }
-      
-      // Apply the updates
+
       if (Object.keys(updateOperation).length > 0) {
         await UsersModel.updateOne(
           { "users._id": userId },
           { $set: updateOperation },
           { session }
         );
+
+        if (transactionNotificationMessage) {
+          await addNotification(userId, transactionNotificationMessage);
+        }
       }
-      
-      // Create all transactions in bulk
+
       if (transactions.length > 0) {
         await TransactionModel.insertMany(transactions, { session });
       }
@@ -138,7 +216,7 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    
+
     console.error("Error updating order and balances:", error);
     return {
       success: false,
@@ -154,10 +232,10 @@ export const updateOrderStatusHelper = async (orderId, orderDetails) => {
 
     // Ensure the order status is being set correctly, including rejection scenario
     const updatedOrder = await orderModel.findByIdAndUpdate(
-      orderId,  // Correct query syntax
-      { 
-        orderStatus, 
-        orderRemark: remark  // Correct way to update remark field
+      orderId, // Correct query syntax
+      {
+        orderStatus,
+        orderRemark: remark, // Correct way to update remark field
       },
       { new: true, runValidators: true }
     );
@@ -181,8 +259,6 @@ export const updateOrderStatusHelper = async (orderId, orderDetails) => {
     };
   }
 };
-
-
 
 export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
   try {
@@ -228,10 +304,10 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
     const anyUserApprovalPending = order.items.some(
       (item) => item.itemStatus === "User Approval Pending"
     );
-    
+
     let statusChanged = false;
     let previousStatus = order.orderStatus;
-    
+
     // Update orderStatus based on items' statuses
     if (allApproved) {
       order.orderStatus = "Success";
@@ -243,15 +319,15 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
     } else {
       order.orderStatus = "Processing";
     }
-    
+
     // Save the updated order
     await order.save();
-    
+
     // Add notification to user notification model for status change
     if (order.orderStatus !== previousStatus) {
       try {
         let notificationMessage = "";
-        
+
         // Create appropriate notification message based on new status
         switch (order.orderStatus) {
           case "Success":
@@ -266,38 +342,47 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
           default:
             notificationMessage = `📝 Your order #${order.transactionId} status has been updated to: ${order.orderStatus}`;
         }
-        
+
         // Find existing user notification document or create a new one
-        let userNotificationDoc = await userNotification.findOne({ createdBy: order.userId });
-        
+        let userNotificationDoc = await userNotification.findOne({
+          createdBy: order.userId,
+        });
+
         if (userNotificationDoc) {
           // Add notification to existing document
           userNotificationDoc.notification.push({
             message: notificationMessage,
             read: false,
-            createdAt: new Date()
+            createdAt: new Date(),
           });
           await userNotificationDoc.save();
         } else {
           // Create new notification document
           userNotificationDoc = new userNotification({
-            notification: [{
-              message: notificationMessage,
-              read: false,
-              createdAt: new Date()
-            }],
-            createdBy: order.userId
+            notification: [
+              {
+                message: notificationMessage,
+                read: false,
+                createdAt: new Date(),
+              },
+            ],
+            createdBy: order.userId,
           });
           await userNotificationDoc.save();
         }
-        
-        console.log(`Order status change notification added for user ${order.userId}`);
+
+        console.log(
+          `Order status change notification added for user ${order.userId}`
+        );
       } catch (notificationError) {
-        console.error("Error creating order status notification:", notificationError.message);
+        console.error(
+          "Error creating order status notification:",
+          notificationError.message
+        );
         // Continue processing - notification failure shouldn't stop the order update
       }
     }
-    
+
     // Send notification and email only if status changed to "User Approval Pending"
     if (order.orderStatus === "User Approval Pending" && statusChanged) {
       // Send FCM notifications
@@ -336,7 +421,7 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
           await fcmTokenDoc.save();
         }
       }
-      
+
       // Send confirmation email to user
       try {
         const emailResult = await sendQuantityConfirmationEmail(
@@ -345,14 +430,17 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
           quantity
         );
         if (!emailResult.success) {
-          console.error("Failed to send confirmation email:", emailResult.error);
+          console.error(
+            "Failed to send confirmation email:",
+            emailResult.error
+          );
         }
       } catch (emailError) {
         console.error("Error in email sending process:", emailError);
         // Continue processing - email failure shouldn't stop the order update
       }
     }
-    
+
     return {
       success: true,
       message: "Order updated successfully",
@@ -368,67 +456,67 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
 
 const sendQuantityConfirmationEmail = async (orderId, itemId, quantity) => {
   try {
-   // Find the order with proper population
-   const order = await orderModel.findById(orderId);
-   if (!order) {
-     throw new Error('Order not found');
-   }
-   
-   // Now populate the userId with proper fields
-   // Based on your schema, Users is an array inside a document
-   const userData = await UsersModel.findOne(
-    { "users._id": order.userId },
-    { "users.$": 1 }
-  );
-  
-   if (!userData || !userData.users || userData.users.length === 0) {
-     throw new Error('User data not found');
-   }
-   
-   const user = userData.users[0];
-   const userEmail = user.email;
-   const userName = user.name;
-   
-   // Find the specific item in the order
-   const item = order.items.find(item => item._id.toString() === itemId);
-   if (!item) {
-     throw new Error('Item not found in order');
-   }
-   
-   // Get product details by querying the Product model directly
-   const product = await mongoose.model("Product").findById(item.productId);
-   if (!product) {
-     throw new Error('Product not found');
-   }
+    // Find the order with proper population
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      throw new Error("Order not found");
+    }
 
-   const productName = product.name || 'Product';
-   const productWeight = product.weight || 0;
-   const totalWeight = productWeight * quantity;
+    // Now populate the userId with proper fields
+    // Based on your schema, Users is an array inside a document
+    const userData = await UsersModel.findOne(
+      { "users._id": order.userId },
+      { "users.$": 1 }
+    );
+
+    if (!userData || !userData.users || userData.users.length === 0) {
+      throw new Error("User data not found");
+    }
+
+    const user = userData.users[0];
+    const userEmail = user.email;
+    const userName = user.name;
+
+    // Find the specific item in the order
+    const item = order.items.find((item) => item._id.toString() === itemId);
+    if (!item) {
+      throw new Error("Item not found in order");
+    }
+
+    // Get product details by querying the Product model directly
+    const product = await mongoose.model("Product").findById(item.productId);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    const productName = product.name || "Product";
+    const productWeight = product.weight || 0;
+    const totalWeight = productWeight * quantity;
 
     const admin = await adminModel.findById(order.adminId);
-    const adminBrandName = admin && admin.companyName ? admin.companyName : 'Aurify';
+    const adminBrandName =
+      admin && admin.companyName ? admin.companyName : "Aurify";
 
     // Configure base URLs for action buttons
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const approveUrl = `${baseUrl}/confirm-quantity?orderId=${orderId}&itemId=${itemId}&action=true`;
     const rejectUrl = `${baseUrl}/confirm-quantity?orderId=${orderId}&itemId=${itemId}&action=false`;
 
     // Email configuration
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      service: "gmail",
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        pass: process.env.EMAIL_PASS,
       },
     });
 
     // Format price with comma separators for Indian Rupees
-    const formattedPrice = new Intl.NumberFormat('en-IN', {
+    const formattedPrice = new Intl.NumberFormat("en-IN", {
       maximumFractionDigits: 2,
-      minimumFractionDigits: 2
+      minimumFractionDigits: 2,
     }).format(item.fixedPrice);
 
-  
     // Email content with enhanced MJML
     const mailOptions = {
       from: `"${adminBrandName} Precious Metals" <aurifycontact@gmail.com>`,
@@ -530,9 +618,9 @@ const sendQuantityConfirmationEmail = async (orderId, itemId, quantity) => {
                   <tr>
                     <td style="font-weight: bold;">Total Investment</td>
                     <td style="text-align: right; font-weight: bold; color: #2C3E50;">
-                      AED ${new Intl.NumberFormat('en-IN', {
+                      AED ${new Intl.NumberFormat("en-IN", {
                         maximumFractionDigits: 2,
-                        minimumFractionDigits: 2
+                        minimumFractionDigits: 2,
                       }).format(item.fixedPrice * quantity)}
                     </td>
                   </tr>
@@ -573,23 +661,23 @@ const sendQuantityConfirmationEmail = async (orderId, itemId, quantity) => {
             </mj-section>
           </mj-body>
         </mjml>
-      `).html
+      `).html,
     };
 
     // Send the email
     const info = await transporter.sendMail(mailOptions);
-    console.log('Quantity confirmation email sent:', info.messageId);
-    
+    console.log("Quantity confirmation email sent:", info.messageId);
+
     return {
       success: true,
-      message: 'Quantity confirmation email sent successfully'
+      message: "Quantity confirmation email sent successfully",
     };
   } catch (error) {
-    console.error('Error sending quantity confirmation email:', error);
+    console.error("Error sending quantity confirmation email:", error);
     return {
       success: false,
-      message: 'Error sending quantity confirmation email',
-      error: error.message
+      message: "Error sending quantity confirmation email",
+      error: error.message,
     };
   }
 };
@@ -704,7 +792,7 @@ export const fetchBookingDetails = async (adminId) => {
                 address: "$$userInfo.user.address",
                 email: "$$userInfo.user.email",
                 cashBalance: "$$userInfo.user.cashBalance",
-                goldBalance: "$$userInfo.user.goldBalance"
+                goldBalance: "$$userInfo.user.goldBalance",
               },
             },
           },
