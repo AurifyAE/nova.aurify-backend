@@ -236,7 +236,21 @@ export const requestPassInAdmin = async (adminId, request) => {
 export const getUserNotifications = async (userId) => {
   try {
     const notifications = await UserNotificationModel.findOne({ createdBy: userId });
-    return notifications || { notification: [] };
+    
+    if (!notifications) {
+      return { 
+        notifications: { notification: [] }, 
+        unreadCount: 0 
+      };
+    }
+    
+    // Count unread messages (where read is false)
+    const unreadCount = notifications.notification.filter(msg => msg.read === false).length;
+    
+    return { 
+      notifications,
+      unreadCount
+    };
   } catch (error) {
     throw new Error("Error fetching notifications: " + error.message);
   }

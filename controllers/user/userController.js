@@ -185,12 +185,15 @@ export const fetchAdminBankDetails = async (req, res, next) => {
 
 export const getNotifications = async (req, res, next) => {
   try {
-    const {userId} = req.params; // Assuming user info is available from auth middleware
-    const notifications = await getUserNotifications(userId);
+    const {userId} = req.params;
+    const { notifications, unreadCount } = await getUserNotifications(userId);
     
     return res.status(200).json({
       success: true,
-      data: notifications.notification,
+      data: {
+        notifications: notifications.notification,
+        unreadCount
+      },
       message: "Notifications fetched successfully"
     });
   } catch (error) {
