@@ -15,7 +15,12 @@ import {
   requestAdmin,
   userLoginController,
   getProfile,
-  fetchProductCount
+  fetchProductCount,
+  getVideoBanner,
+  getNotifications,
+  readNotification,
+  removeNotification,
+  clearAllNotifications
 } from "../../controllers/user/userController.js";
 import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
@@ -32,6 +37,7 @@ router.get("/get-product/:adminId?/:categoryId?", fetchProductData);
 router.get("/product-count/:categoryId", fetchProductCount);
 router.put("/forgot-password/:adminId", forgotPassword);
 router.get("/get-profile/:adminId", getProfile);
+router.get("/get-VideoBanner/:adminId", getVideoBanner);
 // cart Management
 router.get("/get-cart/:userId", getUserCart);
 router.patch("/cart-increment/:adminId/:userId/:productId", incrementCartItem);
@@ -39,11 +45,15 @@ router.put("/cart/update-quantity/:adminId/:userId/:productId", updateCartQuanti
 router.patch("/cart-decrement/:adminId/:userId/:productId", decrementCartItem);
 router.delete("/delete-cart/:adminId/:userId/:productId", deleteCartItem);
 //order management
-
 router.post("/booking/:adminId/:userId", saveBooking);
 router.put("/products/fix-prices", fixedProductPrice);
 router.post("/order_quantity_confirmation", orderQuantityConfirmation);
 router.get("/fetch-order/:adminId/:userId", fetchUserOrder);
-
 router.get("/fetch-transtion/:userId", fetchUserTranstions);
+
+//notifications management
+router.get("/notifications/:userId", getNotifications);
+router.patch("/notifications/read/:userId/:notificationId", readNotification);
+router.delete("/notifications/:userId/:notificationId", removeNotification);
+router.delete("/notifications/:userId", clearAllNotifications);
 export default router;

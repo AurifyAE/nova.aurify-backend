@@ -5,6 +5,8 @@ import FCMTokenModel from "../../model/fcmTokenSchema.js";
 import UserFCMTokenModel from "../../model/userFCMToken.js";
 import NotificationService from "../../utils/sendPushNotification.js";
 import { encryptPassword, decryptPassword } from "../../utils/crypto.js";
+import { VideoBannerModel } from "../../model/videoBannerSchema.js";
+import UserNotificationModel from '../../model/userNotificationSchema.js'
 
 export const updateUserPassword = async (adminId, contact, newPassword) => {
   try {
@@ -146,7 +148,38 @@ export const addFCMToken = async (userId, fcmToken) => {
     throw new Error("Error adding FCM token: " + error.message);
   }
 };
+export const getVideoBannerDetails = async (adminId) => {
+  try {
+    const bannerDocument = await VideoBannerModel.findOne({
+      createdBy: adminId,
+    });
 
+    if (!bannerDocument) {
+      return {
+        success: false,
+        banners: [],
+        message: "No VideoBanner found for this admin",
+      };
+    }
+
+    // Flatten the videos array and extract only the location links
+    const locations = bannerDocument.banner
+      .flatMap((item) => item.videos) // Extract all videos arrays and flatten them
+      .map((video) => video.location); // Extract only the location property
+
+    return {
+      success: true,
+      banners: locations,
+      message: "VideoBanner fetched successfully",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      banners: [],
+      message: "Error fetching VideoBanner: " + error.message,
+    };
+  }
+};
 export const requestPassInAdmin = async (adminId, request) => {
   try {
     const notificationMessage = `📩 New Request: ${
@@ -197,5 +230,78 @@ export const requestPassInAdmin = async (adminId, request) => {
     return { success: true, message: "Requesting add successfully" };
   } catch (error) {
     throw new Error("Error For the Requesting" + error.message);
+  }
+};
+
+export const getUserNotifications = async (userId) => {
+  try {
+    const notifications = await UserNotificationModel.findOne({ createdBy: userId });
+    return notifications || { notification: [] };
+  } catch (error) {
+    throw new Error("Error fetching notifications: " + error.message);
+  }
+};
+
+// Mark a notification as read
+export const markNotificationAsRead = async (userId, notificationId) => {
+  try {
+    const result = await UserNotificationModel.findOneAndUpdate(
+      { 
+        createdBy: userId, 
+        "notification._id": notificationId 
+      },
+      { 
+        $set: { "notification.$.read": true } 
+      },
+      { new: true }
+    );
+    
+    if (!result) {
+      throw new Error("Notification not found");
+    }
+    
+    return result;
+  } catch (error) {
+    throw new Error("Error marking notification as read: " + error.message);
+  }
+};
+
+// Delete a notification
+export const deleteNotification = async (userId, notificationId) => {
+  try {
+    const result = await UserNotificationModel.findOneAndUpdate(
+      { createdBy: userId },
+      { 
+        $pull: { notification: { _id: notificationId } } 
+      },
+      { new: true }
+    );
+    
+    if (!result) {
+      throw new Error("Notification not found");
+    }
+    
+    return result;
+  } catch (error) {
+    throw new Error("Error deleting notification: " + error.message);
+  }
+};
+
+// Delete all notifications for a user
+export const deleteAllNotifications = async (userId) => {
+  try {
+    const result = await UserNotificationModel.findOneAndUpdate(
+      { createdBy: userId },
+      { $set: { notification: [] } },
+      { new: true }
+    );
+    
+    if (!result) {
+      throw new Error("User notifications not found");
+    }
+    
+    return result;
+  } catch (error) {
+    throw new Error("Error deleting all notifications: " + error.message);
   }
 };

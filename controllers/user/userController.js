@@ -4,6 +4,11 @@ import {
   userVerification,
   getAdminProfile,
   addFCMToken,
+  getVideoBannerDetails,
+  deleteAllNotifications,
+  deleteNotification,
+  markNotificationAsRead,
+  getUserNotifications,
 } from "../../helper/user/userHelper.js";
 import { UserSpotRateModel } from "../../model/UserSpotRateSchema.js";
 import { UsersModel } from "../../model/usersSchema.js";
@@ -98,7 +103,27 @@ export const fetchProductCount = async (req, res, next) => {
   }
 };
 
+export const getVideoBanner = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+    const { success, banners, message } = await getVideoBannerDetails(adminId);
 
+    if (!success) {
+      return res.status(204).json({
+        success: false,
+        message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      banners,
+      message: "VideoBanner fetching successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 export const getProfile = async (req, res, next) => {
   try {
     const { adminId } = req.params;
@@ -136,6 +161,7 @@ export const requestAdmin = async (req, res, next) => {
     next(error);
   }
 };
+
 export const fetchAdminBankDetails = async (req, res, next) => {
   try {
     const { adminId } = req.params;
@@ -151,6 +177,85 @@ export const fetchAdminBankDetails = async (req, res, next) => {
       success: true,
       bankInfo: adminData,
       message: "Fetch banking details successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getNotifications = async (req, res, next) => {
+  try {
+    const {userId} = req.params; // Assuming user info is available from auth middleware
+    const notifications = await getUserNotifications(userId);
+    
+    return res.status(200).json({
+      success: true,
+      data: notifications.notification,
+      message: "Notifications fetched successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Mark a notification as read
+export const readNotification = async (req, res, next) => {
+  try {
+    const { notificationId,userId } = req.params;
+    
+    if (!notificationId) {
+      return res.status(400).json({
+        success: false,
+        message: "Notification ID is required"
+      });
+    }
+    
+    const result = await markNotificationAsRead(userId, notificationId);
+    
+    return res.status(200).json({
+      success: true,
+      data: result,
+      message: "Notification marked as read"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete a specific notification
+export const removeNotification = async (req, res, next) => {
+  try {
+    const {userId, notificationId } = req.params;
+    
+    if (!notificationId) {
+      return res.status(400).json({
+        success: false,
+        message: "Notification ID is required"
+      });
+    }
+    
+    const result = await deleteNotification(userId, notificationId);
+    
+    return res.status(200).json({
+      success: true,
+      data: result,
+      message: "Notification deleted successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete all notifications for a user
+export const clearAllNotifications = async (req, res, next) => {
+  try {
+    const {userId} = req.params;
+    const result = await deleteAllNotifications(userId);
+    
+    return res.status(200).json({
+      success: true,
+      data: result,
+      message: "All notifications cleared successfully"
     });
   } catch (error) {
     next(error);
