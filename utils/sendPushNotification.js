@@ -143,10 +143,15 @@ class NotificationService {
       title,
       body,
       itemId: info.itemId,
+      notificationType: "warning"
     };
 
     const message = {
       token: deviceToken.trim(),
+      notification: {
+        title: title || "⏳ Confirmation Countdown! 🕒",
+        body: body
+      },
       data: {
         ...data,
       },
@@ -190,10 +195,15 @@ class NotificationService {
       title,
       body,
       itemId: info.itemId,
+      notificationType: "reject"
     };
 
     const message = {
       token: deviceToken.trim(),
+      notification: {
+        title: title || "❌ Order Auto-Canceled 🚫",
+        body: body
+      },
       data: {
         ...data,
       },
@@ -221,6 +231,7 @@ class NotificationService {
       }
     }
   }
+
   static async sendSuccessNotification(deviceToken, title, body, info) {
     if (
       !deviceToken ||
@@ -266,6 +277,91 @@ class NotificationService {
         throw error;
       }
     }
+  }
+
+  // New method for sending order reminder notification
+  static async sendOrderReminderNotification(deviceToken, orderId, itemId, quantity, isWarning = false, isAutoReject = false) {
+    if (!deviceToken || typeof deviceToken !== "string" || deviceToken.trim() === "") {
+      console.error("Invalid device token:", deviceToken);
+      throw new Error("Invalid device token");
+    }
+
+    let title, body, notificationType;
+
+    if (isAutoReject) {
+      title = "❌ Order Auto-Canceled 🚫";
+      body = `⚠️ Auto-Rejected! (Qty: ${quantity}) No response detected. Retry? 🔄`;
+      notificationType = "reject";
+    } else if (isWarning) {
+      title = "⏳ Confirmation Countdown! 🕒";
+      body = `Review & confirm item quantity (${quantity}) before time runs out!`;
+      notificationType = "warning";
+    } else {
+      title = "⚡Action Required: Order Confirmation";
+      body = `Please confirm your order with quantity: ${quantity}`;
+      notificationType = "confirmation";
+    }
+
+    const notificationPayload = {
+      notification: {
+        title: title,
+        body: body
+      },
+      data: {
+        orderId: orderId.toString(),
+        itemId: itemId.toString(),
+        quantity: quantity.toString(),
+        notificationType: notificationType
+      },
+      token: deviceToken.trim()
+    };
+
+    try {
+      const response = await admin.messaging().send(notificationPayload);
+      console.log(`${notificationType} notification sent successfully:`, response);
+      return response;
+    } catch (error) {
+      if (
+        error.code === "messaging/registration-token-not-registered" ||
+        (error.message && error.message.includes("is not registered"))
+      ) {
+        console.error(`The device token ${deviceToken} is not registered or has expired.`);
+        throw new Error(`Device token ${deviceToken} is not registered or has expired.`);
+      } else {
+        console.error("Error sending notification:", error);
+        throw error;
+      }
+    }
+  }
+
+  // Helper method to validate FCM tokens
+  static async validateAndRemoveInvalidTokens(fcmTokens) {
+    const validTokens = [];
+    const invalidTokens = [];
+
+    for (const token of fcmTokens) {
+      try {
+        // Make a simple FCM request to validate the token
+        const message = {
+          data: { test: "true" },
+          token: token
+        };
+        await admin.messaging().send(message, { dryRun: true });
+        validTokens.push(token);
+      } catch (error) {
+        if (
+          error.code === "messaging/registration-token-not-registered" ||
+          (error.message && error.message.includes("is not registered"))
+        ) {
+          invalidTokens.push(token);
+        } else {
+          // For other errors, consider the token valid
+          validTokens.push(token);
+        }
+      }
+    }
+
+    return { validTokens, invalidTokens };
   }
 }
 

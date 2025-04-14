@@ -20,6 +20,7 @@ export const userLoginController = async (req, res, next) => {
     const { contact, password, token } = req.body;
     const { adminId } = req.params;
 
+
     const response = await userVerification(adminId, contact, password);
 
     if (!response.success) {
@@ -50,6 +51,7 @@ export const userLoginController = async (req, res, next) => {
       {
         $project: {
           _id: 0,
+          "users._id": 1,
           "users.name": 1,
           "users.email": 1,
           "users.contact": 1,
@@ -69,7 +71,6 @@ export const userLoginController = async (req, res, next) => {
     }
 
     const userDetails = user[0].users;
-   
     await addFCMToken(userDetails._id, token);
 
     res.status(200).json({
