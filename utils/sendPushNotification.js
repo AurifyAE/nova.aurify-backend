@@ -285,9 +285,9 @@ class NotificationService {
       console.error("Invalid device token:", deviceToken);
       throw new Error("Invalid device token");
     }
-
+  
     let title, body, notificationType;
-
+  
     if (isAutoReject) {
       title = "❌ Order Auto-Canceled 🚫";
       body = `⚠️ Auto-Rejected! (Qty: ${quantity}) No response detected. Retry? 🔄`;
@@ -301,7 +301,7 @@ class NotificationService {
       body = `Please confirm your order with quantity: ${quantity}`;
       notificationType = "confirmation";
     }
-
+  
     const notificationPayload = {
       notification: {
         title: title,
@@ -311,11 +311,38 @@ class NotificationService {
         orderId: orderId.toString(),
         itemId: itemId.toString(),
         quantity: quantity.toString(),
-        notificationType: notificationType
+        notificationType: notificationType,
+        title: title,  // Duplicate in data for compatibility
+        body: body,    // Duplicate in data for compatibility
+        message: body  // Additional field for some client implementations
+      },
+      android: {
+        priority: "high",
+        notification: {
+          sound: "default",
+          channelId: "high_importance_channel",
+          clickAction: "FLUTTER_NOTIFICATION_CLICK"
+        }
+      },
+      apns: {
+        headers: {
+          "apns-priority": "10",
+        },
+        payload: {
+          aps: {
+            alert: {
+              title: title,
+              body: body
+            },
+            sound: "default",
+            badge: 1,
+            "content-available": 1
+          }
+        }
       },
       token: deviceToken.trim()
     };
-
+  
     try {
       const response = await admin.messaging().send(notificationPayload);
       console.log(`${notificationType} notification sent successfully:`, response);
