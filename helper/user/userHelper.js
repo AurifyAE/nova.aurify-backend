@@ -244,6 +244,9 @@ export const getUserNotifications = async (userId) => {
       };
     }
     
+    // Sort notifications by createdAt in descending order (newest first)
+    notifications.notification.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
     // Count unread messages (where read is false)
     const unreadCount = notifications.notification.filter(msg => msg.read === false).length;
     

@@ -143,15 +143,10 @@ class NotificationService {
       title,
       body,
       itemId: info.itemId,
-      notificationType: "warning"
     };
 
     const message = {
       token: deviceToken.trim(),
-      notification: {
-        title: title || "⏳ Confirmation Countdown! 🕒",
-        body: body
-      },
       data: {
         ...data,
       },
@@ -195,15 +190,10 @@ class NotificationService {
       title,
       body,
       itemId: info.itemId,
-      notificationType: "reject"
     };
 
     const message = {
       token: deviceToken.trim(),
-      notification: {
-        title: title || "❌ Order Auto-Canceled 🚫",
-        body: body
-      },
       data: {
         ...data,
       },
@@ -324,22 +314,7 @@ class NotificationService {
           clickAction: "FLUTTER_NOTIFICATION_CLICK"
         }
       },
-      apns: {
-        headers: {
-          "apns-priority": "10",
-        },
-        payload: {
-          aps: {
-            alert: {
-              title: title,
-              body: body
-            },
-            sound: "default",
-            badge: 1,
-            "content-available": 1
-          }
-        }
-      },
+     
       token: deviceToken.trim()
     };
   

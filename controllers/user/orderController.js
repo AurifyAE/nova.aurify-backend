@@ -94,7 +94,20 @@ export const orderQuantityConfirmation = async (req, res, next) => {
           createdAt: new Date(),
         });
         await userNotificationDoc.save();
+      } else {
+        userNotificationDoc = new userNotification({
+          notification: [
+            {
+              message: notificationMessage,
+              read: false,
+              createdAt: new Date(),
+            },
+          ],
+          createdBy: userId,
+        });
       }
+
+      await userNotificationDoc.save();
     } catch (notificationError) {
       console.error(
         "Error creating order status notification:",
@@ -233,10 +246,10 @@ export const checkPendingOrderNotifications = async () => {
         `Time since notification: ${timeSinceNotification.toFixed(2)} minutes`
       );
 
-      // Define notification states based on time thresholds
+      // Define notification states based on time thresholds (using your original working thresholds)
       const shouldSendWarning =
-        timeSinceNotification >= 1 && timeSinceNotification < 2;
-      const shouldAutoReject = timeSinceNotification >= 2;
+        timeSinceNotification >= 2 && timeSinceNotification < 5;
+      const shouldAutoReject = timeSinceNotification >= 5;
 
       if (!shouldSendWarning && !shouldAutoReject) {
         console.log(`No action needed for order ${order._id} at this time`);
@@ -301,49 +314,81 @@ export const checkPendingOrderNotifications = async () => {
         if (fcmTokens.length > 0) {
           for (const token of fcmTokens) {
             try {
+              let notificationResult = null;
+              
+              // Use same conditions as your working code
               if (shouldSendWarning) {
-                await NotificationService.sendOrderReminderNotification(
+                console.log(`Sending warning notification to token: ${token.substring(0, 10)}...`);
+                notificationResult = await NotificationService.sendWarningNotification(
                   token,
-                  order._id.toString(),
-                  item._id.toString(),
-                  item.quantity,
-                  true, // isWarning
-                  false // isAutoReject
+                  "⏳ Confirmation Countdown! 🕒",
+                  `Review & confirm item quantity (${item.quantity}) before time runs out!`,
+                  {
+                    orderId: order._id.toString(),
+                    itemId: item._id.toString(),
+                  }
                 );
-              } else if (shouldAutoReject) {
-                await NotificationService.sendOrderReminderNotification(
+                console.log("Warning notification result:", !!notificationResult);
+              } 
+              
+              if (shouldAutoReject) {
+                console.log(`Sending reject notification to token: ${token.substring(0, 10)}...`);
+                notificationResult = await NotificationService.sendRejectNotification(
                   token,
-                  order._id.toString(),
-                  item._id.toString(),
-                  item.quantity,
-                  false, // isWarning
-                  true // isAutoReject
+                  "❌ Order Auto-Canceled 🚫",
+                  `⚠️ Auto-Rejected! (Qty: ${item.quantity}) No response detected. Retry? 🔄`,
+                  {
+                    orderId: order._id.toString(),
+                    itemId: item._id.toString(),
+                  }
                 );
+                console.log("Reject notification result:", !!notificationResult);
+              }
+              
+              // Track successful notification
+              if (notificationResult) {
+                console.log(`Notification sent successfully to token: ${token.substring(0, 10)}...`);
               }
             } catch (notifError) {
-              console.error("Error sending notification:", notifError);
+              console.error(`Error sending notification to token:`, notifError);
+              
+              // Check for invalid token errors (combining both approaches)
               if (
-                notifError.message &&
-                (notifError.message.includes("is not registered") ||
-                  notifError.message.includes("token is not registered"))
+                (notifError.errorInfo && notifError.errorInfo.code === "messaging/registration-token-not-registered") ||
+                (notifError.message && (
+                  notifError.message.includes("is not registered") ||
+                  notifError.message.includes("token is not registered") ||
+                  notifError.message.includes("has expired")
+                ))
               ) {
+                console.log(`Adding invalid token to cleanup list`);
                 invalidTokens.push(token);
               }
             }
           }
+        } else {
+          console.log("No FCM tokens available to send notification");
         }
 
         // Always create user notification records
-        if (shouldSendWarning) {
-          await createUserNotification(
-            order.userId,
-            `⏳ Confirmation Countdown! Review & confirm item quantity (${item.quantity}) before time runs out!`
-          );
-        } else if (shouldAutoReject) {
-          await createUserNotification(
-            order.userId,
-            `❌ Order Auto-Canceled! Item (Qty: ${item.quantity}) was auto-rejected due to no response. Order ID: ${order.transactionId}`
-          );
+        try {
+          if (shouldSendWarning) {
+            await createUserNotification(
+              order.userId,
+              `⏳ Confirmation Countdown! Review & confirm item quantity (${item.quantity}) before time runs out!`
+            );
+            console.log("Created warning notification in database");
+          }
+          
+          if (shouldAutoReject) {
+            await createUserNotification(
+              order.userId,
+              `❌ Order Auto-Canceled! Item (Qty: ${item.quantity}) was auto-rejected due to no response. Order ID: ${order.transactionId}`
+            );
+            console.log("Created reject notification in database");
+          }
+        } catch (notifDbError) {
+          console.error("Error creating notification record:", notifDbError);
         }
 
         // Send email notifications
@@ -356,7 +401,9 @@ export const checkPendingOrderNotifications = async () => {
               false
             );
             console.log("Warning email sent successfully");
-          } else if (shouldAutoReject && !autoRejectEmailSent) {
+          }
+          
+          if (shouldAutoReject && !autoRejectEmailSent) {
             await sendQuantityConfirmationEmail(
               order._id.toString(),
               item._id.toString(),
@@ -371,7 +418,7 @@ export const checkPendingOrderNotifications = async () => {
         }
       }
 
-      // Clean up invalid tokens if any
+      // Clean up invalid tokens if any (using the approach from your working code)
       if (invalidTokens.length > 0 && fcmTokens.length > 0) {
         try {
           console.log(`Removing ${invalidTokens.length} invalid tokens`);
@@ -385,6 +432,7 @@ export const checkPendingOrderNotifications = async () => {
               },
             }
           );
+          console.log(`Removed ${invalidTokens.length} invalid tokens for user ${order.userId}`);
         } catch (tokenUpdateError) {
           console.error("Error removing invalid tokens:", tokenUpdateError);
         }
@@ -395,7 +443,7 @@ export const checkPendingOrderNotifications = async () => {
         try {
           console.log("Processing auto-rejection for pending items...");
 
-          // Update each pending item status to Rejected
+          // Update each pending item status to Rejected (simplified from your working code)
           for (const item of pendingItems) {
             item.itemStatus = "Rejected";
             item.select = true;
@@ -503,6 +551,5 @@ async function createUserNotification(userId, message) {
     return false;
   }
 }
-
 // Start a cron job to check pending orders every minute
 cron.schedule("* * * * *", checkPendingOrderNotifications);
