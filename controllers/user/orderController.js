@@ -8,123 +8,7 @@ import {
 } from "../../helper/user/bookingHelper.js";
 import { sendQuantityConfirmationEmail } from "../../utils/emailService.js";
 import userNotification from "../../model/userNotificationSchema.js";
-export const orderQuantityConfirmation = async (req, res, next) => {
-  try {
-    const { orderId, itemId, action } = req.body;
 
-    // Find the order by ID
-    const order = await orderModel.findById(orderId);
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Oops! We couldn't find the order you're looking for.",
-      });
-    }
-
-    // Find the specific item in the order
-    const item = order.items.find((item) => item._id.toString() === itemId);
-
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        message:
-          "The item you are trying to update does not exist in the order.",
-      });
-    }
-
-    // Update item status based on action (true: Approved, false: Rejected)
-    item.itemStatus = action ? "Approved" : "Rejected";
-
-    // Save the updated item in the order
-    await order.save();
-
-    // Recalculate order status based on items' statuses
-    const hasApprovedItems = order.items.some(
-      (item) => item.itemStatus === "Approved"
-    );
-    const hasPendingItems = order.items.some(
-      (item) => item.itemStatus === "User Approval Pending"
-    );
-
-    if (hasApprovedItems) {
-      // If any item is Approved
-      order.orderStatus = "Success";
-    } else if (hasPendingItems) {
-      // If any item is User Approval Pending
-      order.orderStatus = "User Approval Pending";
-    } else {
-      // Default to Processing if no Approved or Pending items
-      order.orderStatus = "Processing";
-    }
-
-    // Save the updated order status
-    await order.save();
-
-    // Create an appropriate message based on the updated order status
-    let message;
-    switch (order.orderStatus) {
-      case "Success":
-        message = `🎉 Great news! At least one item in your order (Transaction ID: ${order.transactionId}) has been approved!`;
-        break;
-      case "User Approval Pending":
-        message = `⚠️ Order ${order.transactionId} requires your attention: Some items need your approval.`;
-        break;
-      case "Processing":
-        message = `✅ Order ${order.transactionId} is being processed. We'll keep you updated!`;
-        break;
-      default:
-        message = `Order ${order.transactionId} status has been updated.`;
-    }
-
-    // Add notification to user notification model
-    try {
-      const userId = order.userId;
-      const notificationMessage = message;
-
-      // Find existing user notification document or create a new one
-      let userNotificationDoc = await userNotification.findOne({
-        createdBy: userId,
-      });
-
-      if (userNotificationDoc) {
-        // Add notification to existing document
-        userNotificationDoc.notification.push({
-          message: notificationMessage,
-          read: false,
-          createdAt: new Date(),
-        });
-        await userNotificationDoc.save();
-      } else {
-        userNotificationDoc = new userNotification({
-          notification: [
-            {
-              message: notificationMessage,
-              read: false,
-              createdAt: new Date(),
-            },
-          ],
-          createdBy: userId,
-        });
-      }
-
-      await userNotificationDoc.save();
-    } catch (notificationError) {
-      console.error(
-        "Error creating order status notification:",
-        notificationError.message
-      );
-      // Don't return error here, as the status update is already successful
-    }
-
-    return res.status(200).json({
-      success: true,
-      message,
-      orderStatus: order.orderStatus,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
 export const fetchUserOrder = async (req, res) => {
   try {
@@ -612,4 +496,4 @@ async function createUserNotification(userId, message) {
   }
 }
 // Start a cron job to check pending orders every minute
-// cron.schedule("* * * * *", checkPendingOrderNotifications);
+cron.schedule("* * * * *", checkPendingOrderNotifications);

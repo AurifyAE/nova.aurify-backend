@@ -84,8 +84,7 @@ export const orderQuantityConfirmation = async (req, res, next) => {
   try {
     let { orderId, itemId, action } = req.body;
 
-    action = action === "true";
-
+    action = action === "true" || action ;
     const order = await orderModel.findById(orderId);
     if (!order) {
       return res.status(404).json({

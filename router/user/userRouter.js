@@ -25,9 +25,9 @@ import {
 import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
   fetchUserOrder,
-  orderQuantityConfirmation,
   fetchUserTranstions 
 } from "../../controllers/user/orderController.js";
+import { orderQuantityConfirmation } from "../../controllers/admin/bookingController.js";
 const router = Router();
 
 router.post("/login/:adminId", userLoginController);
