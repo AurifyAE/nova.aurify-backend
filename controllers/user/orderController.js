@@ -392,11 +392,36 @@ export const checkPendingOrderNotifications = async () => {
         try {
           console.log("Processing auto-rejection for pending items...");
           
+          // Track the amount that will be deducted from total price and weight
+          let priceDeduction = 0;
+          let weightDeduction = 0;
+          
           // Update pending items as rejected
           pendingItems.forEach((item) => {
+            // Calculate price and weight to deduct
+            const itemPrice = item.fixedPrice * item.quantity;
+            const itemWeight = item.productWeight * item.quantity;
+            
+            // Add to totals for deduction
+            priceDeduction += itemPrice;
+            weightDeduction += itemWeight;
+            
+            // Update item status
             item.itemStatus = "Rejected";
             item.select = true; // Added from your new implementation
+            
+            console.log(`Rejecting item ${item._id}, deducting price: ${itemPrice}, weight: ${itemWeight}`);
           });
+
+          // Update order totals by subtracting rejected items
+          const newTotalPrice = Math.max(0, order.totalPrice - priceDeduction);
+          const newTotalWeight = Math.max(0, order.totalWeight - weightDeduction);
+          
+          console.log(`Updating order totals: old price ${order.totalPrice} -> new price ${newTotalPrice}`);
+          console.log(`Updating order weights: old weight ${order.totalWeight} -> new weight ${newTotalWeight}`);
+          
+          order.totalPrice = newTotalPrice;
+          order.totalWeight = newTotalWeight;
 
           // Update order remarks with rejection reason
           const rejectionRemarks = pendingItems
@@ -439,11 +464,23 @@ export const checkPendingOrderNotifications = async () => {
                 console.error("Error sending final rejection email:", finalEmailError);
               }
             }
+          } else {
+            // Some items still exist in the order, check if we need to update order status
+            const hasActiveItems = order.items.some(
+              (item) => item.itemStatus !== "Rejected"
+            );
+            
+            if (hasActiveItems) {
+              console.log("Order still has active items, updating totals only");
+            } else {
+              console.log("No active items remain, setting order status to Rejected");
+              order.orderStatus = "Rejected";
+            }
           }
 
           // Save the updated order
           await order.save();
-          console.log(`Order ${order._id} updated successfully`);
+          console.log(`Order ${order._id} updated successfully with recalculated totals`);
         } catch (rejectionError) {
           console.error("Error in auto-rejection process:", rejectionError);
         }
@@ -496,4 +533,4 @@ async function createUserNotification(userId, message) {
   }
 }
 // Start a cron job to check pending orders every minute
-// cron.schedule("* * * * *", checkPendingOrderNotifications);
+cron.schedule("* * * * *", checkPendingOrderNotifications);

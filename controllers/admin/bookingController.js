@@ -12,7 +12,7 @@ import {
 import { orderModel } from "../../model/orderSchema.js";
 import { UsersModel } from "../../model/usersSchema.js";
 import adminModel from "../../model/adminSchema.js";
-import userNotification from '../../model/userNotificationSchema.js'
+import userNotification from "../../model/userNotificationSchema.js";
 import UserFCMTokenModel from "../../model/userFCMToken.js";
 import NotificationService from "../../utils/sendPushNotification.js";
 dotenv.config();
@@ -61,30 +61,27 @@ export const deleteOrder = async (req, res, next) => {
 export const rejectOrderItem = async (req, res, next) => {
   try {
     const { orderId, itemId } = req.params;
-    
+
     if (!orderId || !itemId) {
       return res.status(400).json({
         success: false,
-        message: "Order ID and Item ID are required"
+        message: "Order ID and Item ID are required",
       });
     }
 
-    const { message, success, data } = await rejectItemInOrder(
-      orderId,
-      itemId,
-    );
+    const { message, success, data } = await rejectItemInOrder(orderId, itemId);
 
     if (!success) {
       return res.status(404).json({
         success: false,
-        message: message || "Failed to reject the item"
+        message: message || "Failed to reject the item",
       });
     }
 
     return res.status(200).json({
       success: true,
       data,
-      message: "Item rejected successfully"
+      message: "Item rejected successfully",
     });
   } catch (error) {
     next(error);
@@ -116,8 +113,9 @@ export const updateOrder = async (req, res, next) => {
 export const orderQuantityConfirmation = async (req, res, next) => {
   try {
     let { orderId, itemId, action } = req.body;
-
-    action = action === "true" || action ;
+console.log("first")
+console.log(req.body)
+    action = action === "true" || action;
     const order = await orderModel.findById(orderId);
     if (!order) {
       return res.status(404).json({
@@ -142,9 +140,31 @@ export const orderQuantityConfirmation = async (req, res, next) => {
       });
     }
 
+    // Track old status before updating
+    const oldItemStatus = item.itemStatus;
+
     // Update item status based on action
     item.itemStatus = action ? "Approved" : "Rejected";
     item.select = true;
+
+    // Recalculate total price and weight if item is rejected
+    if (item.itemStatus === "Rejected") {
+      // Calculate price and weight for this item
+      const itemPrice = item.fixedPrice * item.quantity;
+      const itemWeight = item.productWeight * item.quantity;
+
+      console.log(
+        `Item ${itemId} rejected: Deducting price: ${itemPrice}, weight: ${itemWeight}`
+      );
+
+      // Update order totals by subtracting rejected item values
+      order.totalPrice = Math.max(0, order.totalPrice - itemPrice);
+      order.totalWeight = Math.max(0, order.totalWeight - itemWeight);
+
+      console.log(
+        `Order ${orderId} new totals: price=${order.totalPrice}, weight=${order.totalWeight}`
+      );
+    }
 
     // Determine overall order status
     const allApproved = order.items.every((i) => i.itemStatus === "Approved");
@@ -182,52 +202,59 @@ export const orderQuantityConfirmation = async (req, res, next) => {
     }
 
     let message;
-let success = true;
-let notificationMessage = "";
+    let success = true;
+    let notificationMessage = "";
 
-if (item.itemStatus === "Rejected") {
-  success = false;
-  message = `❌ Order ${order.transactionId}: Item rejected.`;
-  notificationMessage = `❌ You've rejected ${item.quantity} units from order ${order.transactionId}.`;
-} else if (order.orderStatus === "Success") {
-  message = `🎉 Order ${order.transactionId} fully approved!`;
-  notificationMessage = `✅ Great news! Order ${order.transactionId} approved and processing.`;
-} else if (order.orderStatus === "User Approval Pending") {
-  message = `⚠️ Order ${order.transactionId} awaiting approval.`;
-  notificationMessage = `✅ ${item.quantity} units approved. Some items still need your approval.`;
-} else if (order.orderStatus === "Processing") {
-  message = `🔄 Order ${order.transactionId} processing. Some items pending.`;
-  notificationMessage = `✅ ${item.quantity} units approved. Your order is being processed.`;
-} else {
-  message = `⚠️ Order ${order.transactionId} needs review - rejected items.`;
-  notificationMessage = `⚠️ Order ${order.transactionId} needs attention - rejected items.`;
-}
+    if (item.itemStatus === "Rejected") {
+      success = false;
+      message = `❌ Order ${order.transactionId}: Item rejected.`;
+      notificationMessage = `❌ You've rejected ${item.quantity} units from order ${order.transactionId}.`;
+    } else if (order.orderStatus === "Success") {
+      message = `🎉 Order ${order.transactionId} fully approved!`;
+      notificationMessage = `✅ Great news! Order ${order.transactionId} approved and processing.`;
+    } else if (order.orderStatus === "User Approval Pending") {
+      message = `⚠️ Order ${order.transactionId} awaiting approval.`;
+      notificationMessage = `✅ ${item.quantity} units approved. Some items still need your approval.`;
+    } else if (order.orderStatus === "Processing") {
+      message = `🔄 Order ${order.transactionId} processing. Some items pending.`;
+      notificationMessage = `✅ ${item.quantity} units approved. Your order is being processed.`;
+    } else {
+      message = `⚠️ Order ${order.transactionId} needs review - rejected items.`;
+      notificationMessage = `⚠️ Order ${order.transactionId} needs attention - rejected items.`;
+    }
+
     // Create user notification in database
     try {
       // Find existing notification doc or create new one
-      let userNotificationDoc = await userNotification.findOne({ createdBy: order.userId });
-      
+      let userNotificationDoc = await userNotification.findOne({
+        createdBy: order.userId,
+      });
+
       if (userNotificationDoc) {
         // Add to existing doc
         userNotificationDoc.notification.push({
           message: notificationMessage,
           read: false,
-          createdAt: new Date()
+          createdAt: new Date(),
         });
       } else {
         // Create new doc
         userNotificationDoc = new userNotification({
-          notification: [{
-            message: notificationMessage,
-            read: false,
-            createdAt: new Date()
-          }],
-          createdBy: order.userId
+          notification: [
+            {
+              message: notificationMessage,
+              read: false,
+              createdAt: new Date(),
+            },
+          ],
+          createdBy: order.userId,
         });
       }
-      
+
       await userNotificationDoc.save();
-      console.log(`User notification created successfully for user ${order.userId}`);
+      console.log(
+        `User notification created successfully for user ${order.userId}`
+      );
     } catch (notificationError) {
       console.error("Failed to create user notification:", notificationError);
     }
@@ -238,64 +265,73 @@ if (item.itemStatus === "Rejected") {
         createdBy: order.userId,
       });
 
-      if (fcmTokenDoc && fcmTokenDoc.FCMTokens && fcmTokenDoc.FCMTokens.length > 0) {
+      if (
+        fcmTokenDoc &&
+        fcmTokenDoc.FCMTokens &&
+        fcmTokenDoc.FCMTokens.length > 0
+      ) {
         // Prepare notification data
-        let notificationTitle = action 
-          ? "✅ Item Approved Successfully" 
+        let notificationTitle = action
+          ? "✅ Item Approved Successfully"
           : "❌ Item Rejected";
-        
+
         const invalidTokens = [];
-        
+
         // Send notification to all user tokens
         for (const tokenObj of fcmTokenDoc.FCMTokens) {
           if (!tokenObj || !tokenObj.token) continue;
-          
+
           try {
             let notificationResult;
-            
+
             if (action) {
               // Use success notification for approved items
-              notificationResult = await NotificationService.sendSuccessNotification(
-                tokenObj.token,
-                notificationTitle,
-                notificationMessage,
-                {
-                  orderId: order._id.toString(),
-                  itemId: item._id.toString(),
-                  actionType: "approved"
-                }
-              );
+              notificationResult =
+                await NotificationService.sendSuccessNotification(
+                  tokenObj.token,
+                  notificationTitle,
+                  notificationMessage,
+                  {
+                    orderId: order._id.toString(),
+                    itemId: item._id.toString(),
+                    actionType: "approved",
+                  }
+                );
             } else {
               // Use reject notification for rejected items
-              notificationResult = await NotificationService.sendRejectNotification(
-                tokenObj.token,
-                notificationTitle,
-                notificationMessage,
-                {
-                  orderId: order._id.toString(),
-                  itemId: item._id.toString(),
-                  actionType: "rejected"
-                }
-              );
+              notificationResult =
+                await NotificationService.sendRejectNotification(
+                  tokenObj.token,
+                  notificationTitle,
+                  notificationMessage,
+                  {
+                    orderId: order._id.toString(),
+                    itemId: item._id.toString(),
+                    actionType: "rejected",
+                  }
+                );
             }
-            
+
             if (notificationResult) {
-              console.log(`Notification sent to user ${order.userId} for order ${order.transactionId}`);
+              console.log(
+                `Notification sent to user ${order.userId} for order ${order.transactionId}`
+              );
             }
           } catch (notifError) {
             console.error("Failed to send push notification:", notifError);
-            
+
             // Track invalid tokens
             if (
               notifError.errorInfo &&
-              (notifError.errorInfo.code === "messaging/registration-token-not-registered" ||
-              notifError.message.includes("is not registered or has expired"))
+              (notifError.errorInfo.code ===
+                "messaging/registration-token-not-registered" ||
+                notifError.message.includes("is not registered or has expired"))
             ) {
               invalidTokens.push(tokenObj.token);
             }
           }
         }
-        
+
         // Remove invalid tokens if any
         if (invalidTokens.length > 0) {
           await UserFCMTokenModel.updateOne(
@@ -308,10 +344,14 @@ if (item.itemStatus === "Rejected") {
               },
             }
           );
-          console.log(`Removed ${invalidTokens.length} invalid tokens for user ${order.userId}`);
+          console.log(
+            `Removed ${invalidTokens.length} invalid tokens for user ${order.userId}`
+          );
         }
       } else {
-        console.log(`No FCM tokens found for user ${order.userId}, skipping push notification`);
+        console.log(
+          `No FCM tokens found for user ${order.userId}, skipping push notification`
+        );
       }
     } catch (fcmError) {
       console.error("Error in FCM notification process:", fcmError);
@@ -330,32 +370,39 @@ if (item.itemStatus === "Rejected") {
 async function createUserNotification(userId, message) {
   try {
     // Find existing notification doc or create new one
-    let userNotificationDoc = await userNotification.findOne({ createdBy: userId });
-    
+    let userNotificationDoc = await userNotification.findOne({
+      createdBy: userId,
+    });
+
     if (userNotificationDoc) {
       // Add to existing doc
       userNotificationDoc.notification.push({
         message: message,
         read: false,
-        createdAt: new Date()
+        createdAt: new Date(),
       });
     } else {
       // Create new doc
       userNotificationDoc = new userNotification({
-        notification: [{
-          message: message,
-          read: false,
-          createdAt: new Date()
-        }],
-        createdBy: userId
+        notification: [
+          {
+            message: message,
+            read: false,
+            createdAt: new Date(),
+          },
+        ],
+        createdBy: userId,
       });
     }
-    
+
     await userNotificationDoc.save();
     console.log(`User notification created successfully for user ${userId}`);
     return true;
   } catch (notificationError) {
-    console.error(`Error creating user notification for user ${userId}:`, notificationError);
+    console.error(
+      `Error creating user notification for user ${userId}:`,
+      notificationError
+    );
     return false;
   }
 }
