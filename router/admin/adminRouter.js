@@ -38,6 +38,7 @@ import {
 import {
   getUserCommodity,
   updateUserSpread,
+  addProduct
 } from "../../controllers/admin/UserSpotRateController.js";
 import {
   fetchBookings,
@@ -46,6 +47,7 @@ import {
   updateOrderStatus,
   orderQuantityConfirmation,
   deleteOrder,
+  rejectOrderItem,
 } from "../../controllers/admin/bookingController.js";
 import {
   getDashboardOverview,
@@ -88,6 +90,7 @@ router.get("/get-profile/:userId", getUserDetail);
 router.patch("/receive-cash/:userId", updateUserCashBalance);
 router.patch("/receive-gold/:userId", updateUserGoldBalance);
 router.patch("/update-received-metrics/:userId", updateReceivedMetrics);
+router.patch("/products/:userSpotRateId", addProduct);
 
 //category management
 router.post("/addCategory/:adminId", addCategory);
@@ -107,7 +110,7 @@ router.put("/update-order-reject/:orderId", updateOrderStatus);
 router.post("/orders/confirm-quantity", orderQuantityConfirmation);
 router.get("/fetch-order/:adminId/:userId", fetchUserOrder);
 router.delete("/delete-order/:orderId", deleteOrder);
-
+router.patch('/orders/:orderId/items/:itemId/reject', rejectOrderItem);
 //Dashboard overview
 router.get("/overview/:adminId", getDashboardOverview);
 

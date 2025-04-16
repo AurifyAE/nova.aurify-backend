@@ -336,6 +336,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
         }
 
         const fixedPrice = product.price;
+        const productWeight = product.weight;
         const itemTotal = fixedPrice * item.quantity;
         const itemWeight = (Number(product.weight) || 0) * item.quantity;
         totalPrice += itemTotal;
@@ -345,6 +346,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
           productId: item.productId,
           quantity: item.quantity,
           fixedPrice: fixedPrice || 0,
+          productWeight:productWeight,
           totalPrice: itemTotal,
           totalWeight: itemWeight,
           addedAt: new Date(),

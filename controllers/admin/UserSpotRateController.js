@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { UserSpotRateModel } from "../../model/UserSpotRateSchema.js";
+import { addProductDetailHelper } from "../../helper/admin/productHelper.js";
 
 export const getUserCommodity = async (req, res, next) => {
   try {
@@ -65,3 +66,34 @@ export const updateUserSpread = async (req, res) => {
   }
 };
 
+export const addProduct = async (req, res, next) => {
+  try {
+    const { userSpotRateId } = req.params;
+    const productDetail = req.body;
+
+    if (!productDetail.productId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Product ID is required" });
+    }
+
+    const updatedUserSpotRate = await addProductDetailHelper(
+      userSpotRateId,
+      productDetail
+    );
+
+    if (!updatedUserSpotRate) {
+      return res
+        .status(404)
+        .json({ success: false, message: "userSpotRate not found" });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Product detail added successfully",
+      userSpotRate: updatedUserSpotRate,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

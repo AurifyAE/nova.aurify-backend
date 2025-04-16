@@ -4,6 +4,7 @@ import mjml2html from "mjml";
 import dotenv from "dotenv";
 import {
   fetchBookingDetails,
+  rejectItemInOrder,
   updateOrderDetails,
   updateOrderQuantityHelper,
   updateOrderStatusHelper,
@@ -55,6 +56,38 @@ export const deleteOrder = async (req, res, next) => {
       .json({ success: true, message: "Order deleted successfully" });
   } catch (error) {
     next(error); // Pass error to the global error handler
+  }
+};
+export const rejectOrderItem = async (req, res, next) => {
+  try {
+    const { orderId, itemId } = req.params;
+    
+    if (!orderId || !itemId) {
+      return res.status(400).json({
+        success: false,
+        message: "Order ID and Item ID are required"
+      });
+    }
+
+    const { message, success, data } = await rejectItemInOrder(
+      orderId,
+      itemId,
+    );
+
+    if (!success) {
+      return res.status(404).json({
+        success: false,
+        message: message || "Failed to reject the item"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data,
+      message: "Item rejected successfully"
+    });
+  } catch (error) {
+    next(error);
   }
 };
 export const updateOrder = async (req, res, next) => {

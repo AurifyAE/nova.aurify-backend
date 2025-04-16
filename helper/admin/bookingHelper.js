@@ -225,7 +225,77 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
     };
   }
 };
+export const rejectItemInOrder = async (orderId, itemId) => {
+  try {
+    // Validate IDs
+    if (!mongoose.Types.ObjectId.isValid(orderId) || !mongoose.Types.ObjectId.isValid(itemId)) {
+      return {
+        success: false,
+        message: "Invalid Order ID or Item ID format"
+      };
+    }
 
+    // Find the order
+    const order = await orderModel.findById(orderId);
+    
+    if (!order) {
+      return {
+        success: false,
+        message: "Order not found"
+      };
+    }
+    
+    // Find the specific item
+    const itemIndex = order.items.findIndex(item => item._id.toString() === itemId);
+    
+    if (itemIndex === -1) {
+      return {
+        success: false,
+        message: "Item not found in the order"
+      };
+    }
+    
+    // Update the item status to rejected
+    order.items[itemIndex].itemStatus = "Rejected";
+    
+    // Set the select property to true for the rejected item
+    order.items[itemIndex].select = true;
+    
+    // Recalculate the total price by excluding the rejected item
+    const rejectedItemPrice = order.items[itemIndex].fixedPrice * order.items[itemIndex].quantity;
+    order.totalPrice = Math.max(0, order.totalPrice - rejectedItemPrice);
+    
+    // Calculate and update totalWeight
+    const weightToSubtract = order.items[itemIndex].productWeight * order.items[itemIndex].quantity;
+    order.totalWeight = Math.max(0, order.totalWeight - weightToSubtract);
+    
+    // If this is the only item in the order, update the order status to "Rejected"
+    if (order.items.length === 1) {
+      order.orderStatus = "Rejected";
+    } else {
+      // Check if all items are now rejected
+      const allRejected = order.items.every(item => item.itemStatus === "Rejected");
+      if (allRejected) {
+        order.orderStatus = "Rejected";
+      }
+    }
+    
+    // Save the updated order
+    await order.save();
+    
+    return {
+      success: true,
+      data: order,
+      message: "Item rejected successfully"
+    };
+  } catch (error) {
+    console.error("Error rejecting item:", error);
+    return {
+      success: false,
+      message: error.message || "Internal server error"
+    };
+  }
+};
 export const updateOrderStatusHelper = async (orderId, orderDetails) => {
   try {
     const { orderStatus, remark } = orderDetails;

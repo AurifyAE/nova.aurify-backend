@@ -14,7 +14,12 @@ const orderItemSchema = new mongoose.Schema({
   fixedPrice: {
     type: Number,
     required: true,
-    default:0
+    default: 0,
+  },
+  productWeight: {
+    type: Number,
+    required: true,
+    default: 0,
   },
   addedAt: {
     type: Date,
@@ -22,12 +27,12 @@ const orderItemSchema = new mongoose.Schema({
   },
   itemStatus: {
     type: String,
-    default: "Approval Pending"
+    default: "Approval Pending",
   },
-  select : {
+  select: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 });
 
 const orderSchema = new mongoose.Schema(
@@ -36,7 +41,7 @@ const orderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
       required: true,
-      index: true
+      index: true,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -47,21 +52,21 @@ const orderSchema = new mongoose.Schema(
     totalPrice: {
       type: Number,
       required: true,
-      default: 0
+      default: 0,
     },
     totalWeight: {
       type: Number,
       required: true,
-      default: 0
+      default: 0,
     },
     transactionId: {
       type: String,
       unique: true,
       default: () => {
         const timestamp = Date.now().toString(36);
-        const shortUuid = uuidv4().replace(/-/g, '').substring(0, 8);
+        const shortUuid = uuidv4().replace(/-/g, "").substring(0, 8);
         return `TX${timestamp}${shortUuid}`.toUpperCase();
-      }
+      },
     },
     orderStatus: {
       type: String,
@@ -77,20 +82,19 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      required: true
+      required: true,
     },
     orderDate: {
       type: Date,
       default: Date.now,
     },
-    
+
     notificationSentAt: {
       type: Date,
-      default: null
-    }
+      default: null,
+    },
   },
   { timestamps: true }
 );
-
 
 export const orderModel = mongoose.model("Order", orderSchema);

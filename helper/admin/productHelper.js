@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Product from "../../model/productSchema.js";
 import { createAppError } from "../../utils/errorHandler.js";
+import { UserSpotRateModel } from "../../model/UserSpotRateSchema.js";
 
 export const createProductHelper = async (productData) => {
   try {
@@ -119,6 +120,28 @@ export const fetchAllProductHelper = async (adminId) => {
   }
 };
 
+
+export const addProductDetailHelper = async (userSpotRateId, productDetail) => {
+  try {
+    const userSpotRate = await UserSpotRateModel.findById(userSpotRateId);
+    if (!userSpotRate) {
+      throw new Error("UserSpotRate not found");
+    }
+    const isProductExists = userSpotRate.products.some(
+      (product) => product.productId.toString() === productDetail.productId
+    );
+
+    if (isProductExists) {
+      throw createAppError("Product already exists in this userSpotRate", 400);
+    }
+    userSpotRate.products.push(productDetail);
+
+    const updatedUserSpotRate = await userSpotRate.save();
+    return updatedUserSpotRate;
+  } catch (error) {
+    throw error
+  }
+};
 
 
 
