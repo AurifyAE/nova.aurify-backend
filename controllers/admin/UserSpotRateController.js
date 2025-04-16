@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { UserSpotRateModel } from "../../model/UserSpotRateSchema.js";
 import { addProductDetailHelper } from "../../helper/admin/productHelper.js";
+import { createAppError } from "../../utils/errorHandler.js";
 
 export const getUserCommodity = async (req, res, next) => {
   try {
@@ -68,29 +69,33 @@ export const updateUserSpread = async (req, res) => {
 
 export const addProduct = async (req, res, next) => {
   try {
-    const { userSpotRateId } = req.params;
+    let { userSpotRateId = null, userId } = req.params;
+    
+    if (userSpotRateId === "null") {
+      userSpotRateId = null;
+    }
+    
     const productDetail = req.body;
 
+    if (!userId) {
+      return next(createAppError("User ID is required", 400));
+    }
+
     if (!productDetail.productId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Product ID is required" });
+      return next(createAppError("Product ID is required", 400));
     }
 
     const updatedUserSpotRate = await addProductDetailHelper(
       userSpotRateId,
-      productDetail
+      productDetail,
+      userId
     );
-
-    if (!updatedUserSpotRate) {
-      return res
-        .status(404)
-        .json({ success: false, message: "userSpotRate not found" });
-    }
 
     res.status(201).json({
       success: true,
-      message: "Product detail added successfully",
+      message: userSpotRateId && userSpotRateId !== "null" 
+        ? "Product detail added successfully" 
+        : "New spot rate created with product",
       userSpotRate: updatedUserSpotRate,
     });
   } catch (error) {
