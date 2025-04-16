@@ -90,7 +90,7 @@ router.get("/get-profile/:userId", getUserDetail);
 router.patch("/receive-cash/:userId", updateUserCashBalance);
 router.patch("/receive-gold/:userId", updateUserGoldBalance);
 router.patch("/update-received-metrics/:userId", updateReceivedMetrics);
-router.patch("/products/:userSpotRateId", addProduct);
+router.patch("/user-spot-rate/:userSpotRateId?/user/:userId/product", addProduct);
 
 //category management
 router.post("/addCategory/:adminId", addCategory);

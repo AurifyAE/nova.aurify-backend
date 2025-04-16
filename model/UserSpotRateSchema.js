@@ -31,7 +31,7 @@ const ProductDetailSchema = new mongoose.Schema(
 const UserSpotRateSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Admin",
+    ref: "Users.users",
     required: true,
   },
   products: [ProductDetailSchema],

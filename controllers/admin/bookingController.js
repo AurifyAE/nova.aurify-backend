@@ -113,8 +113,6 @@ export const updateOrder = async (req, res, next) => {
 export const orderQuantityConfirmation = async (req, res, next) => {
   try {
     let { orderId, itemId, action } = req.body;
-console.log("first")
-console.log(req.body)
     action = action === "true" || action;
     const order = await orderModel.findById(orderId);
     if (!order) {

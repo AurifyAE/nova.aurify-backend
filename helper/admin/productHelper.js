@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Product from "../../model/productSchema.js";
 import { createAppError } from "../../utils/errorHandler.js";
 import { UserSpotRateModel } from "../../model/UserSpotRateSchema.js";
+import { UsersModel } from "../../model/usersSchema.js";
 
 export const createProductHelper = async (productData) => {
   try {
@@ -18,7 +19,6 @@ export const createProductHelper = async (productData) => {
       type,
     } = productData;
 
-  
     // Validate SKU uniqueness
     const skuExists = await Product.findOne({ sku });
     if (skuExists) {
@@ -84,7 +84,6 @@ export const updateProductHelper = async (productId, updateData) => {
   }
 };
 
-
 // Delete a product (soft delete)
 export const deleteProductHelper = async (productId) => {
   try {
@@ -102,11 +101,10 @@ export const deleteProductHelper = async (productId) => {
   }
 };
 
-
 export const fetchAllProductHelper = async (adminId) => {
   try {
     // Fetch all products from the database
-    const products = await Product.find({addedBy:adminId});
+    const products = await Product.find({ addedBy: adminId });
 
     if (!products || products.length === 0) {
       throw createAppError("No products found", 404);
@@ -120,28 +118,83 @@ export const fetchAllProductHelper = async (adminId) => {
   }
 };
 
-
-export const addProductDetailHelper = async (userSpotRateId, productDetail) => {
+export const addProductDetailHelper = async (userSpotRateId, productDetail, userId) => {
   try {
-    const userSpotRate = await UserSpotRateModel.findById(userSpotRateId);
-    if (!userSpotRate) {
-      throw new Error("UserSpotRate not found");
-    }
-    const isProductExists = userSpotRate.products.some(
-      (product) => product.productId.toString() === productDetail.productId
-    );
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    if (isProductExists) {
-      throw createAppError("Product already exists in this userSpotRate", 400);
-    }
-    userSpotRate.products.push(productDetail);
+    try {
+      let updatedUserSpotRate;
+      
+      // Case 1: If userSpotRateId is valid, user is trying to update an existing rate
+      if (userSpotRateId && userSpotRateId !== "null" && userSpotRateId !== "new") {
+        // First verify that this spot rate belongs to the user
+        const existingRate = await UserSpotRateModel.findOne({
+          _id: userSpotRateId,
+          createdBy: userId
+        });
+        
+        if (!existingRate) {
+          throw createAppError("UserSpotRate not found or does not belong to this user", 404);
+        }
+        
+        // Update the existing spot rate
+        updatedUserSpotRate = await UserSpotRateModel.findByIdAndUpdate(
+          userSpotRateId,
+          { $push: { products: productDetail } },
+          { new: true, session }
+        );
+      } 
+      // Case 2: Check if user already has a spot rate
+      else {
+        // Check if user already has a spot rate
+        const existingUserRate = await UserSpotRateModel.findOne({ createdBy: userId });
+        
+        if (existingUserRate) {
+          // User already has a spot rate, just add the product to it
+          updatedUserSpotRate = await UserSpotRateModel.findByIdAndUpdate(
+            existingUserRate._id,
+            { $push: { products: productDetail } },
+            { new: true, session }
+          );
+        } else {
+          // User doesn't have a spot rate yet, create a new one
+          const newUserSpotRate = new UserSpotRateModel({
+            createdBy: userId,
+            products: [productDetail],
+            isActive: true
+          });
+          
+          updatedUserSpotRate = await newUserSpotRate.save({ session });
+        }
+      }
 
-    const updatedUserSpotRate = await userSpotRate.save();
-    return updatedUserSpotRate;
+      // Update the user's reference to this spot rate ID and nullify categoryId
+      const updatedUser = await UsersModel.findOneAndUpdate(
+        { "users._id": userId },
+        { 
+          $set: { 
+            "users.$.userSpotRateId": updatedUserSpotRate._id,
+            "users.$.categoryId": null
+          }
+        },
+        { new: true, session }
+      );
+
+      if (!updatedUser) {
+        throw createAppError("User not found", 404);
+      }
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return updatedUserSpotRate;
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      throw error;
+    }
   } catch (error) {
-    throw error
+    throw error;
   }
 };
-
-
-
