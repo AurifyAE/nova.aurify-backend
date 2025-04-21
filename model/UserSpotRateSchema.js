@@ -25,7 +25,6 @@ const ProductDetailSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { _id: false }
 );
 
 const UserSpotRateSchema = new mongoose.Schema({

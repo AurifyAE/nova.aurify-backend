@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { CategoryModel } from "../../model/categorySchema.js";
 import { createAppError } from "../../utils/errorHandler.js";
 
@@ -23,7 +24,7 @@ export const addProductDetailHelper = async (categoryId, productDetail) => {
     const updatedCategory = await category.save();
     return updatedCategory;
   } catch (error) {
-    throw error
+    throw error;
   }
 };
 
@@ -77,4 +78,120 @@ export const getAllCategories = async (adminId) => {
   }
 
   return categories;
+};
+
+export const findCategoryById = async (categoryId) => {
+  if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+    throw createAppError("Invalid category ID format", 400);
+  }
+
+  const category = await CategoryModel.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(categoryId) } },
+    {
+      $lookup: {
+        from: "products",
+        localField: "products.productId",
+        foreignField: "_id",
+        as: "productDetails",
+      },
+    },
+    {
+      $addFields: {
+        products: {
+          $map: {
+            input: "$products",
+            as: "product",
+            in: {
+              $mergeObjects: [
+                "$$product",
+                {
+                  details: {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: "$productDetails",
+                          as: "pd",
+                          cond: { $eq: ["$$pd._id", "$$product.productId"] },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+    { $project: { productDetails: 0 } },
+  ]);
+
+  if (!category || category.length === 0) {
+    throw createAppError("Category not found", 404);
+  }
+
+  return category[0];
+};
+
+export const updateProductInCategories = async (
+  categoryId,
+  productDetailId,
+  updateData
+) => {
+  if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+    throw createAppError("Invalid category ID format", 400);
+  }
+
+  const category = await CategoryModel.findById(categoryId);
+  if (!category) {
+    throw createAppError("Category not found", 404);
+  }
+
+  const productIndex = category.products.findIndex(
+    (p) => p._id.toString() === productDetailId
+  );
+
+  if (productIndex === -1) {
+    throw createAppError("Product not found in category", 404);
+  }
+
+  // Update only the fields provided in updateData
+  Object.keys(updateData).forEach((key) => {
+    if (key !== "_id" && key !== "productId") {
+      // Prevent updating immutable fields
+      category.products[productIndex][key] = updateData[key];
+    }
+  });
+
+  await category.save();
+  return category;
+};
+
+export const removeProductFromCategory = async (
+  categoryId,
+  productDetailId
+) => {
+  if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+    throw createAppError("Invalid category ID format", 400);
+  }
+
+  const category = await CategoryModel.findById(categoryId);
+  if (!category) {
+    throw createAppError("Category not found", 404);
+  }
+
+  const productIndex = category.products.findIndex(
+    (p) => p._id.toString() === productDetailId
+  );
+
+  if (productIndex === -1) {
+    throw createAppError("Product not found in category", 404);
+  }
+
+  // Remove the product at the found index
+  category.products.splice(productIndex, 1);
+
+  await category.save();
+  return category;
 };

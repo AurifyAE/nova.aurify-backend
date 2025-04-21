@@ -4,6 +4,9 @@ import {
   deleteCategoryById,
   getAllCategories,
   addProductDetailHelper,
+  findCategoryById,
+  removeProductFromCategory,
+  updateProductInCategories
 } from "../../helper/admin/categoryHelper.js";
 
 export const addCategory = async (req, res, next) => {
@@ -105,6 +108,73 @@ export const getCategories = async (req, res, next) => {
     const categories = await getAllCategories(adminId);
 
     res.json({ success: true, categories });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSingleCategory = async (req, res, next) => {
+  try {
+    const { categoryId } = req.params;
+    const category = await findCategoryById(categoryId);
+
+    res.status(200).json({
+      success: true,
+      message: "Category fetched successfully",
+      data: category,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProductInCategory = async (req, res, next) => {
+  try {
+    const { categoryId, productDetailId } = req.params;
+    const updateData = req.body;
+
+    // Validate update data
+    const allowedFields = ["markingCharge", "pricingType", "value", "isActive"];
+    const invalidFields = Object.keys(updateData).filter(
+      (key) => !allowedFields.includes(key)
+    );
+
+    if (invalidFields.length > 0) {
+      return next(
+        createAppError(`Invalid fields: ${invalidFields.join(", ")}`, 400)
+      );
+    }
+
+    const updatedCategory = await updateProductInCategories(
+      categoryId,
+      productDetailId,
+      updateData
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Product updated successfully",
+      data: updatedCategory,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteProductFromCategory = async (req, res, next) => {
+  try {
+    const { categoryId, productDetailId } = req.params;
+
+    const updatedCategory = await removeProductFromCategory(
+      categoryId,
+      productDetailId
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Product removed from category successfully",
+      data: updatedCategory,
+    });
   } catch (error) {
     next(error);
   }

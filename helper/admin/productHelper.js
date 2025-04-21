@@ -84,7 +84,6 @@ export const updateProductHelper = async (productId, updateData) => {
   }
 };
 
-// Delete a product (soft delete)
 export const deleteProductHelper = async (productId) => {
   try {
     const product = await Product.findById(productId);
@@ -138,6 +137,15 @@ export const addProductDetailHelper = async (userSpotRateId, productDetail, user
           throw createAppError("UserSpotRate not found or does not belong to this user", 404);
         }
         
+        // Check if product with same ID already exists
+        const productExists = existingRate.products.some(
+          product => product.productId.toString() === productDetail.productId.toString()
+        );
+        
+        if (productExists) {
+          throw createAppError("Product already exists in this spot rate", 400);
+        }
+        
         // Update the existing spot rate
         updatedUserSpotRate = await UserSpotRateModel.findByIdAndUpdate(
           userSpotRateId,
@@ -151,6 +159,15 @@ export const addProductDetailHelper = async (userSpotRateId, productDetail, user
         const existingUserRate = await UserSpotRateModel.findOne({ createdBy: userId });
         
         if (existingUserRate) {
+          // Check if product with same ID already exists
+          const productExists = existingUserRate.products.some(
+            product => product.productId.toString() === productDetail.productId.toString()
+          );
+          
+          if (productExists) {
+            throw createAppError("Product already exists in this spot rate", 400);
+          }
+          
           // User already has a spot rate, just add the product to it
           updatedUserSpotRate = await UserSpotRateModel.findByIdAndUpdate(
             existingUserRate._id,
@@ -196,5 +213,82 @@ export const addProductDetailHelper = async (userSpotRateId, productDetail, user
     }
   } catch (error) {
     throw error;
+  }
+};
+
+export const updateProductByProductId = async (userSpotRateId, Id, productData) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(userSpotRateId)) {
+      throw createAppError('Invalid user spot rate ID', 400);
+    }
+    
+    if (!mongoose.Types.ObjectId.isValid(Id)) {
+      throw createAppError('Invalid product ID', 400);
+    }
+    
+    // Create update object with dot notation for nested documents
+    const updateFields = {};
+    for (const [key, value] of Object.entries(productData)) {
+      updateFields[`products.$.${key}`] = value;
+    }
+    
+    const result = await UserSpotRateModel.findOneAndUpdate(
+      { 
+        _id: userSpotRateId, 
+        'products._id': Id 
+      },
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    )
+    if (!result) {
+      throw createAppError('User spot rate or product not found', 404);
+    }
+    
+    return result;
+  } catch (error) {
+    if (error.statusCode) throw error;
+    
+    if (error.name === 'ValidationError') {
+      throw createAppError(
+        `Validation error: ${Object.values(error.errors).map(e => e.message).join(', ')}`, 
+        400
+      );
+    }
+    
+    throw createAppError(
+      error.message || 'Error updating product in user spot rate', 
+      error.statusCode || 500
+    );
+  }
+};
+
+export const removeProductById = async (userSpotRateId, productObjectId) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(userSpotRateId)) {
+      throw createAppError('Invalid user spot rate ID', 400);
+    }
+    
+    if (!mongoose.Types.ObjectId.isValid(productObjectId)) {
+      throw createAppError('Invalid product ID', 400);
+    }
+    
+    const result = await UserSpotRateModel.findByIdAndUpdate(
+      userSpotRateId,
+      { $pull: { products: { _id: productObjectId } } },
+      { new: true }
+    )
+   
+    
+    if (!result) {
+      throw createAppError('User spot rate not found', 404);
+    }
+    
+    return result;
+  } catch (error) {
+    if (error.statusCode) throw error;
+    throw createAppError(
+      error.message || 'Error removing product from user spot rate', 
+      error.statusCode || 500
+    );
   }
 };
