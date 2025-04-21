@@ -374,80 +374,95 @@ class UserHelper {
   
   
   async getAllUsers(adminId) {
-    // Convert adminId to ObjectId
-    const objectIdAdminId = new mongoose.Types.ObjectId(adminId);
-    
-    const users = await UsersModel.aggregate([
-      { $match: { createdBy: objectIdAdminId } },
-      { $unwind: "$users" },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "users.categoryId",
-          foreignField: "_id",
-          as: "categoryInfo",
-        },
-      },
-      { $unwind: "$categoryInfo" },
-      {
-        $project: {
-          _id: "$users._id",
-          name: "$users.name",
-          email: "$users.email",
-          contact: "$users.contact",
-          address: "$users.address",
-          categoryId: "$users.categoryId",
-          categoryName: "$categoryInfo.name",
-          encryptedPassword: "$users.password",
-          passwordAccessKey: "$users.passwordAccessKey",
-          cashBalance: "$users.cashBalance",
-          goldBalance: "$users.goldBalance",
-          pricingOption: "$users.pricingOption",
-          discountAmount: "$users.discountAmount",
-          premiumAmount: "$users.premiumAmount",
-          makingCharge: "$users.makingCharge",
-          createdAt: "$users.createdAt"
-        },
-      },
-    ]);
-    
-    // Decrypt passwords and remove sensitive information
-    return users.map((user) => {
-      try {
-        if (user.encryptedPassword && user.passwordAccessKey) {
-          const decryptedPassword = decryptPassword(
-            user.encryptedPassword,
-            user.passwordAccessKey
-          );
-          const { encryptedPassword, passwordAccessKey, ...sanitizedUser } = user;
-          return { ...sanitizedUser, decryptedPassword };
-        } else {
-          const { encryptedPassword, passwordAccessKey, ...sanitizedUser } = user;
-          return {
-            ...sanitizedUser,
-            decryptionFailed: true,
-            reason: "Missing password or passwordAccessKey",
-          };
-        }
-      } catch (decryptionError) {
-        console.error(
-          `Failed to decrypt password for user ${user._id}:`,
-          decryptionError
-        );
-        const { encryptedPassword, passwordAccessKey, ...sanitizedUser } = user;
-        return {
-          ...sanitizedUser,
-          decryptionFailed: true,
-          reason: "Decryption error",
-        };
-      }
-    });
-  }
+    try {
+        // Convert adminId to ObjectId
+        const objectIdAdminId = new mongoose.Types.ObjectId(adminId);
+        
+        const users = await UsersModel.aggregate([
+            { $match: { createdBy: objectIdAdminId } },
+            { $unwind: "$users" },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "users.categoryId",
+                    foreignField: "_id",
+                    as: "categoryInfo",
+                },
+            },
+            { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } }, // Keep users even if they have no category
+            {
+                $lookup: {
+                    from: "userSpotRates", // Assuming this is the collection name
+                    localField: "users.userSpotRateId",
+                    foreignField: "_id",
+                    as: "spotRateInfo",
+                },
+            },
+            { $unwind: { path: "$spotRateInfo", preserveNullAndEmptyArrays: true } }, // Keep users even if they have no spot rate
+            {
+                $project: {
+                    _id: "$users._id",
+                    name: "$users.name",
+                    email: "$users.email",
+                    contact: "$users.contact",
+                    address: "$users.address",
+                    categoryId: "$users.categoryId",
+                    categoryName: { $ifNull: ["$categoryInfo.name", null] },
+                    userSpotRateId: "$users.userSpotRateId",
+                    encryptedPassword: "$users.password",
+                    passwordAccessKey: "$users.passwordAccessKey",
+                    cashBalance: "$users.cashBalance",
+                    goldBalance: "$users.goldBalance",
+                    pricingOption: "$users.pricingOption",
+                    discountAmount: "$users.discountAmount",
+                    premiumAmount: "$users.premiumAmount",
+                    makingCharge: "$users.makingCharge",
+                    createdAt: "$users.createdAt"
+                },
+            },
+        ]);
+        
+        // Decrypt passwords and remove sensitive information
+        return users.map((user) => {
+            try {
+                if (user.encryptedPassword && user.passwordAccessKey) {
+                    const decryptedPassword = decryptPassword(
+                        user.encryptedPassword,
+                        user.passwordAccessKey
+                    );
+                    const { encryptedPassword, passwordAccessKey, ...sanitizedUser } = user;
+                    return { ...sanitizedUser, decryptedPassword };
+                } else {
+                    const { encryptedPassword, passwordAccessKey, ...sanitizedUser } = user;
+                    return {
+                        ...sanitizedUser,
+                        decryptionFailed: true,
+                        reason: "Missing password or passwordAccessKey",
+                    };
+                }
+            } catch (decryptionError) {
+                console.error(
+                    `Failed to decrypt password for user ${user._id}:`,
+                    decryptionError
+                );
+                const { encryptedPassword, passwordAccessKey, ...sanitizedUser } = user;
+                return {
+                    ...sanitizedUser,
+                    decryptionFailed: true,
+                    reason: "Decryption error",
+                };
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching all users:", error);
+        return { error: "Failed to fetch user data" };
+    }
+}
   async getUser(userId) {
     try {
         const objectIdUserId = new mongoose.Types.ObjectId(userId);
         const users = await UsersModel.aggregate([
-            { $unwind: "$users" }, // Unwind users array if it exists
+            { $unwind: "$users" }, // Unwind users array
             { $match: { "users._id": objectIdUserId } }, // Match by user ID
             {
                 $lookup: {
@@ -459,6 +474,15 @@ class UserHelper {
             },
             { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } }, // Keep users even if they have no category
             {
+                $lookup: {
+                    from: "userSpotRates", // Assuming this is the collection name
+                    localField: "users.userSpotRateId",
+                    foreignField: "_id",
+                    as: "spotRateInfo",
+                },
+            },
+            { $unwind: { path: "$spotRateInfo", preserveNullAndEmptyArrays: true } }, // Keep users even if they have no spot rate
+            {
                 $project: {
                     _id: "$users._id",
                     name: "$users.name",
@@ -466,7 +490,8 @@ class UserHelper {
                     contact: "$users.contact",
                     address: "$users.address",
                     categoryId: "$users.categoryId",
-                    categoryName: "$categoryInfo.name",
+                    categoryName: { $ifNull: ["$categoryInfo.name", null] },
+                    userSpotRateId: "$users.userSpotRateId",
                     encryptedPassword: "$users.password",
                     passwordAccessKey: "$users.passwordAccessKey",
                     cashBalance: "$users.cashBalance",
