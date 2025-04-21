@@ -34,11 +34,17 @@ import {
   editCategory,
   getCategories,
   addProductDetail,
+  getSingleCategory,
+  updateProductInCategory,
+  deleteProductFromCategory,
 } from "../../controllers/admin/categoryController.js";
 import {
   getUserCommodity,
   updateUserSpread,
-  addProduct
+  addProduct,
+  getAllUserSpotRates,
+  updateUserSpotRateProduct,
+  deleteUserSpotRateProduct
 } from "../../controllers/admin/UserSpotRateController.js";
 import {
   fetchBookings,
@@ -90,18 +96,22 @@ router.get("/get-profile/:userId", getUserDetail);
 router.patch("/receive-cash/:userId", updateUserCashBalance);
 router.patch("/receive-gold/:userId", updateUserGoldBalance);
 router.patch("/update-received-metrics/:userId", updateReceivedMetrics);
-router.patch("/user-spot-rate/:userSpotRateId?/user/:userId/product", addProduct);
-
 //category management
 router.post("/addCategory/:adminId", addCategory);
 router.put("/editCategory/:id/:adminId", editCategory);
 router.delete("/deleteCategory/:id/:adminId", deleteCategory);
 router.patch("/products/:categoryId", addProductDetail);
-
 router.get("/getCategories/:adminId", getCategories);
+router.get("/categories/:categoryId", getSingleCategory);
+router.patch("/categories/:categoryId/products/:productDetailId", updateProductInCategory);
+router.delete("/categories/:categoryId/products/:productDetailId", deleteProductFromCategory);
 //user spotrate router
 router.get("/spotrates/:adminId/:categoryId", getUserCommodity);
 router.post("/update-user-spread/:adminId/:categoryId", updateUserSpread);
+router.patch("/user-spot-rate/:userSpotRateId?/user/:userId/product", addProduct);
+router.get('/user-spot-rates/:userId', getAllUserSpotRates);
+router.put('/user-spot-rate/:userSpotRateId/products/:Id', updateUserSpotRateProduct);
+router.delete('/user-spot-rate/:userSpotRateId/products/:Id', deleteUserSpotRateProduct);
 //order management
 router.get("/booking/:adminId", fetchBookings);
 router.put("/update-order/:orderId", updateOrder);
@@ -113,7 +123,6 @@ router.delete("/delete-order/:orderId", deleteOrder);
 router.patch('/orders/:orderId/items/:itemId/reject', rejectOrderItem);
 //Dashboard overview
 router.get("/overview/:adminId", getDashboardOverview);
-
 // Individual endpoint routes
 router.get("/users/:adminId", getUserCount);
 router.get("/completed-orders/:adminId", getCompletedOrders);

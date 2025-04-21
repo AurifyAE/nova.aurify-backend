@@ -25,7 +25,6 @@ const ProductDetailSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { _id: false }
 );
 
 const CategorySchema = new mongoose.Schema(
