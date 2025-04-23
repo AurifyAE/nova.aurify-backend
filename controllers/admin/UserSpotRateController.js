@@ -114,16 +114,15 @@ export const getAllUserSpotRates = async (req, res, next) => {
       });
     }
 
-    // Using aggregation pipeline for optimized fetching, filtered by userId
+    const objectId = new mongoose.Types.ObjectId(userId);
+
+    // Using aggregation pipeline for optimized fetching
     const spotRates = await UserSpotRateModel.aggregate([
-      {
-        // Filter by userId (createdBy)
-        $match: {
-          createdBy: new mongoose.Types.ObjectId(userId)
-        }
-      },
-      {
-        $addFields: {
+      // Match documents by userId
+      { $match: { createdBy: objectId } },
+      
+      // Create an array of product IDs for lookup
+      { $addFields: {
           "productIds": {
             $map: {
               input: "$products",
@@ -133,16 +132,18 @@ export const getAllUserSpotRates = async (req, res, next) => {
           }
         }
       },
-      {
-        $lookup: {
-          from: "products", // Collection name for Product model
+      
+      // Lookup product details
+      { $lookup: {
+          from: "products",
           localField: "productIds",
           foreignField: "_id",
           as: "productData"
         }
       },
-      {
-        $project: {
+      
+      // Structure the response data to include all fields
+      { $project: {
           _id: 1,
           createdBy: 1,
           isActive: 1,
@@ -151,6 +152,8 @@ export const getAllUserSpotRates = async (req, res, next) => {
               input: "$products",
               as: "productDetail",
               in: {
+                _id: "$$productDetail._id",
+                productId: "$$productDetail.productId",
                 markingCharge: "$$productDetail.markingCharge",
                 pricingType: "$$productDetail.pricingType",
                 value: "$$productDetail.value",
@@ -173,64 +176,64 @@ export const getAllUserSpotRates = async (req, res, next) => {
                       }
                     },
                     in: {
-                      _id: "$$foundProduct._id",
-                      title: "$$foundProduct.title",
-                      description: "$$foundProduct.description",
-                      images: "$$foundProduct.images",
-                      price: "$$foundProduct.price",
-                      weight: "$$foundProduct.weight",
-                      purity: "$$foundProduct.purity",
-                      stock: "$$foundProduct.stock",
-                      sku: "$$foundProduct.sku"
+                      $cond: {
+                        if: { $ne: ["$$foundProduct", null] },
+                        then: {
+                          _id: "$$foundProduct._id",
+                          title: "$$foundProduct.title",
+                          description: "$$foundProduct.description",
+                          images: "$$foundProduct.images",
+                          price: "$$foundProduct.price",
+                          weight: "$$foundProduct.weight",
+                          purity: "$$foundProduct.purity",
+                          stock: "$$foundProduct.stock",
+                          sku: "$$foundProduct.sku",
+                          // Include any other product fields you need
+                          category: "$$foundProduct.category",
+                          subCategory: "$$foundProduct.subCategory",
+                          createdAt: "$$foundProduct.createdAt",
+                          updatedAt: "$$foundProduct.updatedAt"
+                        },
+                        else: null
+                      }
                     }
                   }
                 }
               }
             }
-          }
+          },
+          createdAt: 1,
+          updatedAt: 1
         }
       },
-      {
-        // Remove temporary fields
-        $project: {
+      
+      // Remove temporary fields
+      { $project: {
           productIds: 0,
           productData: 0
         }
       }
     ]);
 
-    // Transform data to a frontend-friendly format
-    const formattedResponse = spotRates.map(spotRate => ({
-      _id: spotRate._id,
-      createdBy: spotRate.createdBy,
-      isActive: spotRate.isActive,
-      products: spotRate.products.map(item => ({
-        // Pricing details
-        markingCharge: item.markingCharge,
-        pricingType: item.pricingType,
-        value: item.value,
-        isActive: item.isActive,
-        
-        // Product details
-        productId: item.product?._id || null,
-        title: item.product?.title || null,
-        description: item.product?.description || null,
-        images: item.product?.images || [],
-        price: item.product?.price || 0,
-        weight: item.product?.weight || 0,
-        purity: item.product?.purity || 0,
-        stock: item.product?.stock || false,
-        sku: item.product?.sku || null
-      }))
-    }));
+    // Handle case where no spot rates are found
+    if (!spotRates || spotRates.length === 0) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        userSpotRates: []
+      });
+    }
 
-    res.status(200).json({
+    // Return full data structure without additional transformation
+    return res.status(200).json({
       success: true,
-      count: formattedResponse.length,
-      userSpotRates: formattedResponse
+      count: spotRates.length,
+      userSpotRates: spotRates
     });
+    
   } catch (error) {
-    next(error);
+    console.error("Error fetching user spot rates:", error);
+    return next(new Error(`Failed to fetch user spot rates: ${error.message}`));
   }
 };
 

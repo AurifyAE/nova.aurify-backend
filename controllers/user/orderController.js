@@ -533,4 +533,4 @@ async function createUserNotification(userId, message) {
   }
 }
 // Start a cron job to check pending orders every minute
-cron.schedule("* * * * *", checkPendingOrderNotifications);
+// cron.schedule("* * * * *", checkPendingOrderNotifications);
