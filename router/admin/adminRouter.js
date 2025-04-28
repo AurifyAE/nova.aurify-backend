@@ -44,7 +44,7 @@ import {
   addProduct,
   getAllUserSpotRates,
   updateUserSpotRateProduct,
-  deleteUserSpotRateProduct
+  deleteUserSpotRateProduct,
 } from "../../controllers/admin/UserSpotRateController.js";
 import {
   fetchBookings,
@@ -62,7 +62,20 @@ import {
   getTotalRevenue,
 } from "../../controllers/admin/dashboardController.js";
 import { fetchUserOrder } from "../../controllers/user/orderController.js";
-import { addVideoBanner, deleteVideoBanner, fetchVideoBanner } from "../../controllers/admin/bannerController.js";
+import {
+  addEcomBanner,
+  deleteBanner,
+  getBanner,
+  updateBanner,
+  fetchEcomBanner,
+  addVideoBanner,
+  deleteVideoBanner,
+  fetchVideoBanner,
+} from "../../controllers/admin/bannerController.js";
+import {
+  getSpotRate,
+  updateSpread,
+} from "../../controllers/admin/spotRateController.js";
 const router = Router();
 
 router.post("/login", adminLoginController);
@@ -82,6 +95,11 @@ router.put(
   uploadSingle("logo"),
   updateBankDetailsController
 );
+
+//spotrate routers
+router.post("/update-spread/:adminId", updateSpread);
+router.get("/spotrates/:adminId", getSpotRate);
+
 // product management
 router.post("/add-products", uploadMultiple("image", 5), createProduct);
 router.put("/edit-products/:id", uploadMultiple("image", 5), updateProduct);
@@ -103,15 +121,30 @@ router.delete("/deleteCategory/:id/:adminId", deleteCategory);
 router.patch("/products/:categoryId", addProductDetail);
 router.get("/getCategories/:adminId", getCategories);
 router.get("/categories/:categoryId", getSingleCategory);
-router.patch("/categories/:categoryId/products/:productDetailId", updateProductInCategory);
-router.delete("/categories/:categoryId/products/:productDetailId", deleteProductFromCategory);
+router.patch(
+  "/categories/:categoryId/products/:productDetailId",
+  updateProductInCategory
+);
+router.delete(
+  "/categories/:categoryId/products/:productDetailId",
+  deleteProductFromCategory
+);
 //user spotrate router
 router.get("/spotrates/:adminId/:categoryId", getUserCommodity);
 router.post("/update-user-spread/:adminId/:categoryId", updateUserSpread);
-router.patch("/user-spot-rate/:userSpotRateId?/user/:userId/product", addProduct);
-router.get('/user-spot-rates/:userId', getAllUserSpotRates);
-router.put('/user-spot-rate/:userSpotRateId/products/:Id', updateUserSpotRateProduct);
-router.delete('/user-spot-rate/:userSpotRateId/products/:Id', deleteUserSpotRateProduct);
+router.patch(
+  "/user-spot-rate/:userSpotRateId?/user/:userId/product",
+  addProduct
+);
+router.get("/user-spot-rates/:userId", getAllUserSpotRates);
+router.put(
+  "/user-spot-rate/:userSpotRateId/products/:Id",
+  updateUserSpotRateProduct
+);
+router.delete(
+  "/user-spot-rate/:userSpotRateId/products/:Id",
+  deleteUserSpotRateProduct
+);
 //order management
 router.get("/booking/:adminId", fetchBookings);
 router.put("/update-order/:orderId", updateOrder);
@@ -120,7 +153,7 @@ router.put("/update-order-reject/:orderId", updateOrderStatus);
 router.post("/orders/confirm-quantity", orderQuantityConfirmation);
 router.get("/fetch-order/:adminId/:userId", fetchUserOrder);
 router.delete("/delete-order/:orderId", deleteOrder);
-router.patch('/orders/:orderId/items/:itemId/reject', rejectOrderItem);
+router.patch("/orders/:orderId/items/:itemId/reject", rejectOrderItem);
 //Dashboard overview
 router.get("/overview/:adminId", getDashboardOverview);
 // Individual endpoint routes
@@ -135,4 +168,10 @@ router.post(
 );
 router.get("/videoBanners/:adminId", fetchVideoBanner);
 router.delete("/videoBanner/:bannerId/:adminId", deleteVideoBanner);
+//banner
+router.post("/addBanner", uploadMultiple("image", 5), addEcomBanner);
+router.put("/banner/:id", uploadMultiple("image", 5), updateBanner);
+router.delete("/banner/:id/:adminId", deleteBanner);
+router.get("/banner/:adminId", fetchEcomBanner);
+
 export default router;
