@@ -20,7 +20,8 @@ import {
   getNotifications,
   readNotification,
   removeNotification,
-  clearAllNotifications
+  clearAllNotifications,
+  getSpotrateDetails
 } from "../../controllers/user/userController.js";
 import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
@@ -38,6 +39,8 @@ router.get("/product-count/:categoryId", fetchProductCount);
 router.put("/forgot-password/:adminId", forgotPassword);
 router.get("/get-profile/:adminId", getProfile);
 router.get("/get-VideoBanner/:adminId", getVideoBanner);
+router.get("/get-spotrates/:adminId", getSpotrateDetails);
+
 // cart Management
 router.get("/get-cart/:userId", getUserCart);
 router.patch("/cart-increment/:adminId/:userId/:productId", incrementCartItem);

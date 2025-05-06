@@ -9,6 +9,7 @@ import {
   deleteNotification,
   markNotificationAsRead,
   getUserNotifications,
+  getSportrate
 } from "../../helper/user/userHelper.js";
 import { UserSpotRateModel } from "../../model/UserSpotRateSchema.js";
 import { UsersModel } from "../../model/usersSchema.js";
@@ -260,6 +261,28 @@ export const clearAllNotifications = async (req, res, next) => {
       success: true,
       data: result,
       message: "All notifications cleared successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSpotrateDetails = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+    const { success, fetchSpotRate } = await getSportrate(adminId);
+
+    if (!success || !fetchSpotRate) {
+      return res.status(204).json({
+        success: false,
+        message: "SpotRate data not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      info: fetchSpotRate,
+      message: "Fetching SpotRate successfully",
     });
   } catch (error) {
     next(error);

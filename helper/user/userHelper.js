@@ -7,6 +7,7 @@ import NotificationService from "../../utils/sendPushNotification.js";
 import { encryptPassword, decryptPassword } from "../../utils/crypto.js";
 import { VideoBannerModel } from "../../model/videoBannerSchema.js";
 import UserNotificationModel from '../../model/userNotificationSchema.js'
+import { spotRateModel } from "../../model/spotRateSchema.js";
 
 export const updateUserPassword = async (adminId, contact, newPassword) => {
   try {
@@ -80,6 +81,20 @@ export const getAdminProfile = async (adminId) => {
     };
   } catch (error) {
     throw new Error("Error during admin profile retrieval: " + error.message);
+  }
+};
+
+export const getSportrate = async (adminId) => {
+  try {
+    const fetchSpotRate = await spotRateModel.findOne({ createdBy: adminId });
+
+    if (!fetchSpotRate) {
+      return { success: false, fetchSpotRate: null };
+    }
+
+    return { success: true, fetchSpotRate };
+  } catch (error) {
+    throw new Error("Error fetching SpotRate: " + error.message);
   }
 };
 
