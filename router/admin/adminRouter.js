@@ -174,7 +174,7 @@ router.put("/banner/:id", uploadMultiple("image", 5), updateBanner);
 router.delete("/banner/:id/:adminId", deleteBanner);
 router.get("/banner/:adminId", fetchEcomBanner);
 
-router.get("/fetch-transtion/:userId", fetchUserTranstions);
+router.get("/fetch-transaction/:userId", fetchUserTranstions);
 
 
 export default router;
