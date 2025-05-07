@@ -17,7 +17,7 @@ export const fetchProductHelper = async (adminId, categoryId) => {
       products = category.products.map((product) => ({
         ...product.productId.toObject(),
         pricingType: product.pricingType,
-        markingCharge: product.markingCharge,
+        makingCharge: product.makingCharge,
         value: product.value,
         isActive: product.isActive,
       }));
@@ -52,7 +52,7 @@ export const fetchProductHelper = async (adminId, categoryId) => {
             createdAt: 1,
             updatedAt: 1,
             pricingType: { $literal: null },
-            markingCharge: { $literal: 0 },
+            makingCharge: { $literal: 0 },
             value: { $literal: 0 },
             isActive: { $literal: false },
           },
