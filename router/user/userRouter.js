@@ -21,7 +21,8 @@ import {
   readNotification,
   removeNotification,
   clearAllNotifications,
-  getSpotrateDetails
+  getSpotrateDetails,
+  checkCategoryStatus
 } from "../../controllers/user/userController.js";
 import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
@@ -34,12 +35,13 @@ const router = Router();
 router.post("/login/:adminId", userLoginController);
 router.post("/request-admin/:adminId", requestAdmin);
 router.get("/get-banks/:adminId", fetchAdminBankDetails);
-router.get("/get-product/:adminId?/:categoryId?", fetchProductData);
+router.get("/get-product/:adminId?/:categoryId?/:userSpotRateId?", fetchProductData);
 router.get("/product-count/:categoryId", fetchProductCount);
 router.put("/forgot-password/:adminId", forgotPassword);
 router.get("/get-profile/:adminId", getProfile);
 router.get("/get-VideoBanner/:adminId", getVideoBanner);
 router.get("/get-spotrates/:adminId", getSpotrateDetails);
+router.get("/check-category-status/:userId", checkCategoryStatus);
 
 // cart Management
 router.get("/get-cart/:userId", getUserCart);

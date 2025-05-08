@@ -9,17 +9,17 @@ import {
 
 export const fetchProductData = async (req, res, next) => {
   try {
-    let { adminId, categoryId } = req.params; 
+    let { adminId, categoryId, userSpotRateId } = req.params; 
 
-    if (!adminId && !categoryId) {
-      return next(createAppError("Either adminId or categoryId is required", 400));
+    if (!adminId && !categoryId && !userSpotRateId) {
+      return next(createAppError("Either adminId, categoryId, or userSpotRateId is required", 400));
     }
-
 
     adminId = adminId === "null" ? undefined : adminId;
     categoryId = categoryId === "null" ? undefined : categoryId;
+    userSpotRateId = userSpotRateId === "null" ? undefined : userSpotRateId;
 
-    const result = await fetchProductHelper(adminId, categoryId);
+    const result = await fetchProductHelper(adminId, categoryId, userSpotRateId);
     res.status(200).json({ success: true, data: result });
 
   } catch (error) {

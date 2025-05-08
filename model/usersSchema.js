@@ -15,7 +15,7 @@ const UsersSchema = new mongoose.Schema({
       categoryId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Category",
-        required: true,
+        default:null
       },
       userSpotRateId: {
         type: mongoose.Schema.Types.ObjectId,

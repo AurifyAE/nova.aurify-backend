@@ -2,11 +2,41 @@ import mongoose from "mongoose";
 import Product from "../../model/productSchema.js";
 import { createAppError } from "../../utils/errorHandler.js";
 import { Cart } from "../../model/cartSchema.js";
+import { UserSpotRateModel } from "../../model/UserSpotRateSchema.js";
 
-export const fetchProductHelper = async (adminId, categoryId) => {
+export const fetchProductHelper = async (adminId, categoryId, userSpotRateId) => {
   try {
     let products = [];
 
+    // Case 1: If userSpotRateId is provided, fetch products from UserSpotRate
+    if (userSpotRateId) {
+      const userSpotRate = await UserSpotRateModel.findById(userSpotRateId)
+        .populate({
+          path: "products.productId",
+          model: "Product"
+        });
+
+      if (!userSpotRate) {
+        throw createAppError("User spot rate not found", 404);
+      }
+
+      products = userSpotRate.products
+        .filter(product => product.productId) // Filter out any null productIds
+        .map((product) => ({
+          ...product.productId.toObject(),
+          pricingType: product.pricingType,
+          makingCharge: product.markingCharge, // Note: Using markingCharge from schema
+          value: product.value,
+          isActive: product.isActive,
+        }));
+
+      // If userSpotRate products exist, return them
+      if (products.length > 0) {
+        return products;
+      }
+    }
+
+    // Case 2: If categoryId is provided and userSpotRateId is not provided or has no products
     if (categoryId) {
       const category = await mongoose.model("Category").findById(categoryId).populate("products.productId");
 
@@ -14,13 +44,15 @@ export const fetchProductHelper = async (adminId, categoryId) => {
         throw createAppError("Category not found", 404);
       }
 
-      products = category.products.map((product) => ({
-        ...product.productId.toObject(),
-        pricingType: product.pricingType,
-        makingCharge: product.makingCharge,
-        value: product.value,
-        isActive: product.isActive,
-      }));
+      products = category.products
+        .filter(product => product.productId) // Filter out any null productIds
+        .map((product) => ({
+          ...product.productId.toObject(),
+          pricingType: product.pricingType,
+          makingCharge: product.makingCharge,
+          value: product.value,
+          isActive: product.isActive,
+        }));
 
       // If category products exist, return them
       if (products.length > 0) {
@@ -28,7 +60,7 @@ export const fetchProductHelper = async (adminId, categoryId) => {
       }
     }
 
-    // If category has no products or categoryId was not provided, fetch all products by adminId
+    // Case 3: If neither userSpotRateId nor categoryId returned products, fetch by adminId
     if (adminId) {
       products = await mongoose.model("Product").aggregate([
         {
@@ -69,6 +101,7 @@ export const fetchProductHelper = async (adminId, categoryId) => {
     throw createAppError(`Error fetching products: ${error.message}`, 500);
   }
 };
+
 
 export const updateCartItemCollection = async (userId, adminId, productId, userPassedQuantity) => {
   try {

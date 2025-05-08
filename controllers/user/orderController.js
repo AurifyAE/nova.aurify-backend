@@ -91,25 +91,306 @@ export const checkPendingOrderNotifications = async () => {
   try {
     console.log("Starting to check pending orders for notifications...");
 
-    // Query orders with pending status
-    const pendingOrders = await orderModel.find({
+    // Part 1: Handle "User Approval Pending" orders (original functionality)
+    const userPendingOrders = await orderModel.find({
       orderStatus: "User Approval Pending",
       "items.itemStatus": "User Approval Pending",
     });
 
-    console.log(`Found ${pendingOrders.length} pending orders to process`);
-
-    if (!pendingOrders.length) {
-      console.log("No pending orders to process.");
-      return;
+    console.log(`Found ${userPendingOrders.length} user pending orders to process`);
+    
+    // Process orders requiring user approval (original functionality)
+    if (userPendingOrders.length > 0) {
+      await processUserPendingOrders(userPendingOrders);
     }
 
-    const currentTime = new Date();
+    // Part 2: Handle "Processing" orders with "Approval Pending" items (new functionality)
+    const adminPendingOrders = await orderModel.find({
+      orderStatus: "Processing",
+      "items.itemStatus": "Approval Pending",
+    });
 
-    // Process each pending order
-    for (const order of pendingOrders) {
+    console.log(`Found ${adminPendingOrders.length} admin pending orders to process`);
+
+    // Process orders requiring admin approval (new functionality)
+    if (adminPendingOrders.length > 0) {
+      await processAdminPendingOrders(adminPendingOrders);
+    }
+
+    console.log("Finished processing all pending orders");
+  } catch (mainError) {
+    console.error("Main error in checkPendingOrderNotifications:", mainError);
+  }
+};
+
+// Function to process orders that require admin approval within 5 minutes
+async function processAdminPendingOrders(orders) {
+  const currentTime = new Date();
+
+  for (const order of orders) {
+    try {
       console.log(
-        `Processing order ${order._id}, transactionId: ${order.transactionId}`
+        `Processing admin pending order ${order._id}, transactionId: ${order.transactionId}`
+      );
+
+      // Calculate time since order was placed
+      const orderDate = new Date(order.orderDate);
+      const minutesSinceOrder = (currentTime - orderDate) / (1000 * 60);
+
+      console.log(
+        `Time since order placement: ${minutesSinceOrder.toFixed(2)} minutes`
+      );
+
+      // Filter pending items requiring admin approval
+      const pendingItems = order.items.filter(
+        (item) => item.itemStatus === "Approval Pending"
+      );
+      
+      console.log(
+        `Found ${pendingItems.length} admin pending items in order ${order._id}`
+      );
+
+      if (pendingItems.length === 0) {
+        continue;
+      }
+
+      // Fetch user's FCM tokens for notifications
+      const fcmTokenDoc = await UserFCMTokenModel.findOne({
+        createdBy: order.userId,
+      });
+      
+      let autoRejectEmailSent = false;
+      const invalidTokens = [];
+
+      // Handle warning notifications (2-5 minute window)
+      if (minutesSinceOrder >= 2 && minutesSinceOrder < 5) {
+        await sendAdminPendingNotifications(
+          order,
+          pendingItems,
+          fcmTokenDoc,
+          invalidTokens,
+          "warning",
+          autoRejectEmailSent
+        );
+      } 
+      // Handle auto-rejection (after 5 minutes)
+      else if (minutesSinceOrder >= 5) {
+        await sendAdminPendingNotifications(
+          order,
+          pendingItems,
+          fcmTokenDoc,
+          invalidTokens,
+          "reject",
+          autoRejectEmailSent
+        );
+        
+        // Process the auto-rejection for these items
+        await processAdminAutoRejection(order, pendingItems);
+      }
+
+      // Clean up invalid tokens if found
+      if (invalidTokens.length > 0 && fcmTokenDoc) {
+        await cleanupInvalidTokens(fcmTokenDoc, invalidTokens);
+      }
+    } catch (orderError) {
+      console.error(`Error processing admin pending order ${order._id}:`, orderError);
+    }
+  }
+}
+
+// Function to send notifications for admin pending orders
+async function sendAdminPendingNotifications(order, pendingItems, fcmTokenDoc, invalidTokens, type, autoRejectEmailSent) {
+  // Create appropriate messages based on notification type
+  const title = type === "warning" 
+    ? "⏳ Admin Approval Deadline! 🕒" 
+    : "❌ Order Items Auto-Rejected 🚫";
+  
+  for (const item of pendingItems) {
+    console.log(`Processing ${type} notifications for admin pending item ${item._id}`);
+    
+    // Create message based on notification type
+    const message = type === "warning"
+      ? `Your order item (Qty: ${item.quantity}) will be auto-rejected soon if not approved by admin.`
+      : `⚠️ Auto-Rejected! Item (Qty: ${item.quantity}) was not approved by admin in time. Order ID: ${order.transactionId}`;
+    
+    // Send in-app notification
+    try {
+      await createUserNotification(order.userId, message);
+      console.log(`Created ${type} notification in database for admin pending item`);
+    } catch (notifDbError) {
+      console.error("Error creating notification record:", notifDbError);
+    }
+    
+    // Send FCM push notifications if tokens exist
+    if (fcmTokenDoc && fcmTokenDoc.FCMTokens && fcmTokenDoc.FCMTokens.length > 0) {
+      for (const tokenObj of fcmTokenDoc.FCMTokens) {
+        if (!tokenObj.token) {
+          invalidTokens.push(tokenObj);
+          continue;
+        }
+        
+        try {
+          let notificationResult;
+          if (type === "warning") {
+            notificationResult = await NotificationService.sendWarningNotification(
+              tokenObj.token,
+              title,
+              message,
+              {
+                orderId: order._id.toString(),
+                itemId: item._id.toString(),
+              }
+            );
+          } else {
+            notificationResult = await NotificationService.sendRejectNotification(
+              tokenObj.token,
+              title,
+              message,
+              {
+                orderId: order._id.toString(),
+                itemId: item._id.toString(),
+              }
+            );
+          }
+          
+          if (notificationResult) {
+            console.log(`Admin pending ${type} notification sent to token: ${tokenObj.token.substring(0, 10)}...`);
+          }
+        } catch (error) {
+          console.error(`Notification error for token: ${tokenObj.token.substring(0, 10)}...`, error);
+          
+          // Handle invalid tokens
+          if (
+            (error.errorInfo && error.errorInfo.code === "messaging/registration-token-not-registered") ||
+            (error.message && (
+              error.message.includes("is not registered") ||
+              error.message.includes("token is not registered") ||
+              error.message.includes("has expired") ||
+              error.message.includes("Invalid registration") ||
+              error.message.includes("invalid token")
+            ))
+          ) {
+            invalidTokens.push(tokenObj);
+          }
+        }
+      }
+    }
+    
+    // Send email notification
+    try {
+      if (type === "warning") {
+        // Send warning email
+        await sendQuantityConfirmationEmail(
+          order._id.toString(),
+          item._id.toString(),
+          item.quantity,
+          false, // not a rejection email
+          true  // admin pending
+        );
+        console.log("Admin warning email sent successfully");
+      } else if (type === "reject" && !autoRejectEmailSent) {
+        // Send rejection email (only once per order)
+        await sendQuantityConfirmationEmail(
+          order._id.toString(),
+          item._id.toString(),
+          item.quantity,
+          true, // this is a rejection email
+          true  // admin pending
+        );
+        console.log("Admin auto-reject email sent successfully");
+        autoRejectEmailSent = true;
+      }
+    } catch (emailError) {
+      console.error("Error sending admin notification email:", emailError);
+    }
+  }
+}
+
+// Process auto-rejection for admin pending items
+async function processAdminAutoRejection(order, pendingItems) {
+  try {
+    console.log("Processing auto-rejection for admin pending items...");
+    
+    // Track deductions from order totals
+    let priceDeduction = 0;
+    let weightDeduction = 0;
+    
+    // Update pending items as rejected
+    pendingItems.forEach((item) => {
+      // Calculate price and weight to deduct
+      const itemPrice = item.fixedPrice * item.quantity;
+      const itemWeight = item.productWeight * item.quantity;
+      
+      // Add to totals for deduction
+      priceDeduction += itemPrice;
+      weightDeduction += itemWeight;
+      
+      // Update item status
+      item.itemStatus = "Rejected";
+      item.select = true;
+      
+      console.log(`Auto-rejecting admin pending item ${item._id}, deducting price: ${itemPrice}, weight: ${itemWeight}`);
+    });
+
+    // Update order totals
+    const newTotalPrice = Math.max(0, order.totalPrice - priceDeduction);
+    const newTotalWeight = Math.max(0, order.totalWeight - weightDeduction);
+    
+    console.log(`Updating order totals: old price ${order.totalPrice} -> new price ${newTotalPrice}`);
+    console.log(`Updating order weights: old weight ${order.totalWeight} -> new weight ${newTotalWeight}`);
+    
+    order.totalPrice = newTotalPrice;
+    order.totalWeight = newTotalWeight;
+
+    // Update order remarks with rejection reason
+    const rejectionRemarks = pendingItems
+      .map((item) => `Item (Qty: ${item.quantity}) auto-rejected due to admin inaction.`)
+      .join("\n");
+
+    order.orderRemark = order.orderRemark
+      ? `${order.orderRemark}\n${rejectionRemarks}`
+      : rejectionRemarks;
+
+    // Check if all items are now rejected
+    const allItemsRejected = order.items.every((item) => item.itemStatus === "Rejected");
+
+    if (allItemsRejected) {
+      console.log("All items rejected, updating order status to Rejected");
+      order.orderStatus = "Rejected";
+      
+      // Add final notification
+      await createUserNotification(
+        order.userId,
+        `⚠️ Your order #${order.transactionId} has been completely rejected due to lack of admin approval.`
+      );
+    } else {
+      // Some items still exist in the order, check if we need to update order status
+      const hasActiveItems = order.items.some((item) => item.itemStatus !== "Rejected");
+      
+      if (hasActiveItems) {
+        console.log("Order still has active items, updating totals only");
+      } else {
+        console.log("No active items remain, setting order status to Rejected");
+        order.orderStatus = "Rejected";
+      }
+    }
+
+    // Save the updated order
+    await order.save();
+    console.log(`Order ${order._id} updated successfully with recalculated totals after admin auto-rejection`);
+  } catch (rejectionError) {
+    console.error("Error in admin auto-rejection process:", rejectionError);
+  }
+}
+
+// Function to handle the original user approval pending orders
+async function processUserPendingOrders(orders) {
+  const currentTime = new Date();
+
+  for (const order of orders) {
+    try {
+      console.log(
+        `Processing user pending order ${order._id}, transactionId: ${order.transactionId}`
       );
 
       // Ensure notificationSentAt exists and is a valid date
@@ -145,7 +426,7 @@ export const checkPendingOrderNotifications = async () => {
       );
       
       console.log(
-        `Found ${pendingItems.length} pending items in order ${order._id}`
+        `Found ${pendingItems.length} user pending items in order ${order._id}`
       );
 
       if (pendingItems.length === 0) {
@@ -253,7 +534,8 @@ export const checkPendingOrderNotifications = async () => {
                 order._id.toString(),
                 item._id.toString(),
                 item.quantity,
-                false // not a rejection email
+                false, // not a rejection email
+                false  // not admin pending
               );
               console.log("Warning email sent successfully");
             } else if (timeSinceNotification >= 5 && !autoRejectEmailSent) {
@@ -261,7 +543,8 @@ export const checkPendingOrderNotifications = async () => {
                 order._id.toString(),
                 item._id.toString(),
                 item.quantity,
-                true // this is a rejection email
+                true,  // this is a rejection email
+                false  // not admin pending
               );
               console.log("Auto-reject email sent successfully");
               autoRejectEmailSent = true; // Prevent multiple rejection emails
@@ -271,71 +554,9 @@ export const checkPendingOrderNotifications = async () => {
           }
         }
 
-        // Remove invalid tokens from user's FCM tokens
+        // Clean up invalid tokens if any were found
         if (invalidTokens.length > 0) {
-          try {
-            console.log(`Found ${invalidTokens.length} invalid tokens to remove`);
-            
-            // Extract just the token strings from tokenObj for the $in query if needed
-            const invalidTokenStrings = invalidTokens
-              .filter(tokenObj => tokenObj.token)
-              .map(tokenObj => tokenObj.token);
-            
-            // Method 1: Remove by token string (most common approach)
-            if (invalidTokenStrings.length > 0) {
-              await UserFCMTokenModel.updateOne(
-                { _id: fcmTokenDoc._id },
-                {
-                  $pull: {
-                    FCMTokens: {
-                      token: { $in: invalidTokenStrings }
-                    }
-                  }
-                }
-              );
-              console.log(`Removed ${invalidTokenStrings.length} invalid token strings`);
-            }
-            
-            // Method 2: If FCMTokens are stored by _id, remove them by _id
-            const invalidTokenIds = invalidTokens
-              .filter(tokenObj => tokenObj._id)
-              .map(tokenObj => tokenObj._id);
-              
-            if (invalidTokenIds.length > 0) {
-              await UserFCMTokenModel.updateOne(
-                { _id: fcmTokenDoc._id },
-                {
-                  $pull: {
-                    FCMTokens: {
-                      _id: { $in: invalidTokenIds }
-                    }
-                  }
-                }
-              );
-              console.log(`Removed ${invalidTokenIds.length} invalid tokens by ID`);
-            }
-            
-            // Method 3: Full cleanup - find any empty tokens
-            await UserFCMTokenModel.updateOne(
-              { _id: fcmTokenDoc._id },
-              {
-                $pull: {
-                  FCMTokens: {
-                    $or: [
-                      { token: { $exists: false } },
-                      { token: null },
-                      { token: "" }
-                    ]
-                  }
-                }
-              }
-            );
-            console.log("Performed cleanup of any empty token entries");
-            
-            console.log(`Token cleanup completed for user ${order.userId}`);
-          } catch (tokenUpdateError) {
-            console.error("Error removing invalid tokens:", tokenUpdateError);
-          }
+          await cleanupInvalidTokens(fcmTokenDoc, invalidTokens);
         }
       } else {
         console.log(`No FCM tokens found for user ${order.userId}, continuing with email notifications only`);
@@ -368,7 +589,8 @@ export const checkPendingOrderNotifications = async () => {
                 order._id.toString(),
                 item._id.toString(),
                 item.quantity,
-                false // not a rejection email
+                false, // not a rejection email
+                false  // not admin pending
               );
               console.log("Warning email sent successfully (no FCM tokens)");
             } else if (timeSinceNotification >= 5 && !autoRejectEmailSent) {
@@ -376,7 +598,8 @@ export const checkPendingOrderNotifications = async () => {
                 order._id.toString(),
                 item._id.toString(),
                 item.quantity,
-                true // this is a rejection email
+                true,  // this is a rejection email
+                false  // not admin pending
               );
               console.log("Auto-reject email sent successfully (no FCM tokens)");
               autoRejectEmailSent = true; // Prevent multiple rejection emails
@@ -389,109 +612,164 @@ export const checkPendingOrderNotifications = async () => {
 
       // Handle order rejection if applicable
       if (timeSinceNotification >= 5) {
-        try {
-          console.log("Processing auto-rejection for pending items...");
-          
-          // Track the amount that will be deducted from total price and weight
-          let priceDeduction = 0;
-          let weightDeduction = 0;
-          
-          // Update pending items as rejected
-          pendingItems.forEach((item) => {
-            // Calculate price and weight to deduct
-            const itemPrice = item.fixedPrice * item.quantity;
-            const itemWeight = item.productWeight * item.quantity;
-            
-            // Add to totals for deduction
-            priceDeduction += itemPrice;
-            weightDeduction += itemWeight;
-            
-            // Update item status
-            item.itemStatus = "Rejected";
-            item.select = true; // Added from your new implementation
-            
-            console.log(`Rejecting item ${item._id}, deducting price: ${itemPrice}, weight: ${itemWeight}`);
-          });
+        await processUserAutoRejection(order, pendingItems);
+      }
+    } catch (orderError) {
+      console.error(`Error processing user pending order ${order._id}:`, orderError);
+    }
+  }
+}
 
-          // Update order totals by subtracting rejected items
-          const newTotalPrice = Math.max(0, order.totalPrice - priceDeduction);
-          const newTotalWeight = Math.max(0, order.totalWeight - weightDeduction);
-          
-          console.log(`Updating order totals: old price ${order.totalPrice} -> new price ${newTotalPrice}`);
-          console.log(`Updating order weights: old weight ${order.totalWeight} -> new weight ${newTotalWeight}`);
-          
-          order.totalPrice = newTotalPrice;
-          order.totalWeight = newTotalWeight;
+// Handle user auto-rejection process
+async function processUserAutoRejection(order, pendingItems) {
+  try {
+    console.log("Processing auto-rejection for user pending items...");
+    
+    // Track the amount that will be deducted from total price and weight
+    let priceDeduction = 0;
+    let weightDeduction = 0;
+    
+    // Update pending items as rejected
+    pendingItems.forEach((item) => {
+      // Calculate price and weight to deduct
+      const itemPrice = item.fixedPrice * item.quantity;
+      const itemWeight = item.productWeight * item.quantity;
+      
+      // Add to totals for deduction
+      priceDeduction += itemPrice;
+      weightDeduction += itemWeight;
+      
+      // Update item status
+      item.itemStatus = "Rejected";
+      item.select = true; // Added from your new implementation
+      
+      console.log(`Rejecting item ${item._id}, deducting price: ${itemPrice}, weight: ${itemWeight}`);
+    });
 
-          // Update order remarks with rejection reason
-          const rejectionRemarks = pendingItems
-            .map(
-              (item) =>
-                `Item (Qty: ${item.quantity}) auto-rejected due to no response.`
-            )
-            .join("\n");
+    // Update order totals by subtracting rejected items
+    const newTotalPrice = Math.max(0, order.totalPrice - priceDeduction);
+    const newTotalWeight = Math.max(0, order.totalWeight - weightDeduction);
+    
+    console.log(`Updating order totals: old price ${order.totalPrice} -> new price ${newTotalPrice}`);
+    console.log(`Updating order weights: old weight ${order.totalWeight} -> new weight ${newTotalWeight}`);
+    
+    order.totalPrice = newTotalPrice;
+    order.totalWeight = newTotalWeight;
 
-          order.orderRemark = order.orderRemark
-            ? `${order.orderRemark}\n${rejectionRemarks}`
-            : rejectionRemarks;
+    // Update order remarks with rejection reason
+    const rejectionRemarks = pendingItems
+      .map(
+        (item) =>
+          `Item (Qty: ${item.quantity}) auto-rejected due to no response.`
+      )
+      .join("\n");
 
-          // Check if all items are now rejected
-          const allItemsRejected = order.items.every(
-            (item) => item.itemStatus === "Rejected"
-          );
+    order.orderRemark = order.orderRemark
+      ? `${order.orderRemark}\n${rejectionRemarks}`
+      : rejectionRemarks;
 
-          if (allItemsRejected) {
-            console.log("All items rejected, updating order status to Rejected");
-            order.orderStatus = "Rejected";
-            
-            // Add final notification
-            await createUserNotification(
-              order.userId,
-              `⚠️ Your order #${order.transactionId} has been completely rejected due to no response to quantity confirmation requests.`
-            );
-            
-            // Send final email if not already sent
-            if (!autoRejectEmailSent) {
-              try {
-                await sendQuantityConfirmationEmail(
-                  order._id.toString(),
-                  pendingItems[0]._id.toString(),
-                  pendingItems[0].quantity,
-                  true // this is a rejection email
-                );
-                console.log("Final auto-reject email sent successfully");
-              } catch (finalEmailError) {
-                console.error("Error sending final rejection email:", finalEmailError);
-              }
-            }
-          } else {
-            // Some items still exist in the order, check if we need to update order status
-            const hasActiveItems = order.items.some(
-              (item) => item.itemStatus !== "Rejected"
-            );
-            
-            if (hasActiveItems) {
-              console.log("Order still has active items, updating totals only");
-            } else {
-              console.log("No active items remain, setting order status to Rejected");
-              order.orderStatus = "Rejected";
-            }
-          }
+    // Check if all items are now rejected
+    const allItemsRejected = order.items.every(
+      (item) => item.itemStatus === "Rejected"
+    );
 
-          // Save the updated order
-          await order.save();
-          console.log(`Order ${order._id} updated successfully with recalculated totals`);
-        } catch (rejectionError) {
-          console.error("Error in auto-rejection process:", rejectionError);
-        }
+    if (allItemsRejected) {
+      console.log("All items rejected, updating order status to Rejected");
+      order.orderStatus = "Rejected";
+      
+      // Add final notification
+      await createUserNotification(
+        order.userId,
+        `⚠️ Your order #${order.transactionId} has been completely rejected due to no response to quantity confirmation requests.`
+      );
+    } else {
+      // Some items still exist in the order, check if we need to update order status
+      const hasActiveItems = order.items.some(
+        (item) => item.itemStatus !== "Rejected"
+      );
+      
+      if (hasActiveItems) {
+        console.log("Order still has active items, updating totals only");
+      } else {
+        console.log("No active items remain, setting order status to Rejected");
+        order.orderStatus = "Rejected";
       }
     }
 
-    console.log("Finished processing all pending orders");
-  } catch (mainError) {
-    console.error("Main error in checkPendingOrderNotifications:", mainError);
+    // Save the updated order
+    await order.save();
+    console.log(`Order ${order._id} updated successfully with recalculated totals after user auto-rejection`);
+  } catch (rejectionError) {
+    console.error("Error in user auto-rejection process:", rejectionError);
   }
-};
+}
+
+// Clean up invalid tokens
+async function cleanupInvalidTokens(fcmTokenDoc, invalidTokens) {
+  try {
+    console.log(`Found ${invalidTokens.length} invalid tokens to remove`);
+    
+    // Extract just the token strings from tokenObj for the $in query if needed
+    const invalidTokenStrings = invalidTokens
+      .filter(tokenObj => tokenObj.token)
+      .map(tokenObj => tokenObj.token);
+    
+    // Method 1: Remove by token string (most common approach)
+    if (invalidTokenStrings.length > 0) {
+      await UserFCMTokenModel.updateOne(
+        { _id: fcmTokenDoc._id },
+        {
+          $pull: {
+            FCMTokens: {
+              token: { $in: invalidTokenStrings }
+            }
+          }
+        }
+      );
+      console.log(`Removed ${invalidTokenStrings.length} invalid token strings`);
+    }
+    
+    // Method 2: If FCMTokens are stored by _id, remove them by _id
+    const invalidTokenIds = invalidTokens
+      .filter(tokenObj => tokenObj._id)
+      .map(tokenObj => tokenObj._id);
+      
+    if (invalidTokenIds.length > 0) {
+      await UserFCMTokenModel.updateOne(
+        { _id: fcmTokenDoc._id },
+        {
+          $pull: {
+            FCMTokens: {
+              _id: { $in: invalidTokenIds }
+            }
+          }
+        }
+      );
+      console.log(`Removed ${invalidTokenIds.length} invalid tokens by ID`);
+    }
+    
+    // Method 3: Full cleanup - find any empty tokens
+    await UserFCMTokenModel.updateOne(
+      { _id: fcmTokenDoc._id },
+      {
+        $pull: {
+          FCMTokens: {
+            $or: [
+              { token: { $exists: false } },
+              { token: null },
+              { token: "" }
+            ]
+          }
+        }
+      }
+    );
+    console.log("Performed cleanup of any empty token entries");
+    
+    console.log(`Token cleanup completed for user ${fcmTokenDoc.createdBy}`);
+  } catch (tokenUpdateError) {
+    console.error("Error removing invalid tokens:", tokenUpdateError);
+  }
+}
 
 // Helper function to create user notifications with better error handling
 async function createUserNotification(userId, message) {
@@ -532,5 +810,6 @@ async function createUserNotification(userId, message) {
     return false;
   }
 }
+
 // Start a cron job to check pending orders every minute
-// cron.schedule("* * * * *", checkPendingOrderNotifications);
+cron.schedule("* * * * *", checkPendingOrderNotifications);
