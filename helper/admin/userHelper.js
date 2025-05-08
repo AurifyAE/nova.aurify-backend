@@ -11,7 +11,6 @@ class UserHelper {
       !userData.contact ||
       !userData.email ||
       !userData.address ||
-      !userData.categoryId ||
       !userData.password
     ) {
       return "All fields are required";
@@ -322,6 +321,11 @@ class UserHelper {
     // If no fields to update
     if (Object.keys(updateObject).length === 0) {
       throw new Error("At least one field must be updated");
+    }
+    
+    // If categoryId is provided, set userSpotRateId to null
+    if (updatedUserData.categoryId) {
+      updateObject['users.$.userSpotRateId'] = null;
     }
     
     const result = await UsersModel.findOneAndUpdate(
