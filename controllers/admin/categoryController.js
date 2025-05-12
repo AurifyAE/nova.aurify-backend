@@ -134,7 +134,7 @@ export const updateProductInCategory = async (req, res, next) => {
     const updateData = req.body;
 
     // Validate update data
-    const allowedFields = ["markingCharge", "pricingType", "value", "isActive"];
+    const allowedFields = ["makingCharge", "pricingType", "value", "isActive"];
     const invalidFields = Object.keys(updateData).filter(
       (key) => !allowedFields.includes(key)
     );
