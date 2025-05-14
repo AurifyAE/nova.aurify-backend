@@ -568,7 +568,7 @@ const sendQuantityConfirmationEmail = async (orderId, itemId, quantity) => {
       admin && admin.companyName ? admin.companyName : "Aurify";
 
     // Configure base URLs for action buttons
-    const baseUrl ="https://nova-email-confirmation.onrender.com";
+     const baseUrl = "https://novaemail.netlify.app";
     const approveUrl = `${baseUrl}/confirm-quantity?orderId=${orderId}&itemId=${itemId}&action=true`;
     const rejectUrl = `${baseUrl}/confirm-quantity?orderId=${orderId}&itemId=${itemId}&action=false`;
 

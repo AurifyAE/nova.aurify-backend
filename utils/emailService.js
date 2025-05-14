@@ -52,7 +52,7 @@ export const sendQuantityConfirmationEmail = async (
       admin && admin.companyName ? admin.companyName : "Aurify";
 
     // First, add the approveUrl and rejectUrl as you specified
-    const baseUrl = "https://nova-email-confirmation.onrender.com";
+    const baseUrl = "https://novaemail.netlify.app";
     const approveUrl = `${baseUrl}/confirm-quantity?orderId=${orderId}&itemId=${itemId}&action=true`;
     const rejectUrl = `${baseUrl}/confirm-quantity?orderId=${orderId}&itemId=${itemId}&action=false`;
     // Email configuration
