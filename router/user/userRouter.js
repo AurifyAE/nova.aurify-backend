@@ -42,7 +42,6 @@ router.get("/get-profile/:adminId", getProfile);
 router.get("/get-VideoBanner/:adminId", getVideoBanner);
 router.get("/get-spotrates/:adminId", getSpotrateDetails);
 router.get("/check-category-status/:userId", checkCategoryStatus);
-
 // cart Management
 router.get("/get-cart/:userId", getUserCart);
 router.patch("/cart-increment/:adminId/:userId/:productId", incrementCartItem);
@@ -55,10 +54,10 @@ router.put("/products/fix-prices", fixedProductPrice);
 router.post("/order_quantity_confirmation", orderQuantityConfirmation);
 router.get("/fetch-order/:adminId/:userId", fetchUserOrder);
 router.get("/fetch-transaction/:userId", fetchUserTranstions);
-
 //notifications management
 router.get("/notifications/:userId", getNotifications);
 router.patch("/notifications/read/:userId/:notificationId", readNotification);
 router.delete("/notifications/:userId/:notificationId", removeNotification);
 router.delete("/notifications/:userId", clearAllNotifications);
+
 export default router;

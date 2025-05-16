@@ -1,31 +1,29 @@
 import mongoose from "mongoose";
 
-const ProductDetailSchema = new mongoose.Schema(
-  {
-    productId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-      default: null,
-    },
-    markingCharge: {
-      type: Number,
-      default: 0,
-    },
-    pricingType: {
-      type: String,
-      enum: ["Discount", "Premium"],
-      default: null,
-    },
-    value: {
-      type: Number,
-      default: 0,
-    },
-    isActive: {
-      type: Boolean,
-      default: null,
-    },
+const ProductDetailSchema = new mongoose.Schema({
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    default: null,
   },
-);
+  makingCharge: {
+    type: Number,
+    default: 0,
+  },
+  pricingType: {
+    type: String,
+    enum: ["Discount", "Premium"],
+    default: null,
+  },
+  value: {
+    type: Number,
+    default: 0,
+  },
+  isActive: {
+    type: Boolean,
+    default: null,
+  },
+});
 
 const UserSpotRateSchema = new mongoose.Schema({
   createdBy: {
@@ -39,9 +37,7 @@ const UserSpotRateSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
-  
-}
-);
+});
 
 const UserSpotRateModel = mongoose.model("UserSpotRate", UserSpotRateSchema);
 

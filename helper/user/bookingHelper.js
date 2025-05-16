@@ -7,8 +7,8 @@ import Product from "../../model/productSchema.js";
 import { TransactionModel } from "../../model/transaction.js";
 import { UsersModel } from "../../model/usersSchema.js";
 import adminModel from "../../model/adminSchema.js";
-import userNotification from '../../model/userNotificationSchema.js'
-import Notification from '../../model/notificationSchema.js'
+import userNotification from "../../model/userNotificationSchema.js";
+import Notification from "../../model/notificationSchema.js";
 // Function to send order confirmation email
 const sendOrderConfirmationEmail = async (order, userData) => {
   try {
@@ -22,33 +22,36 @@ const sendOrderConfirmationEmail = async (order, userData) => {
 
     // Get admin data
     const admin = await adminModel.findById(order.adminId);
-    const adminBrandName = admin && admin.companyName ? admin.companyName : "Aurify";
+    const adminBrandName =
+      admin && admin.companyName ? admin.companyName : "Aurify";
 
     // Get product details for all items
     // Get product details for all items
-const orderItems = await Promise.all(
-  order.items.map(async (item) => {
-    const product = await mongoose.model("Product").findById(item.productId);
-    
-    // Make sure we have all the required fields
-    return {
-      productId: item.productId,
-      productName: product ? product.title : "Product",
-      productWeight: product ? product.weight : 0,
-      quantity: item.quantity || 0,
-      fixedPrice: item.fixedPrice || 0,
-      totalPrice: item.totalPrice || 0,
-      // Include any other fields needed from the original item
-    };
-  })
-);
+    const orderItems = await Promise.all(
+      order.items.map(async (item) => {
+        const product = await mongoose
+          .model("Product")
+          .findById(item.productId);
+
+        // Make sure we have all the required fields
+        return {
+          productId: item.productId,
+          productName: product ? product.title : "Product",
+          productWeight: product ? product.weight : 0,
+          quantity: item.quantity || 0,
+          fixedPrice: item.fixedPrice || 0,
+          totalPrice: item.totalPrice || 0,
+          // Include any other fields needed from the original item
+        };
+      })
+    );
 
     // Email configuration
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        pass: process.env.EMAIL_PASS,
       },
     });
 
@@ -59,26 +62,27 @@ const orderItems = await Promise.all(
     }).format(order.totalPrice);
 
     // Generate order items HTML for the email
-    const orderItemsHTML = orderItems.map(item => {
-      // Make sure we have valid numbers for calculation
-      const price = Number(item.fixedPrice) || 0;
-      const quantity = Number(item.quantity) || 0;
-      
-      // Calculate the total price for this item
-      const itemTotal = price * quantity;
-      
-      // Format the prices for display
-      const formattedPrice = new Intl.NumberFormat("en-IN", {
-        maximumFractionDigits: 2,
-        minimumFractionDigits: 2,
-      }).format(price);
-      
-      const formattedItemTotal = new Intl.NumberFormat("en-IN", {
-        maximumFractionDigits: 2,
-        minimumFractionDigits: 2,
-      }).format(itemTotal);
-    
-      return `
+    const orderItemsHTML = orderItems
+      .map((item) => {
+        // Make sure we have valid numbers for calculation
+        const price = Number(item.fixedPrice) || 0;
+        const quantity = Number(item.quantity) || 0;
+
+        // Calculate the total price for this item
+        const itemTotal = price * quantity;
+
+        // Format the prices for display
+        const formattedPrice = new Intl.NumberFormat("en-IN", {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2,
+        }).format(price);
+
+        const formattedItemTotal = new Intl.NumberFormat("en-IN", {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2,
+        }).format(itemTotal);
+
+        return `
         <tr>
           <td style="padding: 12px; border-bottom: 1px solid #E0E0E0;">${item.productName}</td>
           <td style="padding: 12px; border-bottom: 1px solid #E0E0E0; text-align: center;">${quantity}</td>
@@ -87,10 +91,13 @@ const orderItems = await Promise.all(
           <td style="padding: 12px; border-bottom: 1px solid #E0E0E0; text-align: right;">AED ${formattedItemTotal}</td>
         </tr>
       `;
-    }).join('');
+      })
+      .join("");
 
     const mailOptions = {
-      from: `"${adminBrandName} Precious Metals" <${process.env.EMAIL_USER || "aurifycontact@gmail.com"}>`,
+      from: `"${adminBrandName} Precious Metals" <${
+        process.env.EMAIL_USER || "aurifycontact@gmail.com"
+      }>`,
       to: userEmail,
       subject: `🎉 Order Confirmed - ${adminBrandName} Order #${order.transactionId}`,
       html: mjml2html(`
@@ -177,8 +184,13 @@ const orderItems = await Promise.all(
                     </mj-text>
                     <mj-text font-size="14px" color="#555555" line-height="1.6">
                       <strong>Order Number:</strong> ${order.transactionId}<br>
-                      <strong>Order Date:</strong> ${new Date().toLocaleDateString('en-IN', {year: 'numeric', month: 'long', day: 'numeric'})}<br>
-                      <strong>Payment Method:</strong> ${order.paymentMethod}<br>
+                      <strong>Order Date:</strong> ${new Date().toLocaleDateString(
+                        "en-IN",
+                        { year: "numeric", month: "long", day: "numeric" }
+                      )}<br>
+                      <strong>Payment Method:</strong> ${
+                        order.paymentMethod
+                      }<br>
                       <strong>Total Weight:</strong> ${order.totalWeight}g<br>
                       <strong>Total Amount:</strong> AED ${formattedTotalPrice}
                     </mj-text>
@@ -237,8 +249,12 @@ const orderItems = await Promise.all(
                 </mj-text>
                 <mj-divider border-color="#EEEEEE" padding="10px 0" />
                 <mj-text font-size="14px" color="#555555" align="center" line-height="1.5">
-                  <strong>📞 Call:</strong> ${admin.contact || "Contact Support"}<br>
-                  <strong>✉️ Email:</strong> ${admin.email || "support@aurify.com"}<br>
+                  <strong>📞 Call:</strong> ${
+                    admin.contact || "Contact Support"
+                  }<br>
+                  <strong>✉️ Email:</strong> ${
+                    admin.email || "support@aurify.com"
+                  }<br>
                   <strong>⏰ Hours:</strong> Monday-Friday, 9AM-6PM IST
                 </mj-text>
               </mj-column>
@@ -285,16 +301,21 @@ const orderItems = await Promise.all(
 
 export const orderPlace = async (adminId, userId, bookingData) => {
   try {
-    if (
-      !userId ||
-      !adminId ||
-      !bookingData?.paymentMethod 
-    ) {
+    if (!userId || !adminId || !bookingData?.paymentMethod) {
       return {
         success: false,
-        message:
-          "Missing required fields (adminId, userId, paymentMethod, or deliveryDate).",
+        message: "Missing required fields (adminId, userId, paymentMethod).",
       };
+    }
+
+    // Create a map of productId to makingCharge from bookingData for quick lookup
+    const makingChargesMap = {};
+    if (bookingData.bookingData && Array.isArray(bookingData.bookingData)) {
+      bookingData.bookingData.forEach((item) => {
+        if (item.productId && typeof item.makingCharge === "number") {
+          makingChargesMap[item.productId] = item.makingCharge;
+        }
+      });
     }
 
     // Fetch the user's cart items
@@ -320,7 +341,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
     const orderItems = await Promise.all(
       cart.items.map(async (item) => {
         const product = await Product.findById(item.productId);
-
+        const productIdStr = item.productId._id.toString();
         if (!product) {
           return {
             success: false,
@@ -337,8 +358,15 @@ export const orderPlace = async (adminId, userId, bookingData) => {
 
         const fixedPrice = product.price;
         const productWeight = product.weight;
+
+        // Get making charge from bookingData if available
+        // Use the proper product ID string for lookup
+        const makingCharge = makingChargesMap[productIdStr] || 0;
+
+        // Calculate total price including making charge
         const itemTotal = fixedPrice * item.quantity;
         const itemWeight = (Number(product.weight) || 0) * item.quantity;
+
         totalPrice += itemTotal;
         totalWeight += itemWeight;
 
@@ -346,13 +374,20 @@ export const orderPlace = async (adminId, userId, bookingData) => {
           productId: item.productId,
           quantity: item.quantity,
           fixedPrice: fixedPrice || 0,
-          productWeight:productWeight,
+          productWeight: productWeight,
+          makingCharge: makingCharge,
           totalPrice: itemTotal,
           totalWeight: itemWeight,
           addedAt: new Date(),
         };
       })
     );
+
+    // Check if any item returned an error object
+    const errorItem = orderItems.find((item) => item.success === false);
+    if (errorItem) {
+      return errorItem; // Return the error
+    }
 
     // Validate total price
     if (totalPrice <= 0) {
@@ -363,9 +398,11 @@ export const orderPlace = async (adminId, userId, bookingData) => {
     }
 
     // Generate a transaction ID (you can customize this format)
-    const transactionId = `ORD-${Date.now().toString().slice(-8)}-${Math.floor(Math.random() * 1000)}`;
+    const transactionId = `ORD-${Date.now().toString().slice(-8)}-${Math.floor(
+      Math.random() * 1000
+    )}`;
 
-    // Create a new order with the fixed price and total weight
+    // Create a new order with the fixed price, making charge, and total weight
     const newOrder = new orderModel({
       adminId: new mongoose.Types.ObjectId(adminId),
       userId: new mongoose.Types.ObjectId(userId),
@@ -400,14 +437,20 @@ export const orderPlace = async (adminId, userId, bookingData) => {
       let userName = "Customer";
       if (userData && userData.users && userData.users.length > 0) {
         // Try to get the user's name, falling back to different name fields if available
-        userName = userData.users[0].name || 
-                  `Customer ${userId.toString().slice(-5)}`;
-        
+        userName =
+          userData.users[0].name || `Customer ${userId.toString().slice(-5)}`;
+
         // Send order confirmation email
-        const emailResult = await sendOrderConfirmationEmail(savedOrder, userData);
-        
+        const emailResult = await sendOrderConfirmationEmail(
+          savedOrder,
+          userData
+        );
+
         if (!emailResult.success) {
-          console.warn("Order placed successfully but failed to send confirmation email:", emailResult.message);
+          console.warn(
+            "Order placed successfully but failed to send confirmation email:",
+            emailResult.message
+          );
         }
       } else {
         console.warn("User data not found for sending confirmation email");
@@ -415,61 +458,76 @@ export const orderPlace = async (adminId, userId, bookingData) => {
 
       // Create notification for user
       try {
-        const userNotificationMessage = `Your order #${transactionId} has been placed successfully for ${totalPrice.toFixed(2)}. Your order status is 'Pending'.`;
-        
+        const userNotificationMessage = `Your order #${transactionId} has been placed successfully for ${totalPrice.toFixed(
+          2
+        )}. Your order status is 'Pending'.`;
+
         // Find existing user notification document or create a new one
-        let userNotificationDoc = await userNotification.findOne({ createdBy: userId });
-        
+        let userNotificationDoc = await userNotification.findOne({
+          createdBy: userId,
+        });
+
         if (userNotificationDoc) {
           // Add notification to existing document
           userNotificationDoc.notification.push({
             message: userNotificationMessage,
             read: false,
-            createdAt: new Date()
+            createdAt: new Date(),
           });
           await userNotificationDoc.save();
         } else {
           // Create new notification document
           userNotificationDoc = new userNotification({
-            notification: [{
-              message: userNotificationMessage,
-              read: false,
-              createdAt: new Date()
-            }],
-            createdBy: userId
+            notification: [
+              {
+                message: userNotificationMessage,
+                read: false,
+                createdAt: new Date(),
+              },
+            ],
+            createdBy: userId,
           });
           await userNotificationDoc.save();
         }
-        
+
         // Create notification for admin with user's name
-        const adminNotificationMessage = `New order #${transactionId} placed by ${userName} for ${totalPrice.toFixed(2)}.`;
-        
-        let adminNotificationDoc = await Notification.findOne({ createdBy: adminId });
-        
+        const adminNotificationMessage = `New order #${transactionId} placed by ${userName} for ${totalPrice.toFixed(
+          2
+        )}.`;
+
+        let adminNotificationDoc = await Notification.findOne({
+          createdBy: adminId,
+        });
+
         if (adminNotificationDoc) {
           // Add notification to existing document
           adminNotificationDoc.notification.push({
             message: adminNotificationMessage,
             read: false,
-            createdAt: new Date()
+            createdAt: new Date(),
           });
           await adminNotificationDoc.save();
         } else {
           // Create new notification document
           adminNotificationDoc = new Notification({
-            notification: [{
-              message: adminNotificationMessage,
-              read: false,
-              createdAt: new Date()
-            }],
-            createdBy: adminId
+            notification: [
+              {
+                message: adminNotificationMessage,
+                read: false,
+                createdAt: new Date(),
+              },
+            ],
+            createdBy: adminId,
           });
           await adminNotificationDoc.save();
         }
-        
+
         console.log("Notifications created for both user and admin");
       } catch (notificationError) {
-        console.error("Error creating notifications:", notificationError.message);
+        console.error(
+          "Error creating notifications:",
+          notificationError.message
+        );
         // Don't return error here, as the order is already placed successfully
       }
 
@@ -493,7 +551,13 @@ export const orderPlace = async (adminId, userId, bookingData) => {
   }
 };
 
-export const fetchBookingDetails = async (adminId, userId, page, limit, orderStatus) => {
+export const fetchBookingDetails = async (
+  adminId,
+  userId,
+  page,
+  limit,
+  orderStatus
+) => {
   try {
     if (!adminId || !userId) {
       return { success: false, message: "Admin ID and User ID are required." };
@@ -519,7 +583,7 @@ export const fetchBookingDetails = async (adminId, userId, page, limit, orderSta
     if (totalOrders === 0) {
       return {
         success: false,
-        message: orderStatus 
+        message: orderStatus
           ? `No orders found with status '${orderStatus}' for the given admin and user.`
           : "No orders found for the given admin and user.",
       };
@@ -637,10 +701,10 @@ export const getUserTransactions = async (userId, options = {}) => {
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return {
         success: false,
-        message: "Invalid user ID format"
+        message: "Invalid user ID format",
       };
     }
-    
+
     // Set default options
     const {
       page = 1,
@@ -650,72 +714,72 @@ export const getUserTransactions = async (userId, options = {}) => {
       filterBy = null,
       filterValue = null,
       startDate = null,
-      endDate = null
+      endDate = null,
     } = options;
-    
+
     // Build query
     const query = { userId };
-    
+
     // Apply filters
     if (filterBy && filterValue) {
       query[filterBy] = filterValue;
     }
-    
+
     // Apply date range filter
     if (startDate && endDate) {
       query.createdAt = {
         $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $lte: new Date(endDate),
       };
     }
-    
+
     // Execute query with pagination
     const skip = (page - 1) * limit;
     const sort = { [sortBy]: sortOrder };
-    
+
     const transactions = await TransactionModel.find(query)
       .sort(sort)
       .skip(skip)
       .limit(limit)
       .populate({
-        path: 'orderId',
-        select: 'orderNumber totalAmount totalWeight paymentMethod'
+        path: "orderId",
+        select: "orderNumber totalAmount totalWeight paymentMethod",
       });
-    
+
     // Get total count
     const totalCount = await TransactionModel.countDocuments(query);
-    
+
     // Calculate summary statistics
     const summary = await calculateTransactionSummary(userId);
-    
+
     // Get user details
     const user = await UsersModel.findOne(
       { "users._id": userId },
       { "users.$": 1 }
     );
-    
+
     if (!user || !user.users.length) {
       return {
         success: false,
-        message: "User not found"
+        message: "User not found",
       };
     }
-    
+
     const userDetails = user.users[0];
-    
+
     // Calculate balance info
     const goldBalance = Number(userDetails.goldBalance) || 0;
     const cashBalance = Number(userDetails.cashBalance) || 0;
-    
+
     const balanceInfo = {
       totalGoldBalance: goldBalance,
       availableGold: goldBalance > 0 ? goldBalance : 0,
       goldCredit: goldBalance < 0 ? Math.abs(goldBalance) : 0,
       cashBalance: cashBalance,
       name: userDetails.name,
-      email: userDetails.email
+      email: userDetails.email,
     };
-    
+
     return {
       success: true,
       data: {
@@ -724,21 +788,20 @@ export const getUserTransactions = async (userId, options = {}) => {
           currentPage: page,
           totalPages: Math.ceil(totalCount / limit),
           totalItems: totalCount,
-          itemsPerPage: limit
+          itemsPerPage: limit,
         },
         summary,
-        balanceInfo
-      }
+        balanceInfo,
+      },
     };
   } catch (error) {
     console.error("Error in getUserTransactions:", error);
     return {
       success: false,
-      message: "Error fetching transactions: " + error.message
+      message: "Error fetching transactions: " + error.message,
     };
   }
 };
-
 
 async function calculateTransactionSummary(userId) {
   try {
@@ -748,105 +811,117 @@ async function calculateTransactionSummary(userId) {
         $match: {
           userId: new mongoose.Types.ObjectId(userId),
           type: "CREDIT",
-          balanceType: "GOLD"
-        }
+          balanceType: "GOLD",
+        },
       },
       {
         $group: {
           _id: null,
           total: { $sum: "$amount" },
-          count: { $sum: 1 }
-        }
-      }
+          count: { $sum: 1 },
+        },
+      },
     ]);
-    
+
     const goldDebits = await TransactionModel.aggregate([
       {
         $match: {
           userId: new mongoose.Types.ObjectId(userId),
           type: "DEBIT",
-          balanceType: "GOLD"
-        }
+          balanceType: "GOLD",
+        },
       },
       {
         $group: {
           _id: null,
           total: { $sum: "$amount" },
-          count: { $sum: 1 }
-        }
-      }
+          count: { $sum: 1 },
+        },
+      },
     ]);
-    
+
     // Get total credits and debits for cash
     const cashCredits = await TransactionModel.aggregate([
       {
         $match: {
           userId: new mongoose.Types.ObjectId(userId),
           type: "CREDIT",
-          balanceType: "CASH"
-        }
+          balanceType: "CASH",
+        },
       },
       {
         $group: {
           _id: null,
           total: { $sum: "$amount" },
-          count: { $sum: 1 }
-        }
-      }
+          count: { $sum: 1 },
+        },
+      },
     ]);
-    
+
     const cashDebits = await TransactionModel.aggregate([
       {
         $match: {
           userId: new mongoose.Types.ObjectId(userId),
           type: "DEBIT",
-          balanceType: "CASH"
-        }
+          balanceType: "CASH",
+        },
       },
       {
         $group: {
           _id: null,
           total: { $sum: "$amount" },
-          count: { $sum: 1 }
-        }
-      }
+          count: { $sum: 1 },
+        },
+      },
     ]);
-    
+
     // Get recent transactions
     const recentTransactions = await TransactionModel.find({ userId })
       .sort({ createdAt: -1 })
       .limit(5);
-    
+
     return {
       gold: {
         totalCredits: goldCredits[0]?.total || 0,
         totalDebits: goldDebits[0]?.total || 0,
         creditCount: goldCredits[0]?.count || 0,
         debitCount: goldDebits[0]?.count || 0,
-        netFlow: (goldCredits[0]?.total || 0) - (goldDebits[0]?.total || 0)
+        netFlow: (goldCredits[0]?.total || 0) - (goldDebits[0]?.total || 0),
       },
       cash: {
         totalCredits: cashCredits[0]?.total || 0,
         totalDebits: cashDebits[0]?.total || 0,
         creditCount: cashCredits[0]?.count || 0,
         debitCount: cashDebits[0]?.count || 0,
-        netFlow: (cashCredits[0]?.total || 0) - (cashDebits[0]?.total || 0)
+        netFlow: (cashCredits[0]?.total || 0) - (cashDebits[0]?.total || 0),
       },
-      recentTransactions: recentTransactions.map(t => ({
+      recentTransactions: recentTransactions.map((t) => ({
         transactionId: t.transactionId,
         type: t.type,
         method: t.method,
         amount: t.amount,
         balanceType: t.balanceType,
-        createdAt: t.createdAt
-      }))
+        createdAt: t.createdAt,
+      })),
     };
   } catch (error) {
     console.error("Error calculating transaction summary:", error);
     return {
-      gold: { totalCredits: 0, totalDebits: 0, creditCount: 0, debitCount: 0, netFlow: 0 },
-      cash: { totalCredits: 0, totalDebits: 0, creditCount: 0, debitCount: 0, netFlow: 0 },
-      recentTransactions: []
+      gold: {
+        totalCredits: 0,
+        totalDebits: 0,
+        creditCount: 0,
+        debitCount: 0,
+        netFlow: 0,
+      },
+      cash: {
+        totalCredits: 0,
+        totalDebits: 0,
+        creditCount: 0,
+        debitCount: 0,
+        netFlow: 0,
+      },
+      recentTransactions: [],
     };
   }
 }

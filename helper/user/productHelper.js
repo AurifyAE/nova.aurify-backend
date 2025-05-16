@@ -183,11 +183,9 @@ export const fixedProductFixHelper = async (bookingData) => {
 
     const updatePromises = bookingData.map((item) => {
       const { productId, fixedPrice } = item;
-
       if (fixedPrice <= 0) {
         throw new Error(`Invalid fixed price for productId: ${productId}`);
       }
-
       return Product.findByIdAndUpdate(
         productId,
         { price: fixedPrice },

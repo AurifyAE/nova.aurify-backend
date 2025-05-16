@@ -21,6 +21,10 @@ const orderItemSchema = new mongoose.Schema({
     required: true,
     default: 0,
   },
+  makingCharge: {
+    type: Number,
+    default: 0,
+  },
   addedAt: {
     type: Date,
     default: Date.now,

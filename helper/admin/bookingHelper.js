@@ -22,7 +22,7 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
       orderId,
       { orderStatus },
       { new: true, runValidators: true, session }
-    );
+    ).populate("items.productId");
 
     if (!updatedOrder) {
       await session.abortTransaction();
@@ -131,11 +131,11 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
 
       let updateOperation = {};
       let transactions = [];
-      let transactionNotificationMessage = "";
+      let transactionNotificationMessages = [];
 
       if (updatedOrder.paymentMethod === "Cash") {
+        // For Cash payment, deduct entire amount from cash balance
         const currentCashBalance = Number(currentUser.cashBalance) || 0;
-
         const newCashBalance = currentCashBalance - totalAmount;
 
         updateOperation = {
@@ -152,23 +152,39 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
           orderId,
         });
 
-        transactionNotificationMessage = `A cash payment of ${totalAmount.toFixed(
+        transactionNotificationMessages.push(`A cash payment of ${totalAmount.toFixed(
           2
         )} has been processed for your order #${orderId
           .toString()
-          .slice(-6)}. Your new cash balance is ${newCashBalance.toFixed(2)}.`;
+          .slice(-6)}. Your new cash balance is ${newCashBalance.toFixed(2)}.`);
       } else if (
         updatedOrder.paymentMethod === "Gold To Gold" ||
         updatedOrder.paymentMethod === "Gold"
       ) {
+        // For Gold payment, we need to split between gold weight and making charges
+        
+        // Calculate total making charges from all items
+        let totalMakingCharge = 0;
+        if (updatedOrder.items && Array.isArray(updatedOrder.items)) {
+          totalMakingCharge = updatedOrder.items.reduce((sum, item) => {
+            return sum + (Number(item.makingCharge || 0) * Number(item.quantity || 1));
+          }, 0);
+        }
+        
+        // Update gold balance for the product weight
         const currentGoldBalance = Number(currentUser.goldBalance) || 0;
-
         const newGoldBalance = currentGoldBalance - totalWeight;
-
+        
+        // Update cash balance for the making charges
+        const currentCashBalance = Number(currentUser.cashBalance) || 0;
+        const newCashBalance = currentCashBalance - totalMakingCharge;
+        
         updateOperation = {
           "users.$.goldBalance": newGoldBalance,
+          "users.$.cashBalance": newCashBalance
         };
-
+        
+        // Add gold transaction
         transactions.push({
           userId,
           type: "DEBIT",
@@ -178,14 +194,37 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
           balanceAfter: newGoldBalance,
           orderId,
         });
-
-        transactionNotificationMessage = `A gold payment of ${totalWeight.toFixed(
+        
+        // Add cash transaction for making charges
+        if (totalMakingCharge > 0) {
+          transactions.push({
+            userId,
+            type: "DEBIT",
+            method: "CASH",
+            amount: totalMakingCharge,
+            balanceType: "CASH",
+            balanceAfter: newCashBalance,
+            orderId,
+            description: "Making charges for gold order"
+          });
+        }
+        
+        // Add notifications for both transactions
+        transactionNotificationMessages.push(`A gold payment of ${totalWeight.toFixed(
           3
         )} grams has been processed for your order #${orderId
           .toString()
           .slice(-6)}. Your new gold balance is ${newGoldBalance.toFixed(
           3
-        )} grams.`;
+        )} grams.`);
+        
+        if (totalMakingCharge > 0) {
+          transactionNotificationMessages.push(`A cash payment of ${totalMakingCharge.toFixed(
+            2
+          )} for making charges has been processed for your order #${orderId
+            .toString()
+            .slice(-6)}. Your new cash balance is ${newCashBalance.toFixed(2)}.`);
+        }
       }
 
       if (Object.keys(updateOperation).length > 0) {
@@ -195,8 +234,9 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
           { session }
         );
 
-        if (transactionNotificationMessage) {
-          await addNotification(userId, transactionNotificationMessage);
+        // Add all transaction notifications
+        for (const message of transactionNotificationMessages) {
+          await addNotification(userId, message);
         }
       }
 
