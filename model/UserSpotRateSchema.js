@@ -6,7 +6,7 @@ const ProductDetailSchema = new mongoose.Schema({
     ref: "Product",
     default: null,
   },
-  makingCharge: {
+  markingCharge: {
     type: Number,
     default: 0,
   },
