@@ -410,7 +410,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
       totalPrice: totalPrice,
       totalWeight: totalWeight,
       paymentMethod: bookingData.paymentMethod,
-      orderStatus: "Pending",
+      orderStatus: "Processing",
       transactionId: transactionId,
     });
 
