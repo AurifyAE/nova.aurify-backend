@@ -18,11 +18,13 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const updatedOrder = await orderModel.findByIdAndUpdate(
-      orderId,
-      { orderStatus },
-      { new: true, runValidators: true, session }
-    ).populate("items.productId");
+    const updatedOrder = await orderModel
+      .findByIdAndUpdate(
+        orderId,
+        { orderStatus },
+        { new: true, runValidators: true, session }
+      )
+      .populate("items.productId");
 
     if (!updatedOrder) {
       await session.abortTransaction();
@@ -98,7 +100,6 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
           });
           await notification.save({ session });
         }
-       
       } catch (err) {
         console.error("Error creating notification:", err);
         throw err;
@@ -152,38 +153,42 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
           orderId,
         });
 
-        transactionNotificationMessages.push(`A cash payment of ${totalAmount.toFixed(
-          2
-        )} has been processed for your order #${orderId
-          .toString()
-          .slice(-6)}. Your new cash balance is ${newCashBalance.toFixed(2)}.`);
+        transactionNotificationMessages.push(
+          `A cash payment of ${totalAmount.toFixed(
+            2
+          )} has been processed for your order #${orderId
+            .toString()
+            .slice(-6)}. Your new cash balance is ${newCashBalance.toFixed(2)}.`
+        );
       } else if (
         updatedOrder.paymentMethod === "Gold To Gold" ||
         updatedOrder.paymentMethod === "Gold"
       ) {
         // For Gold payment, we need to split between gold weight and making charges
-        
+
         // Calculate total making charges from all items
         let totalMakingCharge = 0;
         if (updatedOrder.items && Array.isArray(updatedOrder.items)) {
           totalMakingCharge = updatedOrder.items.reduce((sum, item) => {
-            return sum + (Number(item.makingCharge || 0) * Number(item.quantity || 1));
+            return (
+              sum + Number(item.makingCharge || 0) * Number(item.quantity || 1)
+            );
           }, 0);
         }
-        
+
         // Update gold balance for the product weight
         const currentGoldBalance = Number(currentUser.goldBalance) || 0;
         const newGoldBalance = currentGoldBalance - totalWeight;
-        
+
         // Update cash balance for the making charges
         const currentCashBalance = Number(currentUser.cashBalance) || 0;
         const newCashBalance = currentCashBalance - totalMakingCharge;
-        
+
         updateOperation = {
           "users.$.goldBalance": newGoldBalance,
-          "users.$.cashBalance": newCashBalance
+          "users.$.cashBalance": newCashBalance,
         };
-        
+
         // Add gold transaction
         transactions.push({
           userId,
@@ -194,7 +199,7 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
           balanceAfter: newGoldBalance,
           orderId,
         });
-        
+
         // Add cash transaction for making charges
         if (totalMakingCharge > 0) {
           transactions.push({
@@ -205,25 +210,31 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
             balanceType: "CASH",
             balanceAfter: newCashBalance,
             orderId,
-            description: "Making charges for gold order"
+            description: "Making charges for gold order",
           });
         }
-        
+
         // Add notifications for both transactions
-        transactionNotificationMessages.push(`A gold payment of ${totalWeight.toFixed(
-          3
-        )} grams has been processed for your order #${orderId
-          .toString()
-          .slice(-6)}. Your new gold balance is ${newGoldBalance.toFixed(
-          3
-        )} grams.`);
-        
-        if (totalMakingCharge > 0) {
-          transactionNotificationMessages.push(`A cash payment of ${totalMakingCharge.toFixed(
-            2
-          )} for making charges has been processed for your order #${orderId
+        transactionNotificationMessages.push(
+          `A gold payment of ${totalWeight.toFixed(
+            3
+          )} grams has been processed for your order #${orderId
             .toString()
-            .slice(-6)}. Your new cash balance is ${newCashBalance.toFixed(2)}.`);
+            .slice(-6)}. Your new gold balance is ${newGoldBalance.toFixed(
+            3
+          )} grams.`
+        );
+
+        if (totalMakingCharge > 0) {
+          transactionNotificationMessages.push(
+            `A cash payment of ${totalMakingCharge.toFixed(
+              2
+            )} for making charges has been processed for your order #${orderId
+              .toString()
+              .slice(-6)}. Your new cash balance is ${newCashBalance.toFixed(
+              2
+            )}.`
+          );
         }
       }
 
@@ -268,71 +279,80 @@ export const updateOrderDetails = async (orderId, orderStatus) => {
 export const rejectItemInOrder = async (orderId, itemId) => {
   try {
     // Validate IDs
-    if (!mongoose.Types.ObjectId.isValid(orderId) || !mongoose.Types.ObjectId.isValid(itemId)) {
+    if (
+      !mongoose.Types.ObjectId.isValid(orderId) ||
+      !mongoose.Types.ObjectId.isValid(itemId)
+    ) {
       return {
         success: false,
-        message: "Invalid Order ID or Item ID format"
+        message: "Invalid Order ID or Item ID format",
       };
     }
 
     // Find the order
     const order = await orderModel.findById(orderId);
-    
+
     if (!order) {
       return {
         success: false,
-        message: "Order not found"
+        message: "Order not found",
       };
     }
-    
+
     // Find the specific item
-    const itemIndex = order.items.findIndex(item => item._id.toString() === itemId);
-    
+    const itemIndex = order.items.findIndex(
+      (item) => item._id.toString() === itemId
+    );
+
     if (itemIndex === -1) {
       return {
         success: false,
-        message: "Item not found in the order"
+        message: "Item not found in the order",
       };
     }
-    
+
     // Update the item status to rejected
     order.items[itemIndex].itemStatus = "Rejected";
-    
+
     // Set the select property to true for the rejected item
     order.items[itemIndex].select = true;
-    
+
     // Recalculate the total price by excluding the rejected item
-    const rejectedItemPrice = order.items[itemIndex].fixedPrice * order.items[itemIndex].quantity;
+    const rejectedItemPrice =
+      order.items[itemIndex].fixedPrice * order.items[itemIndex].quantity;
     order.totalPrice = Math.max(0, order.totalPrice - rejectedItemPrice);
-    
+
     // Calculate and update totalWeight
-    const weightToSubtract = order.items[itemIndex].productWeight * order.items[itemIndex].quantity;
+    const weightToSubtract =
+      order.items[itemIndex].productWeight * order.items[itemIndex].quantity;
     order.totalWeight = Math.max(0, order.totalWeight - weightToSubtract);
-    
+
     // If this is the only item in the order, update the order status to "Rejected"
     if (order.items.length === 1) {
       order.orderStatus = "Rejected";
     } else {
       // Check if all items are now rejected
-      const allRejected = order.items.every(item => item.itemStatus === "Rejected");
+      const allRejected = order.items.every(
+        (item) => item.itemStatus === "Rejected"
+      );
       if (allRejected) {
         order.orderStatus = "Rejected";
       }
     }
-    
+
     // Save the updated order
     await order.save();
-    
+
     return {
       success: true,
       data: order,
-      message: "Item rejected successfully"
+      message: "Item rejected successfully",
     };
   } catch (error) {
     console.error("Error rejecting item:", error);
     return {
       success: false,
-      message: error.message || "Internal server error"
+      message: error.message || "Internal server error",
     };
   }
 };
@@ -453,6 +473,13 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
             notificationMessage = `📝 Your order #${order.transactionId} status has been updated to: ${order.orderStatus}`;
         }
 
+        // Determine notification type based on order status
+        let notificationType = "default";
+        if (order.orderStatus === "User Approval Pending") {
+          notificationType = "Approval-Pending";
+        } else if (order.orderStatus === "Success") {
+          notificationType = "Approved";
+        }
         // Find existing user notification document or create a new one
         let userNotificationDoc = await userNotification.findOne({
           createdBy: order.userId,
@@ -464,16 +491,22 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
             message: notificationMessage,
             read: false,
             createdAt: new Date(),
+            orderId: orderId,
+            itemId: itemId,
+            type: notificationType
           });
           await userNotificationDoc.save();
         } else {
           // Create new notification document
           userNotificationDoc = new userNotification({
             notification: [
-              {
+             {
                 message: notificationMessage,
                 read: false,
                 createdAt: new Date(),
+                orderId: orderId,
+                itemId: itemId,
+                type: notificationType
               },
             ],
             createdBy: order.userId,
@@ -608,7 +641,7 @@ const sendQuantityConfirmationEmail = async (orderId, itemId, quantity) => {
       admin && admin.companyName ? admin.companyName : "Aurify";
 
     // Configure base URLs for action buttons
-     const baseUrl = "https://novaemail.netlify.app";
+    const baseUrl = "https://novaemail.netlify.app";
     const approveUrl = `${baseUrl}/confirm-quantity?orderId=${orderId}&itemId=${itemId}&action=true`;
     const rejectUrl = `${baseUrl}/confirm-quantity?orderId=${orderId}&itemId=${itemId}&action=false`;
 
