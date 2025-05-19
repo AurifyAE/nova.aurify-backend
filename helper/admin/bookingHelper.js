@@ -473,13 +473,6 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
             notificationMessage = `📝 Your order #${order.transactionId} status has been updated to: ${order.orderStatus}`;
         }
 
-        // Determine notification type based on order status
-        let notificationType = "default";
-        if (order.orderStatus === "User Approval Pending") {
-          notificationType = "Approval-Pending";
-        } else if (order.orderStatus === "Success") {
-          notificationType = "Approved";
-        }
         // Find existing user notification document or create a new one
         let userNotificationDoc = await userNotification.findOne({
           createdBy: order.userId,
@@ -493,20 +486,20 @@ export const updateOrderQuantityHelper = async (orderId, orderDetails) => {
             createdAt: new Date(),
             orderId: orderId,
             itemId: itemId,
-            type: notificationType
+            type: "Approval-Pending",
           });
           await userNotificationDoc.save();
         } else {
           // Create new notification document
           userNotificationDoc = new userNotification({
             notification: [
-             {
+              {
                 message: notificationMessage,
                 read: false,
                 createdAt: new Date(),
                 orderId: orderId,
                 itemId: itemId,
-                type: notificationType
+                type: "Approval-Pending",
               },
             ],
             createdBy: order.userId,
