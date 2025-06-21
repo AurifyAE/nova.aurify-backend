@@ -27,7 +27,10 @@ import {
 import { saveBooking } from "../../controllers/user/bookingController.js";
 import {
   fetchUserOrder,
-  fetchUserTranstions 
+  fetchUserTranstions ,
+  approveOrderItem,
+  getPendingApprovalOrders,
+  rejectOrderItem
 } from "../../controllers/user/orderController.js";
 import { orderQuantityConfirmation } from "../../controllers/admin/bookingController.js";
 const router = Router();
@@ -54,6 +57,11 @@ router.put("/products/fix-prices", fixedProductPrice);
 router.post("/order_quantity_confirmation", orderQuantityConfirmation);
 router.get("/fetch-order/:adminId/:userId", fetchUserOrder);
 router.get("/fetch-transaction/:userId", fetchUserTranstions);
+router.put("/approve-order-item/:orderId/:itemId", approveOrderItem);
+router.get("/pending-approval-orders", getPendingApprovalOrders);
+router.put("/reject-order-item/:orderId/:itemId", rejectOrderItem);
+
+
 //notifications management
 router.get("/notifications/:userId", getNotifications);
 router.patch("/notifications/read/:userId/:notificationId", readNotification);

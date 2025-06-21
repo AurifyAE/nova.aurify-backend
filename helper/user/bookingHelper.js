@@ -551,6 +551,373 @@ export const orderPlace = async (adminId, userId, bookingData) => {
   }
 };
 
+export const approveOrderItemHelper = async (
+  orderId,
+  itemId,
+  userId,
+  updateData = {}
+) => {
+  try {
+    // Find the order by ID and verify it belongs to the user
+    const order = await orderModel.findOne({
+      _id: orderId,
+      userId: userId,
+    });
+
+    if (!order) {
+      return {
+        success: false,
+        message: "Order not found or access denied",
+      };
+    }
+
+    // Check if order status is "User Approval Pending"
+    if (order.orderStatus !== "User Approval Pending") {
+      return {
+        success: false,
+        message: "Order is not pending user approval",
+      };
+    }
+
+    // Find the item inside the order's items array
+    const itemIndex = order.items.findIndex(
+      (item) => item._id.toString() === itemId
+    );
+
+    if (itemIndex === -1) {
+      return {
+        success: false,
+        message: "Item not found in the order",
+      };
+    }
+
+    // Check if item is pending approval
+    if (order.items[itemIndex].itemStatus !== "User Approval Pending") {
+      return {
+        success: false,
+        message: "Item is not pending user approval",
+      };
+    }
+
+    // Store original values for reference
+    const originalItem = { ...order.items[itemIndex].toObject() };
+
+    // Update the specific item's status to "Approved"
+    order.items[itemIndex].itemStatus = "Approved";
+
+    // Update item properties if provided in updateData
+    if (updateData.quantity !== undefined && updateData.quantity > 0) {
+      order.items[itemIndex].quantity = updateData.quantity;
+    }
+    if (updateData.fixedPrice !== undefined && updateData.fixedPrice >= 0) {
+      order.items[itemIndex].fixedPrice = updateData.fixedPrice;
+    }
+    if (
+      updateData.productWeight !== undefined &&
+      updateData.productWeight >= 0
+    ) {
+      order.items[itemIndex].productWeight = updateData.productWeight;
+    }
+
+    // Recalculate total price for the order (only include approved items)
+    order.totalPrice = order.items
+      .filter((item) => item.itemStatus === "Approved")
+      .reduce((total, item) => total + item.quantity * item.fixedPrice, 0);
+
+    // Recalculate total weight for the order (only include approved items)
+    order.totalWeight = order.items
+      .filter((item) => item.itemStatus === "Approved")
+      .reduce((total, item) => total + item.quantity * item.productWeight, 0);
+
+    // Check if all items are now "Approved"
+    const allApproved = order.items.every(
+      (item) => item.itemStatus === "Approved"
+    );
+
+    // Check if any item still has "User Approval Pending"
+    const anyUserApprovalPending = order.items.some(
+      (item) => item.itemStatus === "User Approval Pending"
+    );
+
+    // Check if any item is rejected
+    const anyRejected = order.items.some(
+      (item) => item.itemStatus === "Rejected"
+    );
+
+    let previousStatus = order.orderStatus;
+
+    // Update orderStatus based on items' statuses
+    if (allApproved) {
+      order.orderStatus = "Success";
+    } else if (anyUserApprovalPending) {
+      order.orderStatus = "User Approval Pending";
+    } else if (
+      anyRejected &&
+      order.items.filter((item) => item.itemStatus === "Approved").length > 0
+    ) {
+      order.orderStatus = "Partially Processed";
+    } else if (order.items.every((item) => item.itemStatus === "Rejected")) {
+      order.orderStatus = "Cancelled";
+    } else {
+      order.orderStatus = "Processing";
+    }
+
+    // Save the updated order
+    await order.save();
+
+    // Add notification to user notification model for status change
+    if (order.orderStatus !== previousStatus) {
+      try {
+        let notificationMessage = "";
+
+        // Create appropriate notification message based on new status
+        switch (order.orderStatus) {
+          case "Success":
+            notificationMessage = `🎉 Congratulations! Your order #${order.transactionId} has been fully approved and is being processed.`;
+            break;
+          case "Processing":
+            notificationMessage = `📦 Your order #${order.transactionId} is now being processed. We'll keep you updated on its progress.`;
+            break;
+          case "Partially Processed":
+            notificationMessage = `⚠️ Your order #${order.transactionId} is partially processed. Some items were approved while others were rejected.`;
+            break;
+          default:
+            notificationMessage = `📝 Your order #${order.transactionId} status has been updated to: ${order.orderStatus}`;
+        }
+
+        // Determine notification type based on order status
+        let notificationType = "default";
+        if (order.orderStatus === "Success") {
+          notificationType = "Approved";
+        }
+
+        // Find existing user notification document or create a new one
+        let userNotificationDoc = await userNotification.findOne({
+          createdBy: order.userId,
+        });
+
+        if (userNotificationDoc) {
+          // Add notification to existing document
+          userNotificationDoc.notification.push({
+            message: notificationMessage,
+            read: false,
+            createdAt: new Date(),
+            orderId: orderId,
+            itemId: itemId,
+            type: notificationType,
+          });
+          await userNotificationDoc.save();
+        } else {
+          // Create new notification document
+          userNotificationDoc = new userNotification({
+            notification: [
+              {
+                message: notificationMessage,
+                read: false,
+                createdAt: new Date(),
+                orderId: orderId,
+                itemId: itemId,
+                type: notificationType,
+              },
+            ],
+            createdBy: order.userId,
+          });
+          await userNotificationDoc.save();
+        }
+
+        console.log(
+          `Order approval notification added for user ${order.userId}`
+        );
+      } catch (notificationError) {
+        console.error(
+          "Error creating order approval notification:",
+          notificationError.message
+        );
+        // Continue processing - notification failure shouldn't stop the order update
+      }
+    }
+
+    return {
+      success: true,
+      message: "Order item approved successfully",
+      data: order,
+      updatedItem: order.items[itemIndex],
+      originalItem: originalItem,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error approving order item: " + error.message,
+    };
+  }
+};
+export const rejectOrderItemHelper = async (
+  orderId,
+  itemId,
+  userId,
+  rejectionReason = ""
+) => {
+  try {
+    // Find the order by ID and verify it belongs to the user
+    const order = await orderModel.findOne({
+      _id: orderId,
+      userId: userId,
+    });
+
+    if (!order) {
+      return {
+        success: false,
+        message: "Order not found or access denied",
+      };
+    }
+
+    // Find the item inside the order's items array
+    const itemIndex = order.items.findIndex(
+      (item) => item._id.toString() === itemId
+    );
+
+    if (itemIndex === -1) {
+      return {
+        success: false,
+        message: "Item not found in the order",
+      };
+    }
+
+    // Check if item is pending approval
+    if (order.items[itemIndex].itemStatus !== "User Approval Pending") {
+      return {
+        success: false,
+        message: "Item is not pending user approval",
+      };
+    }
+
+    // Store the rejected item's values for calculation
+    const rejectedItem = order.items[itemIndex];
+
+    // Update the specific item's status to "Rejected"
+    order.items[itemIndex].itemStatus = "Rejected";
+
+    // Add rejection reason to order remarks if provided
+    if (rejectionReason) {
+      order.orderRemark = rejectionReason;
+    }
+
+    // Recalculate total price for the order (exclude rejected items)
+    order.totalPrice = order.items
+      .filter((item) => item.itemStatus === "Approved")
+      .reduce((total, item) => total + item.quantity * item.fixedPrice, 0);
+
+    // Recalculate total weight for the order (exclude rejected items)
+    order.totalWeight = order.items
+      .filter((item) => item.itemStatus === "Approved")
+      .reduce((total, item) => total + item.quantity * item.productWeight, 0);
+
+    // Check order status after rejection
+    const anyUserApprovalPending = order.items.some(
+      (item) => item.itemStatus === "User Approval Pending"
+    );
+
+    const allRejected = order.items.every(
+      (item) => item.itemStatus === "Rejected"
+    );
+
+    const anyApproved = order.items.some(
+      (item) => item.itemStatus === "Approved"
+    );
+
+    let previousStatus = order.orderStatus;
+
+    // Update order status
+    if (allRejected) {
+      order.orderStatus = "Cancelled";
+      order.totalPrice = 0;
+      order.totalWeight = 0;
+    } else if (anyUserApprovalPending) {
+      order.orderStatus = "User Approval Pending";
+    } else {
+      order.orderStatus = "Processing";
+    }
+
+    // Save the updated order
+    await order.save();
+
+    // Add notification for rejection
+    try {
+      let notificationMessage = "";
+      let notificationType = "Rejected";
+
+      if (order.orderStatus === "Cancelled") {
+        notificationMessage = `❌ Your order #${
+          order.transactionId
+        } has been cancelled as all items were rejected. ${
+          rejectionReason ? "Reason: " + rejectionReason : ""
+        }`;
+      } else if (order.orderStatus === "Partially Processed") {
+        notificationMessage = `⚠️ An item in your order #${
+          order.transactionId
+        } has been rejected. Your order will proceed with the remaining approved items. ${
+          rejectionReason ? "Reason: " + rejectionReason : ""
+        }`;
+      } else {
+        notificationMessage = `❌ Item in order #${
+          order.transactionId
+        } has been rejected. ${
+          rejectionReason ? "Reason: " + rejectionReason : ""
+        }`;
+      }
+
+      let userNotificationDoc = await userNotification.findOne({
+        createdBy: order.userId,
+      });
+
+      if (userNotificationDoc) {
+        userNotificationDoc.notification.push({
+          message: notificationMessage,
+          read: false,
+          createdAt: new Date(),
+          orderId: orderId,
+          itemId: itemId,
+          type: notificationType,
+        });
+        await userNotificationDoc.save();
+      } else {
+        userNotificationDoc = new userNotification({
+          notification: [
+            {
+              message: notificationMessage,
+              read: false,
+              createdAt: new Date(),
+              orderId: orderId,
+              itemId: itemId,
+              type: notificationType,
+            },
+          ],
+          createdBy: order.userId,
+        });
+        await userNotificationDoc.save();
+      }
+    } catch (notificationError) {
+      console.error(
+        "Error creating rejection notification:",
+        notificationError.message
+      );
+    }
+
+    return {
+      success: true,
+      message: "Order item rejected successfully",
+      data: order,
+      rejectedItem: rejectedItem,
+      statusChanged: previousStatus !== order.orderStatus,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error rejecting order item: " + error.message,
+    };
+  }
+};
+
 export const fetchBookingDetails = async (
   adminId,
   userId,
