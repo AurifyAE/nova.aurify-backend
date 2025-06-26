@@ -648,7 +648,7 @@ export const approveOrderItemHelper = async (
 
     // Update orderStatus based on items' statuses
     if (allApproved) {
-      order.orderStatus = "Success";
+      order.orderStatus = "Pending";
     } else if (anyUserApprovalPending) {
       order.orderStatus = "User Approval Pending";
     } else if (
@@ -672,9 +672,6 @@ export const approveOrderItemHelper = async (
 
         // Create appropriate notification message based on new status
         switch (order.orderStatus) {
-          case "Success":
-            notificationMessage = `🎉 Congratulations! Your order #${order.transactionId} has been fully approved and is being processed.`;
-            break;
           case "Processing":
             notificationMessage = `📦 Your order #${order.transactionId} is now being processed. We'll keep you updated on its progress.`;
             break;
@@ -687,7 +684,7 @@ export const approveOrderItemHelper = async (
 
         // Determine notification type based on order status
         let notificationType = "default";
-        if (order.orderStatus === "Success") {
+        if (order.orderStatus === "Processing") {
           notificationType = "Approved";
         }
 
@@ -751,6 +748,7 @@ export const approveOrderItemHelper = async (
     };
   }
 };
+
 export const rejectOrderItemHelper = async (
   orderId,
   itemId,
