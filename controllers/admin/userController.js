@@ -115,12 +115,11 @@ export const updateUserCashBalance = async (req, res) => {
   try {
     const { userId } = req.params;
     const { amount } = req.body;
-
     // Validate input
-    if (!userId || !amount || isNaN(amount) || amount <= 0) {
+    if (!userId || !amount || isNaN(amount)) {
       return res.status(400).json({ success: false, message: "Invalid userId or amount" });
     }
-
+    console.log(amount)
     // Call helper function to update balance
     const updatedUser = await userHelper.updateCashBalance(userId, amount);
 
@@ -140,7 +139,7 @@ export const updateUserCashBalance = async (req, res) => {
       success: false,
       message: "Error updating cash balance",
       error: error.message,
-    });
+    }); 
   }
 };
 export const updateUserGoldBalance = async (req, res) => {
@@ -149,7 +148,7 @@ export const updateUserGoldBalance = async (req, res) => {
     const { amount } = req.body;
 
     // Validate input
-    if (!userId || !amount || isNaN(amount) || amount <= 0) {
+    if (!userId || !amount || isNaN(amount)) {
       return res.status(400).json({ success: false, message: "Invalid userId or amount" });
     }
 
@@ -175,6 +174,7 @@ export const updateUserGoldBalance = async (req, res) => {
     });
   }
 };
+
 export const updateReceivedMetrics = async (req, res) => {
   try {
     const { userId } = req.params;

@@ -84,7 +84,7 @@ class UserHelper {
       };
     }
     
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+    if (!amount || isNaN(Number(amount))) {
       return {
         success: false,
         message: "Invalid amount: must be a positive number",
@@ -171,7 +171,7 @@ class UserHelper {
       };
     }
     
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+    if (!amount || isNaN(Number(amount))) {
       return {
         success: false,
         message: "Invalid amount: must be a positive number",
