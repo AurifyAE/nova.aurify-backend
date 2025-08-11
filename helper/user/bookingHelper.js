@@ -3,302 +3,12 @@ import nodemailer from "nodemailer";
 import mjml2html from "mjml";
 import { Cart } from "../../model/cartSchema.js";
 import { orderModel } from "../../model/orderSchema.js";
-import Product from "../../model/productSchema.js";
 import { TransactionModel } from "../../model/transaction.js";
 import { UsersModel } from "../../model/usersSchema.js";
 import adminModel from "../../model/adminSchema.js";
 import userNotification from "../../model/userNotificationSchema.js";
 import Notification from "../../model/notificationSchema.js";
-// Function to send order confirmation email
-const sendOrderConfirmationEmail = async (order, userData) => {
-  try {
-    if (!order || !userData) {
-      throw new Error("Missing order or user data");
-    }
-
-    const user = userData.users[0];
-    const userEmail = user.email;
-    const userName = user.name;
-
-    // Get admin data
-    const admin = await adminModel.findById(order.adminId);
-    const adminBrandName =
-      admin && admin.companyName ? admin.companyName : "Aurify";
-
-    // Get product details for all items
-    // Get product details for all items
-    const orderItems = await Promise.all(
-      order.items.map(async (item) => {
-        const product = await mongoose
-          .model("Product")
-          .findById(item.productId);
-
-        // Make sure we have all the required fields
-        return {
-          productId: item.productId,
-          productName: product ? product.title : "Product",
-          productWeight: product ? product.weight : 0,
-          quantity: item.quantity || 0,
-          fixedPrice: item.fixedPrice || 0,
-          totalPrice: item.totalPrice || 0,
-          // Include any other fields needed from the original item
-        };
-      })
-    );
-
-    // Email configuration
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    // Format total price with comma separators for Indian Rupees
-    const formattedTotalPrice = new Intl.NumberFormat("en-IN", {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 2,
-    }).format(order.totalPrice);
-
-    // Generate order items HTML for the email
-    const orderItemsHTML = orderItems
-      .map((item) => {
-        // Make sure we have valid numbers for calculation
-        const price = Number(item.fixedPrice) || 0;
-        const quantity = Number(item.quantity) || 0;
-
-        // Calculate the total price for this item
-        const itemTotal = price * quantity;
-
-        // Format the prices for display
-        const formattedPrice = new Intl.NumberFormat("en-IN", {
-          maximumFractionDigits: 2,
-          minimumFractionDigits: 2,
-        }).format(price);
-
-        const formattedItemTotal = new Intl.NumberFormat("en-IN", {
-          maximumFractionDigits: 2,
-          minimumFractionDigits: 2,
-        }).format(itemTotal);
-
-        return `
-        <tr>
-          <td style="padding: 12px; border-bottom: 1px solid #E0E0E0;">${item.productName}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #E0E0E0; text-align: center;">${quantity}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #E0E0E0; text-align: right;">${item.productWeight}g</td>
-          <td style="padding: 12px; border-bottom: 1px solid #E0E0E0; text-align: right;">AED ${formattedPrice}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #E0E0E0; text-align: right;">AED ${formattedItemTotal}</td>
-        </tr>
-      `;
-      })
-      .join("");
-
-    const mailOptions = {
-      from: `"${adminBrandName} Precious Metals" <${
-        process.env.EMAIL_USER || "aurifycontact@gmail.com"
-      }>`,
-      to: userEmail,
-      subject: `🎉 Order Confirmed - ${adminBrandName} Order #${order.transactionId}`,
-      html: mjml2html(`
-        <mjml>
-          <mj-head>
-            <mj-title>Order Confirmation - ${adminBrandName}</mj-title>
-            <mj-attributes>
-              <mj-all font-family="'Segoe UI', Arial, sans-serif" />
-            </mj-attributes>
-            <mj-style>
-              .header-gold {
-                background: linear-gradient(135deg, #D4AF37 0%, #F5E7A0 50%, #D4AF37 100%);
-              }
-              .gold-text {
-                color: #D4AF37;
-              }
-              .product-table {
-                width: 100%;
-                border-collapse: collapse;
-              }
-              .product-table th {
-                background-color: #F5F5F5;
-                padding: 12px;
-                text-align: left;
-                border-bottom: 2px solid #D4AF37;
-              }
-              .order-summary {
-                background-color: #FAFAFA;
-                border-radius: 8px;
-                border-left: 4px solid #D4AF37;
-              }
-              .success-badge {
-                background-color: #4CAF50;
-                color: white;
-                padding: 5px 10px;
-                border-radius: 4px;
-                font-weight: bold;
-              }
-              .thank-you-section {
-                background-color: #FFF8E1;
-              }
-            </mj-style>
-          </mj-head>
-          
-          <mj-body background-color="#F9F9F9">
-            <!-- Header -->
-            <mj-section css-class="header-gold" padding="20px 0">
-              <mj-column>
-                <mj-text font-size="26px" font-weight="bold" align="center" color="#333333">
-                  ${adminBrandName}
-                </mj-text>
-                <mj-text font-size="16px" align="center" color="#333333" font-style="italic" padding-top="5px">
-                  Precious Metals
-                </mj-text>
-              </mj-column>
-            </mj-section>
-            
-            <!-- Order Confirmation Banner -->
-            <mj-section background-color="#FFFFFF" padding="10px 0">
-              <mj-column>
-                <mj-text align="center" font-size="14px">
-                  <span class="success-badge">ORDER CONFIRMED</span>
-                </mj-text>
-              </mj-column>
-            </mj-section>
-
-            <!-- Main Content -->
-            <mj-section background-color="#FFFFFF" padding="20px" border-radius="8px">
-              <mj-column>
-                <!-- Greeting -->
-                <mj-text font-size="18px" font-weight="bold" color="#333333" padding-bottom="10px">
-                  Dear ${userName},
-                </mj-text>
-                
-                <mj-text font-size="16px" color="#555555" line-height="1.5">
-                  Thank you for your order! We're pleased to confirm that your order has been received and is being processed. Here's a summary of your purchase:
-                </mj-text>
-                
-                <!-- Order Summary Box -->
-                <mj-section css-class="order-summary" padding="15px" margin="20px 0">
-                  <mj-column>
-                    <mj-text font-size="16px" font-weight="bold" color="#333333">
-                      Order Summary
-                    </mj-text>
-                    <mj-text font-size="14px" color="#555555" line-height="1.6">
-                      <strong>Order Number:</strong> ${order.transactionId}<br>
-                      <strong>Order Date:</strong> ${new Date().toLocaleDateString(
-                        "en-IN",
-                        { year: "numeric", month: "long", day: "numeric" }
-                      )}<br>
-                      <strong>Payment Method:</strong> ${
-                        order.paymentMethod
-                      }<br>
-                      <strong>Total Weight:</strong> ${order.totalWeight}g<br>
-                      <strong>Total Amount:</strong> AED ${formattedTotalPrice}
-                    </mj-text>
-                  </mj-column>
-                </mj-section>
-                
-                <!-- Order Items -->
-                <mj-text font-size="16px" font-weight="bold" color="#333333" padding-bottom="10px">
-                  Order Details
-                </mj-text>
-                
-                <mj-table css-class="product-table">
-                  <tr>
-                    <th>Product</th>
-                    <th style="text-align: center;">Qty</th>
-                    <th style="text-align: right;">Weight</th>
-                    <th style="text-align: right;">Price</th>
-                    <th style="text-align: right;">Total</th>
-                  </tr>
-                  ${orderItemsHTML}
-                  <tr>
-                    <td colspan="4" style="padding: 12px; text-align: right; font-weight: bold;">Grand Total:</td>
-                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #D4AF37;">AED ${formattedTotalPrice}</td>
-                  </tr>
-                </mj-table>
-                
-                <!-- Next Steps -->
-                <mj-text font-size="16px" font-weight="bold" color="#333333" padding-top="20px">
-                  What Happens Next?
-                </mj-text>
-                <mj-text font-size="14px" color="#555555" line-height="1.5">
-                  1. Our team will verify your order and process your payment.<br>
-                  2. You'll receive an order processing confirmation.<br>
-                  3. Once your items are ready to ship, you'll receive a shipping confirmation with tracking details.
-                </mj-text>
-              </mj-column>
-            </mj-section>
-            
-            <!-- Thank You Section -->
-            <mj-section css-class="thank-you-section" padding="20px" border-radius="8px" margin-top="20px">
-              <mj-column>
-                <mj-text font-size="18px" font-weight="bold" align="center" css-class="gold-text">
-                  Thank You for Choosing ${adminBrandName}
-                </mj-text>
-                <mj-text font-size="14px" color="#555555" align="center" line-height="1.5">
-                  We appreciate your business and look forward to delivering your precious metals.
-                </mj-text>
-              </mj-column>
-            </mj-section>
-            
-            <!-- Contact Support -->
-            <mj-section background-color="#FFFFFF" padding="20px" border-radius="8px" margin-top="20px">
-              <mj-column>
-                <mj-text font-size="16px" font-weight="bold" color="#333333" align="center">
-                  Questions About Your Order?
-                </mj-text>
-                <mj-divider border-color="#EEEEEE" padding="10px 0" />
-                <mj-text font-size="14px" color="#555555" align="center" line-height="1.5">
-                  <strong>📞 Call:</strong> ${
-                    admin.contact || "Contact Support"
-                  }<br>
-                  <strong>✉️ Email:</strong> ${
-                    admin.email || "support@aurify.com"
-                  }<br>
-                  <strong>⏰ Hours:</strong> Monday-Friday, 9AM-6PM IST
-                </mj-text>
-              </mj-column>
-            </mj-section>
-
-            <!-- Footer -->
-            <mj-section background-color="#333333" padding="20px">
-              <mj-column>
-                <mj-text color="#FFFFFF" font-size="14px" align="center" font-weight="bold">
-                  ${adminBrandName} Precious Metals
-                </mj-text>
-                <mj-text color="#D4AF37" font-size="12px" align="center" font-style="italic" padding-top="5px">
-                  Quality and Trust Since 2020
-                </mj-text>
-                <mj-divider border-color="#555555" padding="10px 0" />
-                <mj-text color="#AAAAAA" font-size="11px" align="center">
-                  © ${new Date().getFullYear()} ${adminBrandName} Precious Metals. All Rights Reserved.<br>
-                  This email confirms your order with ${adminBrandName}.
-                </mj-text>
-              </mj-column>
-            </mj-section>
-          </mj-body>
-        </mjml>
-      `).html,
-    };
-
-    // Send the email
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Order confirmation email sent:", info.messageId);
-
-    return {
-      success: true,
-      message: "Order confirmation email sent successfully",
-    };
-  } catch (error) {
-    console.error("Error sending order confirmation email:", error);
-    return {
-      success: false,
-      message: "Error sending order confirmation email",
-      error: error.message,
-    };
-  }
-};
-
+import OrderStatusService from "../../utils/EmailTemplateBuilder.js";
 export const orderPlace = async (adminId, userId, bookingData) => {
   try {
     if (!userId || !adminId || !bookingData?.paymentMethod) {
@@ -308,7 +18,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
       };
     }
 
-    // Create a map of productId to makingCharge from bookingData for quick lookup
+    // Create a map of productId to makingCharge from bookingData
     const makingChargesMap = {};
     if (bookingData.bookingData && Array.isArray(bookingData.bookingData)) {
       bookingData.bookingData.forEach((item) => {
@@ -320,19 +30,12 @@ export const orderPlace = async (adminId, userId, bookingData) => {
 
     // Fetch the user's cart items
     const cart = await Cart.findOne({ userId }).populate("items.productId");
-
-    // Check if the cart exists and has items
-    if (!cart) {
+    if (!cart || cart.items.length === 0) {
       return {
         success: false,
-        message: "No cart found for the user.",
-      };
-    }
-
-    if (cart.items.length === 0) {
-      return {
-        success: false,
-        message: "Cart is empty, cannot place an order.",
+        message: cart
+          ? "Cart is empty, cannot place an order."
+          : "No cart found for the user.",
       };
     }
 
@@ -340,30 +43,20 @@ export const orderPlace = async (adminId, userId, bookingData) => {
     let totalWeight = 0;
     const orderItems = await Promise.all(
       cart.items.map(async (item) => {
-        const product = await Product.findById(item.productId);
+        const product = item.productId;
         const productIdStr = item.productId._id.toString();
-        if (!product) {
+        if (!product || product.price <= 0) {
           return {
             success: false,
-            message: `Product with ID ${item.productId} not found.`,
-          };
-        }
-
-        if (product.price <= 0) {
-          return {
-            success: false,
-            message: `Invalid price for product ID ${item.productId}.`,
+            message: product
+              ? `Invalid price for product ID ${item.productId}.`
+              : `Product with ID ${item.productId} not found.`,
           };
         }
 
         const fixedPrice = product.price;
         const productWeight = product.weight;
-
-        // Get making charge from bookingData if available
-        // Use the proper product ID string for lookup
         const makingCharge = makingChargesMap[productIdStr] || 0;
-
-        // Calculate total price including making charge
         const itemTotal = fixedPrice * item.quantity;
         const itemWeight = (Number(product.weight) || 0) * item.quantity;
 
@@ -372,6 +65,7 @@ export const orderPlace = async (adminId, userId, bookingData) => {
 
         return {
           productId: item.productId,
+          productName: product.title || "Product",
           quantity: item.quantity,
           fixedPrice: fixedPrice || 0,
           productWeight: productWeight,
@@ -383,13 +77,11 @@ export const orderPlace = async (adminId, userId, bookingData) => {
       })
     );
 
-    // Check if any item returned an error object
     const errorItem = orderItems.find((item) => item.success === false);
     if (errorItem) {
-      return errorItem; // Return the error
+      return errorItem;
     }
 
-    // Validate total price
     if (totalPrice <= 0) {
       return {
         success: false,
@@ -397,12 +89,13 @@ export const orderPlace = async (adminId, userId, bookingData) => {
       };
     }
 
-    // Generate a transaction ID (you can customize this format)
-    const transactionId = `ORD-${Date.now().toString().slice(-8)}-${Math.floor(
-      Math.random() * 1000
-    )}`;
+    // Generate transaction ID
+    const orderNo = Math.floor(100 + Math.random() * 9900);
+    const transactionId = `ORD-${Date.now().toString().slice(-4)}-${orderNo
+      .toString()
+      .padStart(4, "0")}`;
 
-    // Create a new order with the fixed price, making charge, and total weight
+    // Create a new order
     const newOrder = new orderModel({
       adminId: new mongoose.Types.ObjectId(adminId),
       userId: new mongoose.Types.ObjectId(userId),
@@ -410,137 +103,113 @@ export const orderPlace = async (adminId, userId, bookingData) => {
       totalPrice: totalPrice,
       totalWeight: totalWeight,
       paymentMethod: bookingData.paymentMethod,
-      orderStatus: "Processing",
+      orderStatus: "Pending", // Align with order_placed
       transactionId: transactionId,
+      createdAt: new Date(),
     });
 
     const savedOrder = await newOrder.save();
 
-    if (savedOrder) {
-      // Clear booked items from the cart
-      const bookedProductIds = orderItems.map((item) => item.productId);
-      await Cart.updateOne(
-        { userId },
-        {
-          $pull: { items: { productId: { $in: bookedProductIds } } },
-          $set: { totalWeight: 0 },
-        }
-      );
-
-      // Get user data for the email and notifications
-      const userData = await UsersModel.findOne(
-        { "users._id": userId },
-        { "users.$": 1 }
-      );
-
-      // Extract user name for notifications
-      let userName = "Customer";
-      if (userData && userData.users && userData.users.length > 0) {
-        // Try to get the user's name, falling back to different name fields if available
-        userName =
-          userData.users[0].name || `Customer ${userId.toString().slice(-5)}`;
-
-        // Send order confirmation email
-        const emailResult = await sendOrderConfirmationEmail(
-          savedOrder,
-          userData
-        );
-
-        if (!emailResult.success) {
-          console.warn(
-            "Order placed successfully but failed to send confirmation email:",
-            emailResult.message
-          );
-        }
-      } else {
-        console.warn("User data not found for sending confirmation email");
+    // Clear booked items from the cart
+    const bookedProductIds = orderItems.map((item) => item.productId);
+    await Cart.updateOne(
+      { userId },
+      {
+        $pull: { items: { productId: { $in: bookedProductIds } } },
+        $set: { totalWeight: 0 },
       }
+    );
 
-      // Create notification for user
-      try {
-        const userNotificationMessage = `Your order #${transactionId} has been placed successfully for ${totalPrice.toFixed(
-          2
-        )}. Your order status is 'Pending'.`;
+    // Prepare data for OrderStatusService
+    const userData = await UsersModel.findOne(
+      { "users._id": userId },
+      { "users.$": 1 }
+    ).lean();
+    const adminInfo = await adminModel.findOne({ _id: adminId }).lean();
 
-        // Find existing user notification document or create a new one
-        let userNotificationDoc = await userNotification.findOne({
-          createdBy: userId,
-        });
-
-        if (userNotificationDoc) {
-          // Add notification to existing document
-          userNotificationDoc.notification.push({
-            message: userNotificationMessage,
-            read: false,
-            createdAt: new Date(),
-          });
-          await userNotificationDoc.save();
-        } else {
-          // Create new notification document
-          userNotificationDoc = new userNotification({
-            notification: [
-              {
-                message: userNotificationMessage,
-                read: false,
-                createdAt: new Date(),
-              },
-            ],
-            createdBy: userId,
-          });
-          await userNotificationDoc.save();
-        }
-
-        // Create notification for admin with user's name
-        const adminNotificationMessage = `New order #${transactionId} placed by ${userName} for ${totalPrice.toFixed(
-          2
-        )}.`;
-
-        let adminNotificationDoc = await Notification.findOne({
-          createdBy: adminId,
-        });
-
-        if (adminNotificationDoc) {
-          // Add notification to existing document
-          adminNotificationDoc.notification.push({
-            message: adminNotificationMessage,
-            read: false,
-            createdAt: new Date(),
-          });
-          await adminNotificationDoc.save();
-        } else {
-          // Create new notification document
-          adminNotificationDoc = new Notification({
-            notification: [
-              {
-                message: adminNotificationMessage,
-                read: false,
-                createdAt: new Date(),
-              },
-            ],
-            createdBy: adminId,
-          });
-          await adminNotificationDoc.save();
-        }
-
-        console.log("Notifications created for both user and admin");
-      } catch (notificationError) {
-        console.error(
-          "Error creating notifications:",
-          notificationError.message
-        );
-        // Don't return error here, as the order is already placed successfully
-      }
-
+    if (!userData || !userData.users.length) {
       return {
-        success: true,
-        message: "Order placed successfully.",
-        orderDetails: savedOrder,
+        success: false,
+        message: "User not found.",
       };
     }
 
+    const userName =
+      userData.users[0]?.name || `Customer ${userId.toString().slice(-5)}`;
+    const adminData = {
+      companyName: adminInfo?.companyName || "Aurify",
+      email: adminInfo?.email || "info@aurify.ae",
+      contact: adminInfo?.contact || "+971-XXX-XXXX",
+      logo:
+        adminInfo?.logo ||
+        "https://aurifyimage.s3.ap-south-1.amazonaws.com/1744013531086-swiss.webp",
+      serviceEmail: adminInfo?.serviceEmail,
+      _id: adminId?.toString(),
+    };
+
+    const orderData = {
+      _id: savedOrder._id.toString(),
+      transactionId: savedOrder.transactionId,
+      paymentMethod: savedOrder.paymentMethod,
+      totalWeight: Number(savedOrder.totalWeight) || 0,
+      totalPrice: Number(savedOrder.totalPrice) || 0,
+      createdAt: savedOrder.createdAt || new Date(),
+      items: savedOrder.items.map((item) => ({
+        productId:
+          item.productId?._id?.toString() || item.productId?.toString(),
+        productName:
+          item.productId?.title || item.productName || "Unknown Product",
+        productWeight: Number(
+          item.productId?.weight || item.productWeight || 0
+        ),
+        quantity: Number(item.quantity) || 1,
+        fixedPrice: Number(item.productId?.price || item.fixedPrice || 0),
+        totalPrice:
+          (Number(item.quantity) || 1) *
+          Number(item.productId?.price || item.fixedPrice || 0),
+        makingCharge: Number(item.makingCharge) || 0,
+      })),
+      userId: savedOrder.userId.toString(),
+      adminId: adminId.toString(),
+    };
+
+    const userDataForService = {
+      users: [
+        {
+          _id: userData.users[0]._id.toString(),
+          name: userName,
+          email: userData.users[0].email || "",
+          cashBalance: Number(userData.users[0].cashBalance) || 0,
+          goldBalance: Number(userData.users[0].goldBalance) || 0,
+        },
+      ],
+    };
+
+    // Send notifications using OrderStatusService
+    const orderStatusService = new OrderStatusService();
+    const notificationResult = await orderStatusService.orderPlaced(
+      orderData,
+      userDataForService,
+      adminData,
+      {
+        orderNote: "Your order is now being reviewed by our team.",
+        skipInAppNotifications: false,
+        sendSeparateEmails: true,
+      }
+    );
+
+    if (!notificationResult.success) {
+      console.warn(
+        "Order placed successfully but failed to send notifications:",
+        notificationResult.message
+      );
+    }
+
     return {
-      success: false,
-      message: "Failed to process the order.",
+      success: true,
+      message: "Order placed successfully.",
+      orderDetails: savedOrder,
+      notificationResult,
     };
   } catch (error) {
     console.error("Error placing the order:", error.message);
@@ -558,10 +227,18 @@ export const approveOrderItemHelper = async (
   updateData = {}
 ) => {
   try {
+    // Input validation
+    if (!orderId || !itemId || !userId) {
+      return {
+        success: false,
+        message: "Missing required parameters: orderId, itemId, or userId",
+      };
+    }
+
     // Find the order by ID and verify it belongs to the user
-    const order = await orderModel.findOne({
-      _id: orderId,
-      userId: userId,
+    const order = await orderModel.findById(orderId).populate({
+      path: "items.productId",
+      select: "title description images price weight purity sku",
     });
 
     if (!order) {
@@ -599,140 +276,124 @@ export const approveOrderItemHelper = async (
       };
     }
 
-    // Store original values for reference
+    // Store original values for reference and comparison
     const originalItem = { ...order.items[itemIndex].toObject() };
+    const previousOrderStatus = order.orderStatus;
+
+    // Get product name from populated data or fallback to productName field
+    const productName =
+      order.items[itemIndex].productId?.title ||
+      order.items[itemIndex].productName ||
+      "Unknown Product";
 
     // Update the specific item's status to "Approved"
     order.items[itemIndex].itemStatus = "Approved";
 
+    // Track what was updated
+    const changes = {
+      statusChanged: false,
+      quantityChanged: false,
+      priceChanged: false,
+      weightChanged: false,
+    };
+
     // Update item properties if provided in updateData
     if (updateData.quantity !== undefined && updateData.quantity > 0) {
+      changes.quantityChanged =
+        order.items[itemIndex].quantity !== updateData.quantity;
       order.items[itemIndex].quantity = updateData.quantity;
     }
     if (updateData.fixedPrice !== undefined && updateData.fixedPrice >= 0) {
+      changes.priceChanged =
+        order.items[itemIndex].fixedPrice !== updateData.fixedPrice;
       order.items[itemIndex].fixedPrice = updateData.fixedPrice;
     }
     if (
       updateData.productWeight !== undefined &&
       updateData.productWeight >= 0
     ) {
+      changes.weightChanged =
+        order.items[itemIndex].productWeight !== updateData.productWeight;
       order.items[itemIndex].productWeight = updateData.productWeight;
     }
 
     // Recalculate total price for the order (only include approved items)
     order.totalPrice = order.items
       .filter((item) => item.itemStatus === "Approved")
-      .reduce((total, item) => total + item.quantity * item.fixedPrice, 0);
+      .reduce(
+        (total, item) => total + (item.quantity || 0) * (item.fixedPrice || 0),
+        0
+      );
 
     // Recalculate total weight for the order (only include approved items)
     order.totalWeight = order.items
       .filter((item) => item.itemStatus === "Approved")
-      .reduce((total, item) => total + item.quantity * item.productWeight, 0);
+      .reduce(
+        (total, item) =>
+          total + (item.quantity || 0) * (item.productWeight || 0),
+        0
+      );
 
-    // Check if all items are now "Approved"
-    const allApproved = order.items.every(
-      (item) => item.itemStatus === "Approved"
-    );
-
-    // Check if any item still has "User Approval Pending"
-    const anyUserApprovalPending = order.items.some(
-      (item) => item.itemStatus === "User Approval Pending"
-    );
-
-    // Check if any item is rejected
-    const anyRejected = order.items.some(
-      (item) => item.itemStatus === "Rejected"
-    );
-
-    let previousStatus = order.orderStatus;
-
-    // Update orderStatus based on items' statuses
-    if (allApproved) {
-      order.orderStatus = "Pending";
-    } else if (anyUserApprovalPending) {
-      order.orderStatus = "User Approval Pending";
-    } else if (
-      anyRejected &&
-      order.items.filter((item) => item.itemStatus === "Approved").length > 0
-    ) {
-      order.orderStatus = "Partially Processed";
-    } else if (order.items.every((item) => item.itemStatus === "Rejected")) {
-      order.orderStatus = "Cancelled";
-    } else {
-      order.orderStatus = "Processing";
-    }
+    // Determine new order status
+    const newOrderStatus = determineOrderStatusFromItems(order.items);
+    changes.statusChanged = order.orderStatus !== newOrderStatus;
+    order.orderStatus = newOrderStatus;
 
     // Save the updated order
     await order.save();
 
-    // Add notification to user notification model for status change
-    if (order.orderStatus !== previousStatus) {
-      try {
-        let notificationMessage = "";
+    // Log the changes
+    console.log(`✅ Order ${orderId} item approved:`, {
+      itemId,
+      userId,
+      changes,
+      previousStatus: previousOrderStatus,
+      newStatus: order.orderStatus,
+      approvedItem: {
+        name: productName,
+        quantity: order.items[itemIndex].quantity,
+        price: order.items[itemIndex].fixedPrice,
+      },
+    });
 
-        // Create appropriate notification message based on new status
-        switch (order.orderStatus) {
-          case "Processing":
-            notificationMessage = `📦 Your order #${order.transactionId} is now being processed. We'll keep you updated on its progress.`;
-            break;
-          case "Partially Processed":
-            notificationMessage = `⚠️ Your order #${order.transactionId} is partially processed. Some items were approved while others were rejected.`;
-            break;
-          default:
-            notificationMessage = `📝 Your order #${order.transactionId} status has been updated to: ${order.orderStatus}`;
-        }
+    // ENHANCED: Always send "approved" notifications when item is approved
+    let notificationResult = null;
 
-        // Determine notification type based on order status
-        let notificationType = "default";
-        if (order.orderStatus === "Processing") {
-          notificationType = "Approved";
-        }
+    try {
+      console.log("📧 Sending item approval notifications...");
 
-        // Find existing user notification document or create a new one
-        let userNotificationDoc = await userNotification.findOne({
-          createdBy: order.userId,
-        });
-
-        if (userNotificationDoc) {
-          // Add notification to existing document
-          userNotificationDoc.notification.push({
-            message: notificationMessage,
-            read: false,
-            createdAt: new Date(),
-            orderId: orderId,
-            itemId: itemId,
-            type: notificationType,
-          });
-          await userNotificationDoc.save();
-        } else {
-          // Create new notification document
-          userNotificationDoc = new userNotification({
-            notification: [
-              {
-                message: notificationMessage,
-                read: false,
-                createdAt: new Date(),
-                orderId: orderId,
-                itemId: itemId,
-                type: notificationType,
-              },
-            ],
-            createdBy: order.userId,
-          });
-          await userNotificationDoc.save();
-        }
-
-        console.log(
-          `Order approval notification added for user ${order.userId}`
-        );
-      } catch (notificationError) {
-        console.error(
-          "Error creating order approval notification:",
-          notificationError.message
-        );
-        // Continue processing - notification failure shouldn't stop the order update
-      }
+      // Send "approved" notification using OrderStatusService
+      notificationResult = await sendItemApprovalNotifications(order, userId, {
+        itemId,
+        orderId,
+        changes,
+        previousOrderStatus,
+        newOrderStatus,
+        originalItem,
+        updatedItem: order.items[itemIndex],
+        userAction: "approved",
+        approvalTimestamp: new Date(),
+        // Item-specific details for notifications
+        itemDetails: {
+          productName: productName,
+          quantity: order.items[itemIndex].quantity,
+          price: order.items[itemIndex].fixedPrice,
+          weight: order.items[itemIndex].productWeight,
+        },
+      });
+    } catch (notificationError) {
+      console.error("❌ Error in notification process:", notificationError);
+      // Continue execution - don't fail the approval due to notification errors
     }
+
+    // Add local notification to user notification model
+    await addLocalNotificationForApproval(
+      order,
+      userId,
+      itemId,
+      previousOrderStatus,
+      newOrderStatus
+    );
 
     return {
       success: true,
@@ -740,11 +401,19 @@ export const approveOrderItemHelper = async (
       data: order,
       updatedItem: order.items[itemIndex],
       originalItem: originalItem,
+      changes,
+      notificationResult,
+      statusTransition: {
+        from: previousOrderStatus,
+        to: newOrderStatus,
+      },
     };
   } catch (error) {
+    console.error("❌ Error approving order item:", error);
     return {
       success: false,
       message: "Error approving order item: " + error.message,
+      error: error.name,
     };
   }
 };
@@ -756,16 +425,32 @@ export const rejectOrderItemHelper = async (
   rejectionReason = ""
 ) => {
   try {
+    // Input validation
+    if (!orderId || !itemId || !userId) {
+      return {
+        success: false,
+        message: "Missing required parameters: orderId, itemId, or userId",
+      };
+    }
+
     // Find the order by ID and verify it belongs to the user
-    const order = await orderModel.findOne({
-      _id: orderId,
-      userId: userId,
+    const order = await orderModel.findById(orderId).populate({
+      path: "items.productId",
+      select: "title description images price weight purity sku",
     });
 
     if (!order) {
       return {
         success: false,
         message: "Order not found or access denied",
+      };
+    }
+
+    // Check if order status is "User Approval Pending"
+    if (order.orderStatus !== "User Approval Pending") {
+      return {
+        success: false,
+        message: "Order is not pending user approval",
       };
     }
 
@@ -789,130 +474,658 @@ export const rejectOrderItemHelper = async (
       };
     }
 
-    // Store the rejected item's values for calculation
-    const rejectedItem = order.items[itemIndex];
+    // Store original values for reference and comparison
+    const originalItem = { ...order.items[itemIndex].toObject() };
+    const previousOrderStatus = order.orderStatus;
+
+    // Get product name from populated data or fallback to productName field
+    const productName =
+      order.items[itemIndex].productId?.title ||
+      order.items[itemIndex].productName ||
+      "Unknown Product";
 
     // Update the specific item's status to "Rejected"
     order.items[itemIndex].itemStatus = "Rejected";
 
-    // Add rejection reason to order remarks if provided
+    // Add rejection reason to the item if provided
     if (rejectionReason) {
+      order.items[itemIndex].rejectionReason = rejectionReason;
       order.orderRemark = rejectionReason;
     }
 
-    // Recalculate total price for the order (exclude rejected items)
+    // Track what was changed
+    const changes = {
+      statusChanged: false,
+      itemRejected: true,
+      rejectionReason: rejectionReason || null,
+    };
+
+    // Recalculate total price for the order (only include approved items)
     order.totalPrice = order.items
       .filter((item) => item.itemStatus === "Approved")
-      .reduce((total, item) => total + item.quantity * item.fixedPrice, 0);
+      .reduce(
+        (total, item) => total + (item.quantity || 0) * (item.fixedPrice || 0),
+        0
+      );
 
-    // Recalculate total weight for the order (exclude rejected items)
+    // Recalculate total weight for the order (only include approved items)
     order.totalWeight = order.items
       .filter((item) => item.itemStatus === "Approved")
-      .reduce((total, item) => total + item.quantity * item.productWeight, 0);
+      .reduce(
+        (total, item) =>
+          total + (item.quantity || 0) * (item.productWeight || 0),
+        0
+      );
 
-    // Check order status after rejection
-    const anyUserApprovalPending = order.items.some(
-      (item) => item.itemStatus === "User Approval Pending"
-    );
-
-    const allRejected = order.items.every(
-      (item) => item.itemStatus === "Rejected"
-    );
-
-    const anyApproved = order.items.some(
-      (item) => item.itemStatus === "Approved"
-    );
-
-    let previousStatus = order.orderStatus;
-
-    // Update order status
-    if (allRejected) {
-      order.orderStatus = "Cancelled";
-      order.totalPrice = 0;
-      order.totalWeight = 0;
-    } else if (anyUserApprovalPending) {
-      order.orderStatus = "User Approval Pending";
-    } else {
-      order.orderStatus = "Processing";
-    }
+    // Determine new order status
+    const newOrderStatus = determineOrderStatusFromItems(order.items);
+    changes.statusChanged = order.orderStatus !== newOrderStatus;
+    order.orderStatus = newOrderStatus;
 
     // Save the updated order
     await order.save();
 
-    // Add notification for rejection
+    // Log the changes
+    console.log(`❌ Order ${orderId} item rejected:`, {
+      itemId,
+      userId,
+      changes,
+      previousStatus: previousOrderStatus,
+      newStatus: order.orderStatus,
+      rejectedItem: {
+        name: productName,
+        quantity: order.items[itemIndex].quantity,
+        price: order.items[itemIndex].fixedPrice,
+      },
+      rejectionReason,
+    });
+
+    // ENHANCED: Always send "rejected" notifications when item is rejected
+    let notificationResult = null;
+
     try {
-      let notificationMessage = "";
-      let notificationType = "Rejected";
+      console.log("📧 Sending item rejection notifications...");
 
-      if (order.orderStatus === "Cancelled") {
-        notificationMessage = `❌ Your order #${
-          order.transactionId
-        } has been cancelled as all items were rejected. ${
-          rejectionReason ? "Reason: " + rejectionReason : ""
-        }`;
-      } else if (order.orderStatus === "Partially Processed") {
-        notificationMessage = `⚠️ An item in your order #${
-          order.transactionId
-        } has been rejected. Your order will proceed with the remaining approved items. ${
-          rejectionReason ? "Reason: " + rejectionReason : ""
-        }`;
-      } else {
-        notificationMessage = `❌ Item in order #${
-          order.transactionId
-        } has been rejected. ${
-          rejectionReason ? "Reason: " + rejectionReason : ""
-        }`;
-      }
-
-      let userNotificationDoc = await userNotification.findOne({
-        createdBy: order.userId,
+      // Send "rejected" notification using OrderStatusService
+      notificationResult = await sendItemRejectionNotifications(order, userId, {
+        itemId,
+        orderId,
+        changes,
+        previousOrderStatus,
+        newOrderStatus,
+        originalItem,
+        rejectedItem: order.items[itemIndex],
+        userAction: "rejected",
+        rejectionTimestamp: new Date(),
+        rejectionReason,
+        // Item-specific details for notifications
+        itemDetails: {
+          productName: productName,
+          quantity: order.items[itemIndex].quantity,
+          price: order.items[itemIndex].fixedPrice,
+          weight: order.items[itemIndex].productWeight,
+        },
       });
-
-      if (userNotificationDoc) {
-        userNotificationDoc.notification.push({
-          message: notificationMessage,
-          read: false,
-          createdAt: new Date(),
-          orderId: orderId,
-          itemId: itemId,
-          type: notificationType,
-        });
-        await userNotificationDoc.save();
-      } else {
-        userNotificationDoc = new userNotification({
-          notification: [
-            {
-              message: notificationMessage,
-              read: false,
-              createdAt: new Date(),
-              orderId: orderId,
-              itemId: itemId,
-              type: notificationType,
-            },
-          ],
-          createdBy: order.userId,
-        });
-        await userNotificationDoc.save();
-      }
     } catch (notificationError) {
-      console.error(
-        "Error creating rejection notification:",
-        notificationError.message
-      );
+      console.error("❌ Error in notification process:", notificationError);
+      // Continue execution - don't fail the rejection due to notification errors
     }
+
+    // Add local notification to user notification model
+    await addLocalNotificationForRejection(
+      order,
+      userId,
+      itemId,
+      previousOrderStatus,
+      newOrderStatus,
+      rejectionReason
+    );
 
     return {
       success: true,
       message: "Order item rejected successfully",
       data: order,
-      rejectedItem: rejectedItem,
-      statusChanged: previousStatus !== order.orderStatus,
+      rejectedItem: productName, // Fixed: was using incorrect 'items' instead of 'order.items'
+      originalItem: originalItem,
+      changes,
+      notificationResult,
+      statusTransition: {
+        from: previousOrderStatus,
+        to: newOrderStatus,
+      },
     };
   } catch (error) {
+    console.error("❌ Error rejecting order item:", error);
     return {
       success: false,
       message: "Error rejecting order item: " + error.message,
+      error: error.name,
     };
+  }
+};
+
+// SHARED HELPER FUNCTIONS (moved to bottom to avoid duplication)
+
+// Helper function to determine order status from items
+const determineOrderStatusFromItems = (items) => {
+  if (!items || items.length === 0) return "Processing";
+
+  const allApproved = items.every((item) => item.itemStatus === "Approved");
+  const anyUserApprovalPending = items.some(
+    (item) => item.itemStatus === "User Approval Pending"
+  );
+  const anyRejected = items.some((item) => item.itemStatus === "Rejected");
+  const approvedItems = items.filter((item) => item.itemStatus === "Approved");
+
+  if (allApproved) return "Pending"; // All items approved, ready for processing
+  if (anyUserApprovalPending) return "User Approval Pending";
+  if (anyRejected && approvedItems.length > 0) return "Partially Processed";
+  if (items.every((item) => item.itemStatus === "Rejected")) return "Cancelled";
+  return "Processing";
+};
+
+// Data preparation helper functions
+const prepareOrderDataForNotification = (order, adminId) => ({
+  _id: order._id.toString(),
+  transactionId: order.transactionId || order._id.toString(),
+  paymentMethod: order.paymentMethod || "N/A",
+  totalWeight: Number(order.totalWeight) || 0,
+  totalPrice: Number(order.totalPrice) || 0,
+  createdAt: order.createdAt || new Date(),
+  orderStatus: order.orderStatus,
+  items: order.items.map((item) => ({
+    _id: item._id.toString(),
+    productId: item.productId?.toString() || "",
+    productName: item.productId?.title || item.productName || "Unknown Product", // Enhanced product name fetching
+    productWeight: Number(item.productWeight) || 0,
+    quantity: Number(item.quantity) || 1,
+    fixedPrice: Number(item.fixedPrice) || 0,
+    totalPrice: (Number(item.quantity) || 1) * (Number(item.fixedPrice) || 0),
+    itemStatus: item.itemStatus || "Pending",
+    makingCharge: Number(item.makingCharge) || 0,
+    rejectionReason: item.rejectionReason || null,
+  })),
+  userId: order.userId.toString(),
+  adminId: adminId?.toString() || "",
+});
+
+const prepareUserDataForNotification = (user, userId) => ({
+  users: [
+    {
+      _id: user._id?.toString() || userId.toString(),
+      name: user.name || `Customer ${userId.toString().slice(-5)}`,
+      email: user.email || "",
+      contact: user.contact || "",
+      address: user.address || "",
+      cashBalance: Number(user.cashBalance) || 0,
+      goldBalance: Number(user.goldBalance) || 0,
+    },
+  ],
+});
+
+const prepareAdminDataForNotification = (adminInfo, adminId) => ({
+  companyName: adminInfo?.companyName || "Aurify",
+  email: adminInfo?.email || "info@aurify.ae",
+  contact: adminInfo?.contact || "+971-XXX-XXXX",
+  logo:
+    adminInfo?.logo ||
+    "https://aurifyimage.s3.ap-south-1.amazonaws.com/1744013531086-swiss.webp",
+  _id: adminId?.toString() || "",
+  serviceEmail: adminInfo?.serviceEmail || adminInfo?.email || "info@aurify.ae",
+});
+
+// ENHANCED: Item approval notification function using OrderStatusService
+const sendItemApprovalNotifications = async (order, userId, additionalData) => {
+  try {
+    console.log("🔔 Preparing item approval notifications...");
+
+    // Fetch user data with admin reference
+    const userData = await UsersModel.findOne(
+      { "users._id": userId },
+      { "users.$": 1, createdBy: 1 }
+    ).lean();
+
+    if (!userData || !userData.users.length) {
+      console.warn(`❌ User not found for userId: ${userId}`);
+      return {
+        success: false,
+        message: "User data not found for notifications",
+      };
+    }
+
+    // Extract adminId from user data
+    const adminId = userData.createdBy;
+    if (!adminId) {
+      console.warn(`❌ Admin ID not found for user: ${userId}`);
+      return {
+        success: false,
+        message: "Admin ID not found for user",
+      };
+    }
+
+    // Fetch admin data
+    const adminInfo = await adminModel.findOne({ _id: adminId }).lean();
+    if (!adminInfo) {
+      console.warn(`❌ Admin not found for adminId: ${adminId}`);
+      return {
+        success: false,
+        message: "Admin data not found for notifications",
+      };
+    }
+
+    // Prepare data for OrderStatusService - using "item_approved" status type for consistency
+    const orderData = prepareOrderDataForNotification(order, adminId);
+    const preparedUserData = prepareUserDataForNotification(
+      userData.users[0],
+      userId
+    );
+    const adminData = prepareAdminDataForNotification(adminInfo, adminId);
+
+    // IMPORTANT: Use "item_approved" status type for item approvals to match configs
+    const statusType = "item_approved";
+
+    console.log(
+      `📧 Sending "${statusType}" notification for approved item - Order Status: ${order.orderStatus}`
+    );
+
+    // Enhanced additional data for notifications
+    const enhancedAdditionalData = {
+      ...additionalData,
+      // Item approval specific data
+      approvalType: "item_approved",
+      approvedByUser: true,
+      approvalTimestamp: new Date(),
+      // Custom message for item approval
+      customMessage: `Your item "${additionalData.itemDetails.productName}" has been approved successfully!`,
+      actionType: "item_approval_completed",
+      // Item-specific details
+      itemDetails: {
+        ...additionalData.itemDetails,
+        totalValue:
+          (additionalData.itemDetails.quantity || 0) *
+          (additionalData.itemDetails.price || 0),
+      },
+      // Email template customization
+      emailSubjectSuffix: "- Item Approved",
+      // Push notification customization
+      pushNotificationTitle: "✅ Item Approved!",
+      pushNotificationBody: `Your item "${additionalData.itemDetails.productName}" has been approved for order #${order.transactionId}`,
+    };
+
+    // Send notifications using OrderStatusService with "item_approved" type
+    const orderStatusService = new OrderStatusService();
+    const notificationResult = await orderStatusService.sendOrderStatusUpdates(
+      orderData,
+      preparedUserData,
+      adminData,
+      statusType, // Use "item_approved" for item approvals
+      enhancedAdditionalData
+    );
+
+    if (notificationResult.success) {
+      console.log(
+        `✅ Item approval notifications sent successfully with type: "${statusType}"`
+      );
+      console.log(`📊 Notification Results:`, {
+        email: notificationResult.results?.email?.success || false,
+        push: notificationResult.results?.notifications?.success || false,
+        processId: notificationResult.processId,
+      });
+    } else {
+      console.warn(
+        `⚠️ Item approval notifications partially failed: ${notificationResult.message}`
+      );
+    }
+
+    return notificationResult;
+  } catch (notificationError) {
+    console.error(
+      "❌ Error sending item approval notifications:",
+      notificationError
+    );
+    return {
+      success: false,
+      message:
+        "Item approval notifications failed: " + notificationError.message,
+      error: notificationError.name,
+      statusType: "item_approved",
+    };
+  }
+};
+
+// ENHANCED: Item rejection notification function using OrderStatusService
+const sendItemRejectionNotifications = async (
+  order,
+  userId,
+  additionalData
+) => {
+  try {
+    console.log("🔔 Preparing item rejection notifications...");
+
+    // Fetch user data with admin reference
+    const userData = await UsersModel.findOne(
+      { "users._id": userId },
+      { "users.$": 1, createdBy: 1 }
+    ).lean();
+
+    if (!userData || !userData.users.length) {
+      console.warn(`❌ User not found for userId: ${userId}`);
+      return {
+        success: false,
+        message: "User data not found for notifications",
+      };
+    }
+
+    // Extract adminId from user data
+    const adminId = userData.createdBy;
+    if (!adminId) {
+      console.warn(`❌ Admin ID not found for user: ${userId}`);
+      return {
+        success: false,
+        message: "Admin ID not found for user",
+      };
+    }
+
+    // Fetch admin data
+    const adminInfo = await adminModel.findOne({ _id: adminId }).lean();
+    if (!adminInfo) {
+      console.warn(`❌ Admin not found for adminId: ${adminId}`);
+      return {
+        success: false,
+        message: "Admin data not found for notifications",
+      };
+    }
+
+    // Prepare data for OrderStatusService - using "item_rejected" status type
+    const orderData = prepareOrderDataForNotification(order, adminId);
+    const preparedUserData = prepareUserDataForNotification(
+      userData.users[0],
+      userId
+    );
+    const adminData = prepareAdminDataForNotification(adminInfo, adminId);
+
+    // IMPORTANT: Use "item_rejected" status type for item rejections to match configs
+    const statusType = "item_rejected";
+
+    console.log(
+      `📧 Sending "${statusType}" notification for rejected item - Order Status: ${order.orderStatus}`
+    );
+
+    // Enhanced additional data for notifications
+    const enhancedAdditionalData = {
+      ...additionalData,
+      // Item rejection specific data
+      rejectionType: "item_rejected",
+      rejectedByUser: true,
+      rejectionTimestamp: new Date(),
+      rejectionReason: additionalData.rejectionReason || "No reason provided",
+      // Custom message for item rejection
+      customMessage: `Your item "${
+        additionalData.itemDetails.productName
+      }" has been rejected. ${
+        additionalData.rejectionReason
+          ? "Reason: " + additionalData.rejectionReason
+          : ""
+      }`,
+      actionType: "item_rejection_completed",
+      // Item-specific details
+      itemDetails: {
+        ...additionalData.itemDetails,
+        totalValue:
+          (additionalData.itemDetails.quantity || 0) *
+          (additionalData.itemDetails.price || 0),
+      },
+      // Email template customization
+      emailSubjectSuffix: "- Item Rejected",
+      // Push notification customization
+      pushNotificationTitle: "❌ Item Rejected",
+      pushNotificationBody: `Your item "${
+        additionalData.itemDetails.productName
+      }" has been rejected for order #${order.transactionId}${
+        additionalData.rejectionReason
+          ? ". Reason: " + additionalData.rejectionReason
+          : ""
+      }`,
+    };
+
+    // Send notifications using OrderStatusService with "item_rejected" type
+    const orderStatusService = new OrderStatusService();
+    const notificationResult = await orderStatusService.sendOrderStatusUpdates(
+      orderData,
+      preparedUserData,
+      adminData,
+      statusType, // Use "item_rejected" for item rejections
+      enhancedAdditionalData
+    );
+
+    if (notificationResult.success) {
+      console.log(
+        `✅ Item rejection notifications sent successfully with type: "${statusType}"`
+      );
+      console.log(`📊 Notification Results:`, {
+        email: notificationResult.results?.email?.success || false,
+        push: notificationResult.results?.notifications?.success || false,
+        processId: notificationResult.processId,
+      });
+    } else {
+      console.warn(
+        `⚠️ Item rejection notifications partially failed: ${notificationResult.message}`
+      );
+    }
+
+    return notificationResult;
+  } catch (notificationError) {
+    console.error(
+      "❌ Error sending item rejection notifications:",
+      notificationError
+    );
+    return {
+      success: false,
+      message:
+        "Item rejection notifications failed: " + notificationError.message,
+      error: notificationError.name,
+      statusType: "item_rejected",
+    };
+  }
+};
+
+// Enhanced local notification function for item approval
+const addLocalNotificationForApproval = async (
+  order,
+  userId,
+  itemId,
+  previousStatus,
+  newStatus
+) => {
+  try {
+    // Always create notification for item approval, even if order status hasn't changed
+    let notificationMessage = "";
+    let notificationType = "Approved";
+
+    // Find the approved item details
+    const approvedItem = order.items.find(
+      (item) => item._id.toString() === itemId
+    );
+
+    // Get product name from populated data or fallback to productName field
+    const itemName =
+      approvedItem?.productId?.title ||
+      approvedItem?.productName ||
+      "Unknown Item";
+
+    // Create item-specific approval notification
+    notificationMessage = `✅ Item "${itemName}" approved! Your order #${order.transactionId} item has been successfully approved.`;
+
+    // Add additional context based on order status
+    if (newStatus !== previousStatus) {
+      switch (newStatus) {
+        case "Pending":
+          notificationMessage += " Your order is now ready for processing.";
+          break;
+        case "Processing":
+          notificationMessage += " Your order is now being processed.";
+          break;
+        case "Partially Processed":
+          notificationMessage +=
+            " Some items in your order are still pending approval.";
+          notificationType = "Warning";
+          break;
+        case "Cancelled":
+          notificationMessage += " However, your order has been cancelled.";
+          notificationType = "Cancelled";
+          break;
+        default:
+          notificationMessage += ` Order status: ${newStatus}`;
+      }
+    } else {
+      notificationMessage += " Other items may still be pending approval.";
+    }
+
+    // Find existing user notification document or create a new one
+    let userNotificationDoc = await userNotification.findOne({
+      createdBy: userId,
+    });
+
+    const newNotification = {
+      message: notificationMessage,
+      read: false,
+      createdAt: new Date(),
+      orderId: order._id,
+      itemId: itemId,
+      type: notificationType,
+      metadata: {
+        action: "item_approval",
+        previousOrderStatus: previousStatus,
+        newOrderStatus: newStatus,
+        transactionId: order.transactionId,
+        itemName: itemName,
+        priority: "high",
+      },
+    };
+
+    if (userNotificationDoc) {
+      // Add notification to existing document
+      userNotificationDoc.notification.push(newNotification);
+      await userNotificationDoc.save();
+    } else {
+      // Create new notification document
+      userNotificationDoc = new userNotification({
+        notification: [newNotification],
+        createdBy: userId,
+      });
+      await userNotificationDoc.save();
+    }
+
+    console.log(
+      `✅ Local notification added for user ${userId} - Item: ${itemName}, Status: ${newStatus}`
+    );
+  } catch (notificationError) {
+    console.error(
+      "❌ Error creating local notification:",
+      notificationError.message
+    );
+    // Continue processing - notification failure shouldn't stop the order update
+  }
+};
+
+// Enhanced local notification function for item rejection
+const addLocalNotificationForRejection = async (
+  order,
+  userId,
+  itemId,
+  previousStatus,
+  newStatus,
+  rejectionReason
+) => {
+  try {
+    // Always create notification for item rejection, even if order status hasn't changed
+    let notificationMessage = "";
+    let notificationType = "Rejected";
+
+    // Find the rejected item details
+    const rejectedItem = order.items.find(
+      (item) => item._id.toString() === itemId
+    );
+
+    // Get product name from populated data or fallback to productName field
+    const itemName =
+      rejectedItem?.productId?.title ||
+      rejectedItem?.productName ||
+      "Unknown Item";
+
+    // Create item-specific rejection notification
+    notificationMessage = `❌ Item "${itemName}" rejected for order #${order.transactionId}.`;
+
+    if (rejectionReason) {
+      notificationMessage += ` Reason: ${rejectionReason}`;
+    }
+
+    // Add additional context based on order status
+    if (newStatus !== previousStatus) {
+      switch (newStatus) {
+        case "Pending":
+          notificationMessage += " Other approved items will be processed.";
+          break;
+        case "Processing":
+          notificationMessage += " Other items are being processed.";
+          break;
+        case "Partially Processed":
+          notificationMessage += " Some items are still pending approval.";
+          break;
+        case "Cancelled":
+          notificationMessage += " Your entire order has been cancelled.";
+          notificationType = "Cancelled";
+          break;
+        default:
+          notificationMessage += ` Order status: ${newStatus}`;
+      }
+    }
+
+    // Find existing user notification document or create a new one
+    let userNotificationDoc = await userNotification.findOne({
+      createdBy: userId,
+    });
+
+    const newNotification = {
+      message: notificationMessage,
+      read: false,
+      createdAt: new Date(),
+      orderId: order._id,
+      itemId: itemId,
+      type: notificationType,
+      metadata: {
+        action: "item_rejection",
+        previousOrderStatus: previousStatus,
+        newOrderStatus: newStatus,
+        transactionId: order.transactionId,
+        itemName: itemName,
+        rejectionReason: rejectionReason || null,
+        priority: "high",
+      },
+    };
+
+    if (userNotificationDoc) {
+      // Add notification to existing document
+      userNotificationDoc.notification.push(newNotification);
+      await userNotificationDoc.save();
+    } else {
+      // Create new notification document
+      userNotificationDoc = new userNotification({
+        notification: [newNotification],
+        createdBy: userId,
+      });
+      await userNotificationDoc.save();
+    }
+
+    console.log(
+      `✅ Local rejection notification added for user ${userId} - Item: ${itemName}, Status: ${newStatus}`
+    );
+  } catch (notificationError) {
+    console.error(
+      "❌ Error creating local rejection notification:",
+      notificationError.message
+    );
+    // Continue processing - notification failure shouldn't stop the order update
   }
 };
 

@@ -4,18 +4,19 @@ const adminSchema = new mongoose.Schema({
   userName: { type: String, required: true, unique: true },
   companyName: { type: String, required: true },
   logo: { type: String },
-  awsS3Key: { 
-    type: String, 
-    required: true 
+  awsS3Key: {
+    type: String,
+    required: true,
   },
-  address: { 
+  address: {
     buildingNameNumber: { type: String },
     city: { type: String },
     country: { type: String },
     latitude: { type: String },
-    longitude: { type: String }
+    longitude: { type: String },
   },
   email: { type: String, required: true, unique: true },
+  serviceEmail: { type: String, default: null },
   password: { type: String, required: true },
   passwordAccessKey: { type: String, required: true },
   contact: { type: String, required: true },
@@ -24,7 +25,7 @@ const adminSchema = new mongoose.Schema({
     {
       platform: { type: String },
       link: { type: String },
-    }
+    },
   ],
   workCompletionDate: { type: Date },
   serviceStartDate: { type: Date, required: true },
@@ -42,9 +43,9 @@ const adminSchema = new mongoose.Schema({
       city: { type: String },
       country: { type: String },
       logo: { type: String },
-      awsS3Key: { 
-        type: String, 
-        required: true 
+      awsS3Key: {
+        type: String,
+        required: true,
       },
     },
   ],

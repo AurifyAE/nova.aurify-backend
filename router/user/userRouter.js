@@ -61,7 +61,6 @@ router.put("/approve-order-item/:orderId/:itemId", approveOrderItem);
 router.get("/pending-approval-orders", getPendingApprovalOrders);
 router.put("/reject-order-item/:orderId/:itemId", rejectOrderItem);
 
-
 //notifications management
 router.get("/notifications/:userId", getNotifications);
 router.patch("/notifications/read/:userId/:notificationId", readNotification);

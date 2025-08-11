@@ -89,12 +89,14 @@ export const rejectOrderItem = async (req, res, next) => {
 };
 export const updateOrder = async (req, res, next) => {
   try {
-    const { orderId } = req.params;
+    const { orderId, adminId } = req.params;
     const { orderStatus } = req.body;
     const { message, success, data } = await updateOrderDetails(
       orderId,
+      adminId,
       orderStatus
     );
+
     if (!success || !data) {
       return res.status(404).json({
         success: false,
@@ -687,10 +689,11 @@ const sendStatusConfirmationEmail = async (orderId, itemId, isApproved) => {
 
 export const updateOrderQuantity = async (req, res, next) => {
   try {
-    const { orderId } = req.params;
+    const { orderId, adminId } = req.params;
     const orderDetails = req.body;
     const { message, success, data } = await updateOrderQuantityHelper(
       orderId,
+      adminId,
       orderDetails
     );
     if (!success || !data) {

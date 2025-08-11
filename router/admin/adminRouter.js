@@ -148,8 +148,8 @@ router.delete(
 );
 //order management
 router.get("/booking/:adminId", fetchBookings);
-router.put("/update-order/:orderId", updateOrder);
-router.put("/update-order-quantity/:orderId", updateOrderQuantity);
+router.put("/update-order/:orderId/:adminId", updateOrder);
+router.put("/update-order-quantity/:orderId/:adminId", updateOrderQuantity);
 router.put("/update-order-reject/:orderId", updateOrderStatus);
 router.post("/orders/confirm-quantity", orderQuantityConfirmation);
 router.get("/fetch-order/:adminId/:userId", fetchUserOrder);
