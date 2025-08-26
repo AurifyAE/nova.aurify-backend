@@ -31,22 +31,26 @@ export const getUserData = async (userName) => {
   }
 };
 
-export const updateUserData = async (id, email, fullName, mobile, location) => {
+export const updateUserData = async (id, data) => {
   try {
     return await adminModel
       .findByIdAndUpdate(
         id,
         {
-          email: email,
-          userName: fullName,
-          contact: mobile,
-          address: location,
+          email: data.email,
+          userName: data.fullName,
+          contact: data.mobile,
+          address: data.location,
+          companyName: data.companyName,
+          whatsapp: data.whatsapp,
+          socialMedia: data.socialMedia,
+          logo: data.logo,
         },
         { new: true, runValidators: true }
       )
       .select("-password");
   } catch (error) {
-    console.error("Error in updateing the user:", error.message);
+    console.error("Error in updating the user:", error.message);
     throw new Error("Updation failed: " + error.message);
   }
 };
