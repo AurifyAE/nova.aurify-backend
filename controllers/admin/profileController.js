@@ -6,7 +6,15 @@ import {
 export const updateAdminProfileController = async (req, res, next) => {
   try {
     const { id } = req.params; // Get ID from URL parameters
-    const { email, fullName, mobile, whatsapp, companyName, address, socialMedia } = req.body.userData;
+    const {
+      email,
+      fullName,
+      mobile,
+      whatsapp,
+      companyName,
+      address,
+      socialMedia,
+    } = req.body.userData;
 
     if (!id) {
       throw createAppError("ID parameter is required.", 400);
