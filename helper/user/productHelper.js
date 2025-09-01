@@ -28,7 +28,8 @@ export const fetchProductHelper = async (adminId, categoryId, userSpotRateId) =>
           makingCharge: product.markingCharge, // Note: Using markingCharge from schema
           value: product.value,
           isActive: product.isActive,
-        }));
+        }))
+        .sort((a, b) => a.weight - b.weight); // Sort by weight ascending (lowest first)
 
       // If userSpotRate products exist, return them
       if (products.length > 0) {
@@ -52,7 +53,8 @@ export const fetchProductHelper = async (adminId, categoryId, userSpotRateId) =>
           makingCharge: product.makingCharge,
           value: product.value,
           isActive: product.isActive,
-        }));
+        }))
+        .sort((a, b) => a.weight - b.weight); // Sort by weight ascending (lowest first)
 
       // If category products exist, return them
       if (products.length > 0) {
@@ -89,6 +91,9 @@ export const fetchProductHelper = async (adminId, categoryId, userSpotRateId) =>
             isActive: { $literal: false },
           },
         },
+        {
+          $sort: { weight: 1 } // Sort by weight ascending (1 for ascending, -1 for descending)
+        }
       ]);
     }
 

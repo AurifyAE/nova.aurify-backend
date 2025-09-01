@@ -150,6 +150,11 @@ class DynamicEmailTemplateBuilder {
                     <strong>📊 Current Status:</strong> <span style="color: ${
                       config.statusColor
                     }; font-weight: bold;">${config.currentStatus}</span>
+                    ${
+                      config.isAdminCopy && config.customerName
+                        ? `<br><strong>👤 Customer Name:</strong> ${config.customerName}`
+                        : ""
+                    }
                   </mj-text>
                 </mj-column>
               </mj-section>
@@ -247,17 +252,26 @@ class DynamicEmailTemplateBuilder {
       accentColor: "#4CAF50",
       statusColor: "#4CAF50",
       currentStatus: "Order Placed",
-      mainMessage:
-        "🎉 Thank you for your order! It has been successfully placed and is now being processed.",
+      mainMessage: additionalData.isAdminCopy
+        ? `🎉 A new order has been placed by ${additionalData.customerName} (Email: ${additionalData.customerEmail}). It is now being processed.`
+        : "🎉 Thank you for your order! It has been successfully placed and is now being processed.",
       additionalInfo: additionalData?.orderNote
         ? `<strong>📝 Order Note:</strong> ${additionalData.orderNote}`
+        : additionalData.isAdminCopy
+        ? `Please review the order details for ${additionalData.customerName}.`
         : "We will review your order and provide updates soon.",
       nextSteps:
         "1️⃣ Order review by our team<br>2️⃣ Confirmation of product availability<br>3️⃣ Payment processing<br>4️⃣ Order preparation<br>5️⃣ Shipping updates",
       actionSection: true,
-      actionTitle: "🚀 Your Order is On Its Way!",
-      actionMessage:
-        "We'll keep you updated on the status of your order. Thank you for choosing us!",
+      actionTitle: additionalData.isAdminCopy
+        ? "🚀 New Order Received!"
+        : "🚀 Your Order is On Its Way!",
+      actionMessage: additionalData.isAdminCopy
+        ? `Please proceed with the review and processing of this order for ${additionalData.customerName}.`
+        : "We'll keep you updated on the status of your order. Thank you for choosing us!",
+      isAdminCopy: additionalData.isAdminCopy || false,
+      customerName: additionalData.customerName,
+      customerEmail: additionalData.customerEmail,
     };
     return this.buildBaseTemplate(orderData, userData, adminData, config);
   }
@@ -1509,14 +1523,13 @@ class OrderStatusService {
     }
   }
 
-  // Existing methods
   async orderPlaced(orderData, userData, adminData, additionalData = {}) {
     return this.sendOrderStatusUpdates(
       orderData,
       userData,
       adminData,
       "order_placed",
-      additionalData
+      { ...additionalData, sendSeparateEmails: true } // Force separate emails for order_placed
     );
   }
 
@@ -1585,8 +1598,6 @@ class OrderStatusService {
     );
   }
 
-  // NEW METHODS: Item-specific status updates
-
   /**
    * Send item approved notifications and emails
    * @param {Object} orderData - Order data
@@ -1641,7 +1652,6 @@ class OrderStatusService {
     );
   }
 
-
   async itemReject(orderData, userData, adminData, additionalData = {}) {
     return this.sendOrderStatusUpdates(
       orderData,
@@ -1651,7 +1661,6 @@ class OrderStatusService {
       additionalData
     );
   }
-
 
   static formatItemDetails(item) {
     return {
@@ -1665,7 +1674,6 @@ class OrderStatusService {
       customizations: item.customizations || null,
     };
   }
-
 
   async sendBulkItemStatusUpdates(itemUpdates, orderData, userData, adminData) {
     const results = [];
@@ -1815,7 +1823,6 @@ class OrderStatusService {
     }
   }
 
-
   static getAvailableItemStatusTypes() {
     return [
       "approved",
@@ -1826,13 +1833,11 @@ class OrderStatusService {
     ];
   }
 
-
   static isValidItemStatusType(statusType) {
     return this.getAvailableItemStatusTypes().includes(
       statusType.toLowerCase()
     );
   }
-
 
   static getAvailableStatusMethods() {
     return {
