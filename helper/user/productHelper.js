@@ -4,24 +4,29 @@ import { createAppError } from "../../utils/errorHandler.js";
 import { Cart } from "../../model/cartSchema.js";
 import { UserSpotRateModel } from "../../model/UserSpotRateSchema.js";
 
-export const fetchProductHelper = async (adminId, categoryId, userSpotRateId) => {
+export const fetchProductHelper = async (
+  adminId,
+  categoryId,
+  userSpotRateId
+) => {
   try {
     let products = [];
 
     // Case 1: If userSpotRateId is provided, fetch products from UserSpotRate
     if (userSpotRateId) {
-      const userSpotRate = await UserSpotRateModel.findById(userSpotRateId)
-        .populate({
-          path: "products.productId",
-          model: "Product"
-        });
+      const userSpotRate = await UserSpotRateModel.findById(
+        userSpotRateId
+      ).populate({
+        path: "products.productId",
+        model: "Product",
+      });
 
       if (!userSpotRate) {
         throw createAppError("User spot rate not found", 404);
       }
 
       products = userSpotRate.products
-        .filter(product => product.productId) // Filter out any null productIds
+        .filter((product) => product.productId) // Filter out any null productIds
         .map((product) => ({
           ...product.productId.toObject(),
           pricingType: product.pricingType,
@@ -39,14 +44,17 @@ export const fetchProductHelper = async (adminId, categoryId, userSpotRateId) =>
 
     // Case 2: If categoryId is provided and userSpotRateId is not provided or has no products
     if (categoryId) {
-      const category = await mongoose.model("Category").findById(categoryId).populate("products.productId");
+      const category = await mongoose
+        .model("Category")
+        .findById(categoryId)
+        .populate("products.productId");
 
       if (!category) {
         throw createAppError("Category not found", 404);
       }
 
       products = category.products
-        .filter(product => product.productId) // Filter out any null productIds
+        .filter((product) => product.productId) // Filter out any null productIds
         .map((product) => ({
           ...product.productId.toObject(),
           pricingType: product.pricingType,
@@ -92,8 +100,8 @@ export const fetchProductHelper = async (adminId, categoryId, userSpotRateId) =>
           },
         },
         {
-          $sort: { weight: 1 } // Sort by weight ascending (1 for ascending, -1 for descending)
-        }
+          $sort: { weight: 1 }, // Sort by weight ascending (1 for ascending, -1 for descending)
+        },
       ]);
     }
 
@@ -107,8 +115,12 @@ export const fetchProductHelper = async (adminId, categoryId, userSpotRateId) =>
   }
 };
 
-
-export const updateCartItemCollection = async (userId, adminId, productId, userPassedQuantity) => {
+export const updateCartItemCollection = async (
+  userId,
+  adminId,
+  productId,
+  userPassedQuantity
+) => {
   try {
     if (!userId || !adminId || !productId) {
       throw new Error("Missing required fields: userId, adminId, or productId");
@@ -158,7 +170,10 @@ export const updateCartItemCollection = async (userId, adminId, productId, userP
           totalPrice: userPassedQuantity * product.price,
         });
       } else {
-        return { success: false, message: "Cannot decrement a non-existing item in the cart" };
+        return {
+          success: false,
+          message: "Cannot decrement a non-existing item in the cart",
+        };
       }
     }
 
@@ -177,8 +192,6 @@ export const updateCartItemCollection = async (userId, adminId, productId, userP
     return { success: false, message: "Error updating cart: " + error.message };
   }
 };
-
-
 
 export const fixedProductFixHelper = async (bookingData) => {
   try {
@@ -237,7 +250,6 @@ export const updateCartItemQuantity = async (
     );
 
     if (existingItem) {
-   
       cart.totalWeight -= existingItem.quantity * productWeight;
       existingItem.quantity += quantityChange;
 
@@ -260,38 +272,37 @@ export const updateCartItemQuantity = async (
     const productIds = cart.items.map((item) => item.productId);
     const products = await Product.find({ _id: { $in: productIds } });
 
-
     const productWeights = {};
     products.forEach((prod) => {
       productWeights[prod._id.toString()] = prod.weight;
     });
 
-    
     cart.totalWeight = cart.items.reduce((total, item) => {
       const itemWeight = productWeights[item.productId.toString()] || 0;
       return total + item.quantity * itemWeight;
     }, 0);
 
-    const totalQuantity = cart.items.reduce((total, item) => total + item.quantity, 0);
+    const totalQuantity = cart.items.reduce(
+      (total, item) => total + item.quantity,
+      0
+    );
 
-    
     if (isNaN(cart.totalWeight)) cart.totalWeight = 0;
     if (isNaN(totalQuantity)) totalQuantity = 0;
 
     cart.updatedAt = Date.now();
     await cart.save();
 
-    return { 
-      success: true, 
-      message: "Cart updated successfully", 
+    return {
+      success: true,
+      message: "Cart updated successfully",
       data: cart,
-      totalQuantity: totalQuantity, 
+      totalQuantity: totalQuantity,
     };
   } catch (error) {
     return { success: false, message: "Error updating cart: " + error.message };
   }
 };
-
 
 export const deleteCartProduct = async (userId, productId, adminId) => {
   try {
@@ -371,8 +382,8 @@ export const getUserCartItems = async (userId) => {
         $group: {
           _id: "$_id", // Cart ID
           userId: { $first: "$userId" },
-          totalWeight: { 
-            $sum: { $multiply: ["$items.quantity", "$productDetails.weight"] } 
+          totalWeight: {
+            $sum: { $multiply: ["$items.quantity", "$productDetails.weight"] },
           }, // ✅ Calculate total weight
           items: {
             $push: {

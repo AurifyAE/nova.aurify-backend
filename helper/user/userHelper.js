@@ -6,7 +6,7 @@ import UserFCMTokenModel from "../../model/userFCMToken.js";
 import NotificationService from "../../utils/sendPushNotification.js";
 import { encryptPassword, decryptPassword } from "../../utils/crypto.js";
 import { VideoBannerModel } from "../../model/videoBannerSchema.js";
-import UserNotificationModel from '../../model/userNotificationSchema.js'
+import UserNotificationModel from "../../model/userNotificationSchema.js";
 import { spotRateModel } from "../../model/spotRateSchema.js";
 
 export const updateUserPassword = async (adminId, contact, newPassword) => {
@@ -250,24 +250,30 @@ export const requestPassInAdmin = async (adminId, request) => {
 
 export const getUserNotifications = async (userId) => {
   try {
-    const notifications = await UserNotificationModel.findOne({ createdBy: userId });
-    
+    const notifications = await UserNotificationModel.findOne({
+      createdBy: userId,
+    });
+
     if (!notifications) {
-      return { 
-        notifications: { notification: [] }, 
-        unreadCount: 0 
+      return {
+        notifications: { notification: [] },
+        unreadCount: 0,
       };
     }
-    
+
     // Sort notifications by createdAt in descending order (newest first)
-    notifications.notification.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
+    notifications.notification.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
     // Count unread messages (where read is false)
-    const unreadCount = notifications.notification.filter(msg => msg.read === false).length;
-    
-    return { 
+    const unreadCount = notifications.notification.filter(
+      (msg) => msg.read === false
+    ).length;
+
+    return {
       notifications,
-      unreadCount
+      unreadCount,
     };
   } catch (error) {
     throw new Error("Error fetching notifications: " + error.message);
@@ -278,20 +284,20 @@ export const getUserNotifications = async (userId) => {
 export const markNotificationAsRead = async (userId, notificationId) => {
   try {
     const result = await UserNotificationModel.findOneAndUpdate(
-      { 
-        createdBy: userId, 
-        "notification._id": notificationId 
+      {
+        createdBy: userId,
+        "notification._id": notificationId,
       },
-      { 
-        $set: { "notification.$.read": true } 
+      {
+        $set: { "notification.$.read": true },
       },
       { new: true }
     );
-    
+
     if (!result) {
       throw new Error("Notification not found");
     }
-    
+
     return result;
   } catch (error) {
     throw new Error("Error marking notification as read: " + error.message);
@@ -303,16 +309,16 @@ export const deleteNotification = async (userId, notificationId) => {
   try {
     const result = await UserNotificationModel.findOneAndUpdate(
       { createdBy: userId },
-      { 
-        $pull: { notification: { _id: notificationId } } 
+      {
+        $pull: { notification: { _id: notificationId } },
       },
       { new: true }
     );
-    
+
     if (!result) {
       throw new Error("Notification not found");
     }
-    
+
     return result;
   } catch (error) {
     throw new Error("Error deleting notification: " + error.message);
@@ -327,11 +333,11 @@ export const deleteAllNotifications = async (userId) => {
       { $set: { notification: [] } },
       { new: true }
     );
-    
+
     if (!result) {
       throw new Error("User notifications not found");
     }
-    
+
     return result;
   } catch (error) {
     throw new Error("Error deleting all notifications: " + error.message);

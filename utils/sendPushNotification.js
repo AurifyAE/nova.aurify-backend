@@ -160,87 +160,87 @@ class EnhancedNotificationService {
     return "android";
   }
 
-// Fixed configureWebNotification method
-static async configureWebNotification(
-  message,
-  notificationPayload,
-  adminLogo,
-  data
-) {
-  console.log(
-    `🌐 Configuring web notification with admin logo: ${adminLogo}`
-  );
+  // Fixed configureWebNotification method
+  static async configureWebNotification(
+    message,
+    notificationPayload,
+    adminLogo,
+    data
+  ) {
+    console.log(
+      `🌐 Configuring web notification with admin logo: ${adminLogo}`
+    );
 
-  // Create a unique tag based on order or timestamp
-  const uniqueTag = `aurify_${
-    data.orderId || data.transactionId || Date.now()
-  }_${Math.random().toString(36).substr(2, 9)}`;
+    // Create a unique tag based on order or timestamp
+    const uniqueTag = `aurify_${
+      data.orderId || data.transactionId || Date.now()
+    }_${Math.random().toString(36).substr(2, 9)}`;
 
-  // CRITICAL FIX: Proper web notification structure
-  message.webpush = {
-    headers: {
-      Urgency: "high",
-      TTL: "86400", // 24 hours
-    },
-    notification: {
-      title: notificationPayload.title,
-      body: notificationPayload.body,
-      icon: adminLogo,
-      badge: adminLogo,
-      // Remove image property as it can cause issues
-      // image: adminLogo, 
-      requireInteraction: true,
-      silent: false,
-      tag: uniqueTag,
-      renotify: true,
-      vibrate: [200, 100, 200],
-      timestamp: Date.now(),
-      actions: [
-        {
-          action: "view_order",
-          title: "View Order",
-          icon: adminLogo,
-        },
-        {
-          action: "dismiss", 
-          title: "Dismiss",
-        },
-      ],
-      // Move data inside notification data property
-      data: {
-        url: data.redirectUrl || "https://aurify.ae/orders",
-        orderId: data.orderId || "",
-        transactionId: data.transactionId || "",
-        type: data.type || "default",
-        adminLogo,
-        timestamp: new Date().toISOString(),
-        uniqueTag,
-        platform: "web",
+    // CRITICAL FIX: Proper web notification structure
+    message.webpush = {
+      headers: {
+        Urgency: "high",
+        TTL: "86400", // 24 hours
       },
-    },
-    // FCM options for web
-    fcm_options: {
-      link: data.redirectUrl || "https://aurify.ae/orders",
-    },
-  };
+      notification: {
+        title: notificationPayload.title,
+        body: notificationPayload.body,
+        icon: adminLogo,
+        badge: adminLogo,
+        // Remove image property as it can cause issues
+        // image: adminLogo,
+        requireInteraction: true,
+        silent: false,
+        tag: uniqueTag,
+        renotify: true,
+        vibrate: [200, 100, 200],
+        timestamp: Date.now(),
+        actions: [
+          {
+            action: "view_order",
+            title: "View Order",
+            icon: adminLogo,
+          },
+          {
+            action: "dismiss",
+            title: "Dismiss",
+          },
+        ],
+        // Move data inside notification data property
+        data: {
+          url: data.redirectUrl || "https://aurify.ae/orders",
+          orderId: data.orderId || "",
+          transactionId: data.transactionId || "",
+          type: data.type || "default",
+          adminLogo,
+          timestamp: new Date().toISOString(),
+          uniqueTag,
+          platform: "web",
+        },
+      },
+      // FCM options for web
+      fcm_options: {
+        link: data.redirectUrl || "https://aurify.ae/orders",
+      },
+    };
 
-  // IMPORTANT: Keep the main data object for service worker
-  message.data = {
-    ...message.data,
-    click_action: data.redirectUrl || "https://aurify.ae/orders",
-    url: data.redirectUrl || "https://aurify.ae/orders", 
-    // Add all data fields as strings (FCM requirement)
-    adminLogo: adminLogo,
-    admin_logo_url: adminLogo,
-    uniqueTag: uniqueTag,
-  };
+    // IMPORTANT: Keep the main data object for service worker
+    message.data = {
+      ...message.data,
+      click_action: data.redirectUrl || "https://aurify.ae/orders",
+      url: data.redirectUrl || "https://aurify.ae/orders",
+      // Add all data fields as strings (FCM requirement)
+      adminLogo: adminLogo,
+      admin_logo_url: adminLogo,
+      uniqueTag: uniqueTag,
+    };
 
-  console.log(`🌐 Web notification configured with unique tag: ${uniqueTag}`);
-  console.log(
-    `🌐 Web notification webpush config:`,
-    JSON.stringify(message.webpush, null, 2)
-  );
-}
+    console.log(`🌐 Web notification configured with unique tag: ${uniqueTag}`);
+    console.log(
+      `🌐 Web notification webpush config:`,
+      JSON.stringify(message.webpush, null, 2)
+    );
+  }
 
   static async configureMobileNotification(
     message,
